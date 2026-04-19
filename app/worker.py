@@ -25,6 +25,8 @@ class ProcessingWorker(QThread):
         inpaint=False,
         use_known_poses=False,
         tsdf_voxel_m=0.003,
+        min_fitness=0.3,
+        max_rmse=0.015,
         save_path=None,
     ):
         super().__init__()
@@ -43,6 +45,8 @@ class ProcessingWorker(QThread):
         self.inpaint         = inpaint
         self.use_known_poses = use_known_poses
         self.tsdf_voxel_m    = tsdf_voxel_m
+        self.min_fitness     = min_fitness
+        self.max_rmse        = max_rmse
         self.save_path       = save_path
         self._reconstructor  = None
 
@@ -64,6 +68,8 @@ class ProcessingWorker(QThread):
                 inpaint=self.inpaint,
                 use_known_poses=self.use_known_poses,
                 tsdf_voxel_m=self.tsdf_voxel_m,
+                min_fitness=self.min_fitness,
+                max_rmse=self.max_rmse,
                 save_path=self.save_path,
                 on_frame=self._on_frame,
             )

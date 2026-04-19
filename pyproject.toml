@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phenofusion3d"
+version = "0.2.0"
+description = "RGB-D capture, quality assessment, and 3D plant reconstruction for ANU plant phenotyping"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "ANU COMP8715 Plant Phenotyping Team" }
+]
+license = { text = "MIT" }
+
+dependencies = [
+    "open3d>=0.17.0",
+    "opencv-python>=4.8.0",
+    "numpy>=1.26.0",
+    "natsort>=8.4.0",
+    "tqdm>=4.66.0",
+    "PyQt5>=5.15.0",
+    "pyqtgraph>=0.13.0",
+    "matplotlib>=3.8.0",
+]
+
+[project.optional-dependencies]
+# Lab Linux machine: ROS itself is system-installed (apt), only the camera
+# SDK comes from pip. rospy is provided by the ROS distro on PYTHONPATH.
+ros = [
+    "pyrealsense2>=2.54.0",
+]
+# Windows / dev: camera-only capture, no gantry control
+windows = [
+    "pyrealsense2>=2.54.0",
+]
+# Developer tooling
+dev = [
+    "pytest>=7.4.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+phenofusion3d = "main:main"
+
+[tool.setuptools.packages.find]
+include = ["app*", "capture*", "processing*", "file_io*", "visualiser*"]
+exclude = ["data*", "stakeholder_reference*", "tests*", "venv*"]

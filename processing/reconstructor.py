@@ -47,6 +47,8 @@ class Reconstructor:
         inpaint=False,
         use_known_poses=False,
         tsdf_voxel_m=0.003,
+        min_fitness=0.3,
+        max_rmse=0.015,
         save_path=None,
         on_frame=None,
         on_complete=None,
@@ -92,6 +94,8 @@ class Reconstructor:
         self.inpaint         = inpaint
         self.use_known_poses = use_known_poses
         self.tsdf_voxel_m    = tsdf_voxel_m
+        self.min_fitness     = min_fitness
+        self.max_rmse        = max_rmse
         self.save_path       = save_path
         self.on_frame        = on_frame
         self.on_complete     = on_complete
@@ -350,7 +354,10 @@ class Reconstructor:
                 self._fire_on_frame(i, total, self.reference_pcd, 0.0, 0.0, 'FAILED')
                 continue
 
-            if fitness > 0 or i < 3:
+            # Strict acceptance: require BOTH a meaningful overlap AND a tight fit.
+            # Rejected frames don't update last_transform so the chain stays clean.
+            accept = (fitness >= self.min_fitness) and (rmse <= self.max_rmse)
+            if accept:
                 last_transform = np.dot(last_transform, transformation)
                 frame_pcd = copy.deepcopy(source)
                 frame_pcd.transform(last_transform)
@@ -364,9 +371,14 @@ class Reconstructor:
                 print(f'[reconstructor] Frame {i:4d}/{total} | '
                       f'fitness={fitness:.4f} | rmse={rmse:.4f}')
             else:
-                self.fail_list.append({'frame': i, 'reason': 'fitness=0'})
-                self._fire_on_frame(i, total, self.reference_pcd, 0.0, 0.0, 'FAILED')
-                print(f'[reconstructor] Frame {i:4d}/{total} | ICP failed (fitness=0)')
+                if fitness < self.min_fitness:
+                    reason = f'low fitness {fitness:.3f} < {self.min_fitness:.3f}'
+                else:
+                    reason = f'high rmse {rmse:.4f} > {self.max_rmse:.4f}'
+                self.fail_list.append({'frame': i, 'reason': reason,
+                                       'fitness': fitness, 'rmse': rmse})
+                self._fire_on_frame(i, total, self.reference_pcd, fitness, rmse, 'REJECTED')
+                print(f'[reconstructor] Frame {i:4d}/{total} | REJECTED ({reason})')
 
         print(f'[reconstructor] ICP complete. '
               f'Success={len(self.succeed_list)} Fail={len(self.fail_list)}')

@@ -9,6 +9,8 @@ from PyQt5.QtGui import QFont
 from app.panels.data_panel    import DataPanel
 from app.panels.metrics_panel import MetricsPanel
 from app.panels.log_panel     import LogPanel
+from app.panels.capture_panel import CapturePanel
+from app.panels.quality_panel import QualityPanel
 from app.controller           import Controller
 
 
@@ -47,10 +49,28 @@ class MainWindow(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(6)
 
-        self.data_panel = DataPanel()
-        left_layout.addWidget(self.data_panel)
-        left_layout.addStretch()
-        left_widget.setFixedWidth(320)
+        from PyQt5.QtWidgets import QScrollArea
+
+        self.capture_panel = CapturePanel()
+        self.data_panel    = DataPanel()
+        self.quality_panel = QualityPanel()
+
+        # Stack into a scroll area so the left pane stays usable on small screens
+        inner = QWidget()
+        inner_layout = QVBoxLayout(inner)
+        inner_layout.setContentsMargins(0, 0, 0, 0)
+        inner_layout.setSpacing(6)
+        inner_layout.addWidget(self.capture_panel)
+        inner_layout.addWidget(self.data_panel)
+        inner_layout.addWidget(self.quality_panel)
+        inner_layout.addStretch()
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(inner)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        left_layout.addWidget(scroll)
+        left_widget.setFixedWidth(360)
 
         # --- Right pane: placeholder + metrics + log ---
         right_widget = QWidget()
@@ -113,7 +133,22 @@ class MainWindow(QMainWindow):
     def _connect_signals(self):
         # Data panel -> controller
         self.data_panel.run_requested.connect(self.controller.on_run_clicked)
+        self.data_panel.run_requested.connect(self.controller.on_quality_paths)
         self.data_panel.stop_requested.connect(self.controller.on_stop_clicked)
+
+        # Capture panel -> controller -> capture panel
+        self.capture_panel.capture_requested.connect(self.controller.on_capture_clicked)
+        self.capture_panel.capture_stop_requested.connect(self.controller.on_capture_stop)
+        self.controller.capture_progress.connect(self.capture_panel.on_progress)
+        self.controller.capture_complete.connect(self._on_capture_complete)
+        self.controller.capture_error.connect(self.capture_panel.on_error)
+
+        # Quality panel -> controller -> quality panel
+        self.quality_panel.quick_requested.connect(self._on_quick_check_requested)
+        self.quality_panel.full_requested.connect(self._on_full_report_requested)
+        self.controller.quality_progress.connect(self.quality_panel.on_progress)
+        self.controller.quality_ready.connect(self.quality_panel.show_report)
+        self.controller.quality_error.connect(self.quality_panel.on_error)
 
         # Controller -> UI updates
         self.controller.status_changed.connect(self.status.showMessage)
@@ -124,6 +159,41 @@ class MainWindow(QMainWindow):
         # Export actions -> controller
         self.action_export_ply.triggered.connect(self._export_ply)
         self.action_export_csv.triggered.connect(self._export_csv)
+
+    @pyqtSlot(str, int)
+    def _on_capture_complete(self, out_dir, n_frames):
+        # Auto-populate DataPanel with the freshly captured paths
+        rgb_dir   = f'{out_dir}/rgb'
+        depth_dir = f'{out_dir}/depth'
+        intr      = f'{out_dir}/kdc_intrinsics.txt'
+        import os
+        if not os.path.exists(intr):
+            intr = ''
+        self.data_panel.set_paths(rgb_dir, depth_dir, intr)
+        self.capture_panel.on_finished(out_dir, n_frames)
+        # Tell the controller about these paths so Quality Check can use them too
+        self.controller.on_quality_paths(rgb_dir, depth_dir, intr, 1)
+
+    def _on_quick_check_requested(self):
+        # Push current paths into controller before triggering the worker
+        self.controller.on_quality_paths(
+            self.data_panel.rgb_edit.text(),
+            self.data_panel.depth_edit.text(),
+            self.data_panel.intr_edit.text(),
+            self.data_panel.step_spin.value(),
+        )
+        self.quality_panel.set_running(True)
+        self.controller.on_quick_check_clicked()
+
+    def _on_full_report_requested(self):
+        self.controller.on_quality_paths(
+            self.data_panel.rgb_edit.text(),
+            self.data_panel.depth_edit.text(),
+            self.data_panel.intr_edit.text(),
+            self.data_panel.step_spin.value(),
+        )
+        self.quality_panel.set_running(True)
+        self.controller.on_full_report_clicked()
 
     # ------------------------------------------------------------------
     # Slots

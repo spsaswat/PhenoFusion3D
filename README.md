@@ -9,25 +9,68 @@ Python tools for **RGB-D–based 3D reconstruction**: turn paired colour and dep
 
 ## Getting started
 
-From the repository root:
+For lab and dev installs (preferred), use the bundled installers — see [install/README.md](install/README.md):
+
+- **Lab Linux + ROS:** `./install/install_linux.sh`
+- **Windows (camera-only):** `.\install\install_windows.ps1`
+
+For a manual install (any OS), from the repository root:
 
 ```bash
 python -m venv venv
+# Windows: .\venv\Scripts\Activate.ps1
+# Linux:    source venv/bin/activate
+pip install -e ".[windows]"   # or ".[ros]" on the lab Linux machine
 ```
 
-Activate the virtual environment:
-
-- **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1`
-- **Windows (cmd):** `.\venv\Scripts\activate.bat`
-- **macOS / Linux:** `source venv/bin/activate`
-
-Install dependencies:
+Launch the app:
 
 ```bash
-pip install -r requirements.txt
+python main.py
 ```
 
 Do not commit large datasets or generated point clouds; see `.gitignore` (`data/`, `*.ply`, `*.pcd`, etc.).
+
+## Capture (in-app)
+
+The **Data Capture** panel drives an RGB-D capture without leaving the app.
+
+- **Backend = Auto** picks ROS+gantry on the lab machine and RealSense-only on Windows.
+- **ROS + Gantry** (lab Linux) wraps `stakeholder_reference/rospy_thread_fin_1.py` with the same `Twist`-based velocity command, the same `align(rs.stream.color)` pipeline and the same intrinsics save logic. UI-tunable parameters: velocity (m/s), end position (m), FPS.
+- **RealSense Only** (Windows / dev) captures from the camera directly for `Duration (s)` seconds. Useful for sanity tests.
+
+Output layout (consumed directly by the loader):
+
+```
+data/captures/<YYYYMMDDhhmmss>/
+    rgb/0.png, 1.png, ...
+    depth/0.png, 1.png, ...
+    kdc_intrinsics.txt        # color stream
+    kd_intrinsics.txt         # depth stream
+    session.json              # backend, velocity, frame_index -> gantry position
+```
+
+After a successful capture the **Data Loading** fields are auto-populated so you can immediately run the quality check or reconstruction.
+
+## Quality Check (in-app)
+
+The **Data Quality** panel runs depth + ICP diagnostics on the loaded sequence:
+
+- **Quick Check** -- ~15 random consecutive pairs, ~10–30 s.
+- **Full Report** -- every consecutive pair; writes `quality_report.csv` and `quality_report.txt` next to the dataset.
+
+Per-pair metrics: depth validity %, median depth (m), point count, ICP fitness, ICP inlier RMSE (m), per-pair rotation magnitude (deg).
+
+Verdict bands (default thresholds):
+
+| Metric | PASS | WARN | FAIL |
+|---|---|---|---|
+| ICP fitness (mean) | ≥ 0.50 | 0.30–0.50 | < 0.30 |
+| ICP inlier RMSE (mean) | ≤ 0.005 m | 0.005–0.015 m | > 0.015 m |
+| Depth validity per frame | ≥ 30 % | 10–30 % | < 10 % |
+| Per-frame rotation (gantry) | < 1° | 1–5° | > 5° |
+
+The same `min_fitness` / `max_rmse` thresholds are now enforced inside the reconstructor: frames whose ICP result misses either bar are marked **REJECTED** and don't pollute the merged cloud.
 
 ## Organizing `data/main` (ICL-style layout)
 

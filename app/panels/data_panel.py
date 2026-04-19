@@ -133,3 +133,10 @@ class DataPanel(QWidget):
     def set_running(self, running: bool):
         self.run_btn.setEnabled(not running)
         self.stop_btn.setEnabled(running)
+
+    def set_paths(self, rgb_dir: str, depth_dir: str, intrinsics: str = ''):
+        """Programmatically populate paths (called after a successful capture)."""
+        self.rgb_edit.setText(rgb_dir or '')
+        self.depth_edit.setText(depth_dir or '')
+        self.intr_edit.setText(intrinsics or '')
+        self._validate()
