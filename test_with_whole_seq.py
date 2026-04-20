@@ -40,7 +40,7 @@ intrinsics_path = os.path.join(SEQ_ROOT, "kdc_intrinsics.txt")
 # step=5  → every 5th    (~42 pairs, faster for testing)
 # step=10 → every 10th   (~21 pairs, quick sanity check)
 # ---------------------------------------------------------------------------
-STEP = 5
+STEP = 1
 
 # ---------------------------------------------------------------------------
 # Mode selection
@@ -60,10 +60,10 @@ GANTRY_STEP_M = 0.00127   # metres per original frame
 # Depth / reconstruction parameters
 # ---------------------------------------------------------------------------
 DEPTH_SCALE  = 1000.0
-DEPTH_TRUNC  = 4.0        # metres -- generous to keep all valid depth
+DEPTH_TRUNC  = 3.5        # metres -- scene at ~2.82 m, trim background noise
 VOXEL_SIZE   = 0.005      # ICP radius and output downsample (ICP mode)
 MAX_ITER     = 80         # ICP iterations per frame pair (ICP mode)
-TSDF_VOXEL_M = 0.003      # 3 mm TSDF voxels (known-pose mode)
+TSDF_VOXEL_M = 0.005      # 5 mm TSDF voxels: matches D405 noise floor at 2.8 m
 BBOX         = None       # No crop -- TSDF benefits from full frame
 DEPTH_MIN_MM = 0          # No near-clip -- keep all valid depth
 ERODE        = False

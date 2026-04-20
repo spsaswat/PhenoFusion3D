@@ -28,6 +28,7 @@ class ProcessingWorker(QThread):
         min_fitness=0.3,
         max_rmse=0.015,
         save_path=None,
+        agent_config=None,
     ):
         super().__init__()
         self.pairs           = pairs
@@ -48,6 +49,7 @@ class ProcessingWorker(QThread):
         self.min_fitness     = min_fitness
         self.max_rmse        = max_rmse
         self.save_path       = save_path
+        self.agent_config    = agent_config
         self._reconstructor  = None
 
     def run(self):
@@ -71,6 +73,7 @@ class ProcessingWorker(QThread):
                 min_fitness=self.min_fitness,
                 max_rmse=self.max_rmse,
                 save_path=self.save_path,
+                agent_config=self.agent_config,
                 on_frame=self._on_frame,
             )
             final_pcd, succeed, fail = self._reconstructor.run()

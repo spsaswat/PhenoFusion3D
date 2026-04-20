@@ -78,7 +78,7 @@ class Controller(QObject):
         is_icl = 'icl' in rgb_dir.lower()
 
         depth_scale = 5000.0 if is_icl else 1000.0
-        depth_trunc = 4.0    if is_icl else 4.0
+        depth_trunc = 4.0    if is_icl else 3.5    # gantry scene at ~2.82 m
         voxel_size  = 0.02   if is_icl else 0.005
 
         max_iter     = 30    if is_icl else 80
@@ -91,7 +91,7 @@ class Controller(QObject):
         gantry_axis     = 0
         per_frame_step  = 0.0 if is_icl else 0.00127
         gantry_step_m   = per_frame_step * step_size
-        tsdf_voxel_m    = 0.003
+        tsdf_voxel_m    = 0.005   # matches D405 noise floor (~5 mm RMSE) at 2.8 m
 
         self.worker = ProcessingWorker(
             pairs=pairs, K=K, dist=dist,
