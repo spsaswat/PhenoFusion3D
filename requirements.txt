@@ -1,3 +1,12 @@
+# PhenoFusion3D -- Python dependencies to run the application
+# (aligned with pyproject.toml [project] and optional capture extras).
+# Requires: Python >=3.10
+#
+# ROS (rospy, sensor_msgs, etc.) is NOT listed here -- install from your
+# ROS distro on lab Linux and use a venv with --system-site-packages
+# (see install/install_linux.sh).
+
+# --- Core: GUI, reconstruction, quality pipeline ---
 open3d>=0.17.0
 opencv-python>=4.8.0
 numpy>=1.26.0
@@ -6,4 +15,14 @@ tqdm>=4.66.0
 PyQt5>=5.15.0
 pyqtgraph>=0.13.0
 matplotlib>=3.8.0
-pytest>=7.4.0
+
+# --- Camera capture (RealSense USB; Windows + pip-based Linux) ---
+# Omit this line only if you will never use in-app capture and only load
+# RGB-D folders from disk. Not available as a prebuilt wheel on all ARM
+# platforms -- use system librealsense + docs in that case.
+pyrealsense2>=2.54.0
+
+# --- Developer tooling (optional) ---
+# pip install -e ".[dev]"   or uncomment:
+# pytest>=7.4.0
+# ruff>=0.4.0

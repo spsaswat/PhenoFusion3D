@@ -11,6 +11,7 @@ from app.panels.metrics_panel import MetricsPanel
 from app.panels.log_panel     import LogPanel
 from app.panels.capture_panel import CapturePanel
 from app.panels.quality_panel import QualityPanel
+from app.panels.gantry_panel  import GantryPanel
 from app.controller           import Controller
 
 
@@ -52,6 +53,9 @@ class MainWindow(QMainWindow):
         from PyQt5.QtWidgets import QScrollArea
 
         self.capture_panel = CapturePanel()
+        self.gantry_panel  = GantryPanel(
+            available=self.controller.gantry.is_available()
+        )
         self.data_panel    = DataPanel()
         self.quality_panel = QualityPanel()
 
@@ -61,6 +65,7 @@ class MainWindow(QMainWindow):
         inner_layout.setContentsMargins(0, 0, 0, 0)
         inner_layout.setSpacing(6)
         inner_layout.addWidget(self.capture_panel)
+        inner_layout.addWidget(self.gantry_panel)
         inner_layout.addWidget(self.data_panel)
         inner_layout.addWidget(self.quality_panel)
         inner_layout.addStretch()
@@ -142,6 +147,24 @@ class MainWindow(QMainWindow):
         self.controller.capture_progress.connect(self.capture_panel.on_progress)
         self.controller.capture_complete.connect(self._on_capture_complete)
         self.controller.capture_error.connect(self.capture_panel.on_error)
+
+        # Gantry panel -> controller -> gantry panel
+        self.gantry_panel.jog_requested.connect(self.controller.on_gantry_jog)
+        self.gantry_panel.stop_requested.connect(self.controller.on_gantry_stop)
+        self.gantry_panel.goto_requested.connect(self.controller.on_gantry_goto)
+        self.gantry_panel.go_home_requested.connect(self.controller.on_gantry_home)
+        self.controller.gantry.position_changed.connect(self.gantry_panel.update_position)
+        self.controller.gantry.error.connect(self.gantry_panel.show_status)
+        # Disable jog/go-to during capture so two motion sources don't fight.
+        self.controller.capture_started.connect(
+            lambda: self.gantry_panel.set_capture_active(True)
+        )
+        self.controller.capture_complete.connect(
+            lambda *_: self.gantry_panel.set_capture_active(False)
+        )
+        self.controller.capture_error.connect(
+            lambda *_: self.gantry_panel.set_capture_active(False)
+        )
 
         # Quality panel -> controller -> quality panel
         self.quality_panel.quick_requested.connect(self._on_quick_check_requested)
@@ -231,3 +254,11 @@ class MainWindow(QMainWindow):
         )
         if path:
             self.controller.export_csv(path)
+
+    def closeEvent(self, event):
+        # Final safety stop on the gantry before the process exits.
+        try:
+            self.controller.shutdown()
+        except Exception:
+            pass
+        super().closeEvent(event)

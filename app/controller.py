@@ -7,6 +7,7 @@ from app.worker       import ProcessingWorker
 from app.capture_worker import CaptureWorker
 from app.quality_worker import QualityWorker
 from capture          import CaptureParams
+from capture.gantry   import GantryController
 from processing.quality import QualityParams, QualityThresholds
 from visualiser.viewer import PointCloudViewer
 
@@ -33,6 +34,9 @@ class Controller(QObject):
     quality_ready    = pyqtSignal(object)
     quality_error    = pyqtSignal(str)
 
+    # Capture lifecycle (panel needs this to disable jog during capture).
+    capture_started  = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.worker          = None
@@ -48,6 +52,10 @@ class Controller(QObject):
         self._last_rgb_dir   = None
         self._last_depth_dir = None
         self._last_intr_path = None
+
+        # Gantry controller -- ROS init is deferred to first call so this
+        # is cheap on Windows / non-ROS hosts.
+        self.gantry = GantryController()
 
     # ---------------------------------------------------------------- run
     @pyqtSlot(str, str, str, int)
@@ -155,6 +163,7 @@ class Controller(QObject):
             duration_s=duration_s,
         )
         self.status_changed.emit(f'Capture starting (backend={backend_pref})...')
+        self.capture_started.emit()
         self.capture_worker = CaptureWorker(backend_pref, params)
         self.capture_worker.frame_captured.connect(self.capture_progress)
         self.capture_worker.finished.connect(self._on_capture_finished)
@@ -265,6 +274,34 @@ class Controller(QObject):
     def _on_quality_error(self, msg):
         self.status_changed.emit(f'Quality error: {msg}')
         self.quality_error.emit(msg)
+
+    # ---------------------------------------------------------------- gantry
+    @pyqtSlot(float)
+    def on_gantry_jog(self, velocity_mps: float):
+        if velocity_mps == 0.0:
+            self.gantry.stop()
+        else:
+            self.gantry.start_jog(velocity_mps)
+
+    @pyqtSlot()
+    def on_gantry_stop(self):
+        self.gantry.stop()
+
+    @pyqtSlot(float)
+    def on_gantry_goto(self, position_m: float):
+        self.gantry.go_to(position_m)
+
+    @pyqtSlot()
+    def on_gantry_home(self):
+        self.gantry.go_home()
+
+    def shutdown(self):
+        """Called from MainWindow.closeEvent. Final safety stop +
+        unregister subscribers."""
+        try:
+            self.gantry.shutdown()
+        except Exception:
+            pass
 
     # ---------------------------------------------------------------- export
     def export_ply(self, path):
