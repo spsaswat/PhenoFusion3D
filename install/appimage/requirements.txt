@@ -1,0 +1,17 @@
+# Dependencies pip-installed into the AppImage's bundled Python.
+# Mirrors the runtime deps from pyproject.toml. Capture backends
+# (rospy, pyrealsense2) are intentionally NOT bundled -- they require
+# host hardware/SDK and are loaded from the host site-packages when
+# present (see entrypoint).
+open3d>=0.17.0
+opencv-python>=4.8.0
+numpy>=1.26.0
+natsort>=8.4.0
+tqdm>=4.66.0
+PyQt5>=5.15.0
+pyqtgraph>=0.13.0
+matplotlib>=3.8.0
+
+# The project itself, installed from the repo root that the build
+# script copies into the AppDir staging area.
+.

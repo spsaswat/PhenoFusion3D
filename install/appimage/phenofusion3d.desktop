@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=PhenoFusion3D
+GenericName=3D Plant Reconstruction
+Comment=RGB-D capture, quality assessment, and 3D plant reconstruction
+Exec=phenofusion3d
+Icon=phenofusion3d
+Terminal=false
+Categories=Science;Education;Graphics;
+Keywords=3D;reconstruction;plant;phenotyping;RGB-D;point-cloud;
+StartupWMClass=PhenoFusion3D

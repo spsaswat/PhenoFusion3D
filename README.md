@@ -146,7 +146,7 @@ Typical real-data usage: **`pairs = load_image_pairs(rgb_dir, depth_dir, step=1)
 
 ## Dependencies (summary)
 
-Declared in `requirements.txt`: Open3D, OpenCV, NumPy, natsort, tqdm, PyQt5, pyqtgraph, matplotlib, pytest. Optional acceleration paths (e.g. CuPy) are referenced in `processing/utils.py` but are not required for the core tests.
+Declared in `requirements.txt`: Open3D, OpenCV, NumPy, natsort, tqdm, PyQt5, pyqtgraph, matplotlib, pyrealsense2 (camera capture). Developer extras (`pytest`, `ruff`) are in `pyproject.toml` under `[project.optional-dependencies] dev`. Optional acceleration paths (e.g. CuPy) are referenced in `processing/utils.py` but are not required for the core tests.
 
 ## Contributing tips
 

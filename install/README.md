@@ -93,6 +93,78 @@ realsense-viewer
 "Intel RealSense Viewer.exe"
 ```
 
+## Building a portable AppImage (Linux)
+
+For lab Linux machines that don't have Python set up, or for handing the
+app to a collaborator without making them run the install script, build
+a single-file AppImage:
+
+```bash
+chmod +x install/build_appimage.sh
+./install/build_appimage.sh
+```
+
+Output: `dist/PhenoFusion3D-<version>-x86_64.AppImage` (~600-800 MB --
+Open3D and PyQt5 are heavy).
+
+The script:
+
+- Uses [`python-appimage`](https://github.com/niess/python-appimage) to
+  pull a manylinux Python interpreter (default 3.11; override with
+  `PY_VERSION=3.10 ./install/build_appimage.sh`).
+- Stages a clean copy of the repo (excluding `venv/`, `data/`, `.git/`,
+  captured datasets, etc.) so the bundle stays small.
+- `pip install`s the project + runtime deps from
+  [install/appimage/requirements.txt](install/appimage/requirements.txt)
+  into the AppDir.
+- Wraps it with the launcher in
+  [install/appimage/entrypoint.sh](install/appimage/entrypoint.sh),
+  which clears any host Qt env vars and conditionally exposes
+  `/opt/ros/<distro>/lib/python3/dist-packages` so the ROS capture
+  backend keeps working when the AppImage runs on the lab Linux box.
+- Produces a self-contained, single-file executable.
+
+### Build host requirements
+
+- Linux x86_64 (AppImage is glibc-only; cannot be built on Windows or macOS).
+- Python 3.10+ on PATH (for running `python-appimage` itself; the
+  bundled runtime is independent).
+- `rsync`.
+- Internet access on first build.
+
+### Running the AppImage
+
+```bash
+chmod +x PhenoFusion3D-0.2.0-x86_64.AppImage
+./PhenoFusion3D-0.2.0-x86_64.AppImage
+```
+
+If the target machine lacks FUSE 2 (some minimal containers /
+hardened distros), use the extract-and-run mode:
+
+```bash
+./PhenoFusion3D-0.2.0-x86_64.AppImage --appimage-extract-and-run
+```
+
+### Capture backends inside the AppImage
+
+The AppImage intentionally does **not** bundle `rospy` or
+`pyrealsense2`:
+
+- `rospy` requires a matching ROS distribution on the host; the
+  entrypoint adds `/opt/ros/<distro>/lib/python3/dist-packages` to
+  `PYTHONPATH` automatically when present (looks for `noetic`,
+  `humble`, `jazzy`).
+- `pyrealsense2` needs the `librealsense2` userspace SDK + udev rules
+  installed on the host. Install it system-wide once
+  (`sudo apt install librealsense2-utils python3-pyrealsense2`) and
+  the entrypoint will pick it up via the same ROS dist-packages path
+  on lab machines, or via the host site-packages on dev machines.
+
+For dev-only / no-camera use the AppImage works out of the box --
+loading existing RGB-D folders and reconstructing them needs none of
+the above.
+
 ## Common issues
 
 - **`rospy` import fails on Linux**
@@ -103,3 +175,13 @@ realsense-viewer
 - **`pyrealsense2` not found**
   - On Linux x86_64 / Windows, `pip install pyrealsense2` should just
     work. On ARM Linux you need to build librealsense from source.
+- **AppImage build fails with `python-appimage: command not found`**
+  - The build script installs `python-appimage` into a private build
+    venv at `build/appimage/venv/`. Delete that directory and rerun
+    `./install/build_appimage.sh` to recreate it cleanly.
+- **AppImage launches but crashes with `qt.qpa.plugin: Could not load
+  the Qt platform plugin "xcb"`**
+  - The host is missing X11 client libs. Install them with
+    `sudo apt install libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0`
+    (Ubuntu / Debian). This is a host requirement, not a build bug --
+    PyQt5 wheels assume xcb is present.
