@@ -9,8 +9,8 @@ topics, velocity command, and intrinsics save logic are kept identical
 to the working stakeholder script -- we only:
 
   - wrap them in a class so the QThread worker can drive them
-  - import rospy / pyrealsense2 lazily so this module is importable on
-    Windows (where ROS is unavailable)
+  - import rospy / pyrealsense2 / cv2 lazily so this module is importable on
+    Windows (where ROS is unavailable) without OpenCV until the ROS backend runs
   - parameterise velocity / end position / FPS / serial number
   - write to our standard output layout
         <out>/rgb/<idx>.png, <out>/depth/<idx>.png
@@ -29,7 +29,6 @@ import json
 import os
 from typing import Callable
 
-import cv2
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
@@ -73,6 +72,15 @@ class RosCapture(CaptureBackend):
                 "pyrealsense2 is not installed. Install with "
                 "'pip install pyrealsense2'."
             ) from e
+        try:
+            import cv2
+        except ImportError as e:
+            raise RuntimeError(
+                "opencv-python is required for the ROS capture backend. "
+                "Install with 'pip install opencv-python' or "
+                "'opencv-python-headless'."
+            ) from e
+        self._cv2 = cv2
 
         # ------------------ RealSense pipeline (mirrors stakeholder) -------
         pipeline = rs.pipeline()
@@ -170,8 +178,8 @@ class RosCapture(CaptureBackend):
         depth_img = np.asanyarray(depth_frame.get_data())
         color_img = np.asanyarray(color_frame.get_data())
 
-        cv2.imwrite(os.path.join(self.out_dir, "rgb",   f"{idx}.png"), color_img)
-        cv2.imwrite(os.path.join(self.out_dir, "depth", f"{idx}.png"), depth_img)
+        self._cv2.imwrite(os.path.join(self.out_dir, "rgb",   f"{idx}.png"), color_img)
+        self._cv2.imwrite(os.path.join(self.out_dir, "depth", f"{idx}.png"), depth_img)
 
     def _save_intrinsics(self, profile, rs) -> None:
         for stream_kind, fname in (

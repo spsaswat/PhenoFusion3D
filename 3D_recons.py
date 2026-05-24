@@ -1,143 +1,212 @@
-import torch
-np_loc = 0
-if torch.cuda.is_available():
-    print("GPU is available.")
-    import cupy as np
-    np_loc = 1
-else:
-    print("GPU is not available, using numpy instead.")
-    import numpy as np
+"""
+Simple RGB-D point cloud reconstruction entry point.
+
+This keeps the stakeholder script's `merge_one_cam(...)` idea, but makes it
+runnable from this repository on either:
+  - data/main/<dataset>/rgb/*.png + data/main/<dataset>/depth/*.png
+  - data/main/<dataset>/rgb_*.png + data/main/<dataset>/depth_*.png
+  - data/main/<dataset>/camera_<id>/...
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
 
 import cv2
-import os
 import open3d as o3d
-import json
-import glob
-from tqdm import tqdm
-from natsort import natsorted
-import utils
-import copy
-import time
+
+from file_io.loader import get_default_intrinsics, load_image_pairs, load_intrinsics
+from processing.reconstructor import Reconstructor
+from processing.registration_agent import AgentConfig
+from processing.utils import clean_pcd
 
 
-"""
-This script performs 3D point cloud model reconstruction directly on RGBD images.
-"""
-def merge_one_cam(record_path, cam_id, step_size):
-    try:
-        print("Start merging cam {} images".format(cam_id))
-        if os.path.exists(os.path.join(record_path, "camera_{}".format(cam_id))):
-            record_path = os.path.join(record_path, "camera_{}".format(cam_id))
-        save_path = os.path.join(record_path, 'merge')
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
-        pose_save_path = os.path.join(record_path,'pose')
-        if not os.path.exists(pose_save_path):
-            os.mkdir(pose_save_path)
-
-        intrinsic_folder = record_path
-
-        with open(os.path.join(intrinsic_folder, 'kdc_intrinsics.txt'), 'r') as infile:
-            intrinsics_dict = json.load(infile)
-            print('HI')
-
-        K = np.array(intrinsics_dict['K'])
-        dist = np.array(intrinsics_dict['dist'])
-        print(len(os.listdir(record_path)))
-        color_img_files = natsorted(glob.glob(os.path.join(record_path, 'rgb_*.png')))
-        print(len(color_img_files))
-        depth_img_files = natsorted(glob.glob(os.path.join(record_path, 'depth_*.png')))
-        print(len(depth_img_files))
-        num_imgs = len(list(color_img_files))
-        ds_imgs = int(num_imgs / step_size)
-        target = o3d.geometry.PointCloud()
-        succeed_list = []
-        fail_list = []
-
-        # Get image list
-        last_transform = np.eye(4)
-        cam_T = np.eye(4)
-
-    #     if cam_id == 0:
-    #         bbox = [620, 0, 660, 720]
-    #         # bound box for camera position tuned after 05/04
-    #         bound_max = [307.70884356862109, 133.03577728238881, 756.01158625186258]
-    #         bound_min = [-69.869545476958933, -1512.3899056200662, 379.23399044357382]
-
-    #     else:
-    #         bbox = [550, 0, 700, 720]
-    #         # bbox for camera position tuned after 11/03
-    #         # bbox = [0, 0, 650, 720]
-    #         bound_max = [354.69967180042113, 1573.2051127945665, 729.25]
-    #         bound_min = [8.5977648813832737, -16.218270431675947, 372.11855887099176]
-
-    #     bbox_crop = o3d.geometry.AxisAlignedBoundingBox(max_bound=bound_max, min_bound=bound_min)
-
-        # TODO: comment off this line
-        bbox = None
-        for i in range(ds_imgs):
-            # Get color and depth, and undistort them
-            color_name = color_img_files[i * step_size]
-            depth_name = depth_img_files[i * step_size]
-            color = cv2.imread(color_name)
-            color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
-            depth = cv2.imread(depth_name, -1)
-            source = utils.rgbd2pcd(color, depth, K, bbox=bbox)
-
-            if np_loc == 1:
-                source = source.transform(np.asnumpy(cam_T))
-            else:
-                source = source.transform(cam_T)
+def _resolve_record_path(record_path: str | Path, cam_id: str | int | None) -> Path:
+    """Return camera_<id> when present, otherwise the given dataset path."""
+    path = Path(record_path).resolve()
+    if cam_id not in (None, ""):
+        camera_path = path / f"camera_{cam_id}"
+        if camera_path.exists():
+            return camera_path
+    return path
 
 
-            # o3d.visualization.draw_geometries([source])
-            source = utils.clean_pcd(source)
-
-            # Check if the point cloud has color data before performing ICP
-            # if not source.is_empty():
-            #     print(f"Skipping iteration {i} due to missing color data in the point cloud.")
-            #     continue
-
-            if i == 0:
-                target = source
-                succeed_list.append([0, 0, 0])
-                reference_pcd = copy.deepcopy(target)
-                continue
-            # o3d.visualization.draw_geometries([target])
+def _resolve_rgb_depth_dirs(record_path: Path) -> tuple[Path, Path]:
+    """Support both folder and flat stakeholder file layouts."""
+    rgb_dir = record_path / "rgb"
+    depth_dir = record_path / "depth"
+    if rgb_dir.is_dir() and depth_dir.is_dir():
+        return rgb_dir, depth_dir
+    return record_path, record_path
 
 
+def _load_intrinsics_for_dataset(record_path: Path, first_rgb_path: str):
+    """Load kdc_intrinsics.txt, or fall back to image-size based defaults."""
+    intrinsics = load_intrinsics(str(record_path / "kdc_intrinsics.txt"))
+    if intrinsics:
+        K, dist, _, _ = intrinsics
+        return K, dist
 
-            _, transformation, fitness, inlier_rmse = utils.color_icp(source, target)
-            if fitness > 0 or i<3:
-                succeed_list.append([0, i * step_size, fitness, inlier_rmse])
-                last_transform = np.dot(last_transform, transformation)
-                np.savetxt(os.path.join(pose_save_path, '%d_%s_pose.txt' % (i * step_size, cam_id)), last_transform)
-                target = source
-                reference_pcd += copy.deepcopy(source).transform(last_transform)
-                # print("[Frame: %4d/%4d] fitness: %f, rmse: %f" % (i * step_size, num_imgs, fitness, inlier_rmse))
-                o3d.io.write_point_cloud(os.path.join(save_path, 'merge_pcd_cam{}.ply'.format(cam_id)), reference_pcd)
-            else:
-                fail_list.append([0, i * step_size])
-                # print("[Frame: %4d/%4d] icp failed! " % (i * step_size, num_imgs))
-        # reference_pcd = reference_pcd.crop(bbox_crop)
-        o3d.io.write_point_cloud(os.path.join(save_path, 'merge_pcd_cam{}.ply'.format(cam_id)), reference_pcd)
-    except KeyboardInterrupt:
-        o3d.io.write_point_cloud('./emergency_save.ply', reference_pcd)
-        raise  # re-raise the exception to halt execution
+    first_img = cv2.imread(first_rgb_path)
+    if first_img is None:
+        raise RuntimeError(f"Could not read first RGB frame: {first_rgb_path}")
 
+    height, width = first_img.shape[:2]
+    return get_default_intrinsics(width=width, height=height)
+
+
+def merge_one_cam(
+    record_path: str | Path,
+    cam_id: str | int | None = "",
+    step_size: int = 2,
+    *,
+    output_dir: str | Path | None = None,
+    max_frames: int | None = None,
+    depth_min_mm: int = 500,
+    depth_trunc: float = 4.0,
+    voxel_size: float = 0.01,
+    max_iter: int = 80,
+    min_fitness: float = 0.0,
+    max_rmse: float = 0.05,
+    gantry_step_m: float = 0.0,
+    gantry_axis: int = 0,
+    use_tsdf: bool = False,
+    tsdf_voxel_m: float = 0.005,
+) -> Path:
+    """Run a simple single-camera reconstruction and return the output PLY path."""
+    record_path = _resolve_record_path(record_path, cam_id)
+    if not record_path.exists():
+        raise FileNotFoundError(f"Dataset folder does not exist: {record_path}")
+
+    rgb_dir, depth_dir = _resolve_rgb_depth_dirs(record_path)
+    pairs = load_image_pairs(str(rgb_dir), str(depth_dir), step=max(1, int(step_size)))
+    if max_frames is not None and max_frames > 0:
+        pairs = pairs[:max_frames]
+
+    if not pairs:
+        raise RuntimeError(f"No RGB-D pairs found in {record_path}")
+
+    K, dist = _load_intrinsics_for_dataset(record_path, pairs[0][0])
+
+    save_path = Path(output_dir).resolve() if output_dir else record_path / "merge"
+    save_path.mkdir(parents=True, exist_ok=True)
+    ply_path = save_path / f"merge_pcd_cam{cam_id or 0}.ply"
+    summary_path = save_path / "reconstruction_summary.json"
+
+    print(f"[3D_recons] Dataset: {record_path}")
+    print(f"[3D_recons] RGB dir:  {rgb_dir}")
+    print(f"[3D_recons] Depth dir:{depth_dir}")
+    print(f"[3D_recons] Frames:   {len(pairs)} (step={step_size})")
+    print(f"[3D_recons] Output:   {ply_path}")
+
+    def on_frame(idx, total, _pcd, fitness, rmse, status):
+        print(
+            f"[3D_recons] Frame {idx + 1:4d}/{total} | "
+            f"{status:9s} | fitness={fitness:.4f} | rmse={rmse:.4f}"
+        )
+
+    if use_tsdf:
+        print("[3D_recons] --tsdf is deprecated for now; using stakeholder ICP.")
+
+    agent_config = AgentConfig(
+        floor_min_fitness=0.0,
+        floor_max_rmse=999.0,
+        enable_feature_init=False,
+    )
+
+    reconstructor = Reconstructor(
+        pairs=pairs,
+        K=K,
+        # Stakeholder path loaded distortion but did not apply it in rgbd2pcd.
+        dist=None,
+        depth_scale=1000.0,
+        depth_trunc=float(depth_trunc),
+        voxel_size=float(voxel_size),
+        max_iter=int(max_iter),
+        gantry_step_m=0.0,
+        gantry_axis=0,
+        depth_min_mm=int(depth_min_mm),
+        erode=False,
+        inpaint=False,
+        use_known_poses=False,
+        tsdf_voxel_m=float(tsdf_voxel_m),
+        min_fitness=float(min_fitness),
+        max_rmse=float(max_rmse),
+        save_path=str(save_path),
+        agent_config=agent_config,
+        on_frame=on_frame,
+    )
+
+    final_pcd, succeed, fail = reconstructor.run()
+    if final_pcd is None or final_pcd.is_empty():
+        raise RuntimeError("Reconstruction produced an empty point cloud.")
+
+    o3d.io.write_point_cloud(str(ply_path), final_pcd)
+
+    summary = {
+        "dataset": str(record_path),
+        "rgb_dir": str(rgb_dir),
+        "depth_dir": str(depth_dir),
+        "output_ply": str(ply_path),
+        "frames_used": len(pairs),
+        "succeeded": len(succeed),
+        "failed": len(fail),
+        "points": len(final_pcd.points),
+        "step_size": step_size,
+        "depth_min_mm": depth_min_mm,
+        "depth_trunc_m": depth_trunc,
+        "voxel_size_m": voxel_size,
+        "use_tsdf": False,
+        "pipeline": "stakeholder_icp",
+    }
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+
+    print(f"[3D_recons] Done. Points: {len(final_pcd.points):,}")
+    print(f"[3D_recons] Summary: {summary_path}")
+    return ply_path
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run simple point cloud reconstruction on one RGB-D dataset."
+    )
+    parser.add_argument("dataset", help="Dataset folder, e.g. data/main/test_plant_...")
+    parser.add_argument("--camera-id", default="", help="Optional camera_<id> subfolder.")
+    parser.add_argument("--step", type=int, default=2, help="Use every Nth frame.")
+    parser.add_argument("--max-frames", type=int, default=30, help="Limit frames for a quick run; 0 = all frames.")
+    parser.add_argument("--output", default=None, help="Output folder. Default: <dataset>/merge")
+    parser.add_argument("--depth-min-mm", type=int, default=500, help="Ignore depth below this many mm.")
+    parser.add_argument("--depth-trunc", type=float, default=4.0, help="Ignore depth beyond this many metres.")
+    parser.add_argument("--voxel-size", type=float, default=0.01, help="ICP/final downsample voxel size in metres.")
+    parser.add_argument("--max-iter", type=int, default=80, help="ICP iterations per frame.")
+    parser.add_argument("--min-fitness", type=float, default=0.0, help="ICP acceptance floor.")
+    parser.add_argument("--max-rmse", type=float, default=0.05, help="ICP acceptance ceiling in metres.")
+    parser.add_argument("--gantry-step-m", type=float, default=0.0, help="Known motion per sampled frame, if available.")
+    parser.add_argument("--gantry-axis", type=int, default=0, choices=(0, 1, 2), help="Axis for gantry-step-m.")
+    parser.add_argument("--tsdf", action="store_true", help="Use known-pose TSDF instead of ICP.")
+    parser.add_argument("--tsdf-voxel-m", type=float, default=0.005, help="TSDF voxel size in metres.")
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    # List of folder names
-    # folders = ['test_plant_rs13_1', 'test_plant_rs13_2', 'test_plant_rs13_3', 'test_plant_rs13_4']
-
-    # Directory path
-    directory_path = '/home/ubuntu/CSIRO_APPF_Hyperspec/RS_py/data/rs_data_6'
-    folders = os.listdir(directory_path)
-    # Loop over each folder name
-    for folder in folders:
-        # Construct the full path for each folder using os.path.join
-        full_path = os.path.join(directory_path, folder)
-        
-        # Call the function
-        merge_one_cam(full_path, '', 2)
+    args = _parse_args()
+    max_frames = None if args.max_frames == 0 else args.max_frames
+    merge_one_cam(
+        args.dataset,
+        args.camera_id,
+        args.step,
+        output_dir=args.output,
+        max_frames=max_frames,
+        depth_min_mm=args.depth_min_mm,
+        depth_trunc=args.depth_trunc,
+        voxel_size=args.voxel_size,
+        max_iter=args.max_iter,
+        min_fitness=args.min_fitness,
+        max_rmse=args.max_rmse,
+        gantry_step_m=args.gantry_step_m,
+        gantry_axis=args.gantry_axis,
+        use_tsdf=args.tsdf,
+        tsdf_voxel_m=args.tsdf_voxel_m,
+    )

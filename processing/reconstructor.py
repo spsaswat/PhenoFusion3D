@@ -130,20 +130,21 @@ class Reconstructor:
 
     def run(self):
         """
-        Main entry point. Dispatches to the appropriate mode.
+        Main entry point.
+
+        Stakeholder-compatible mode is currently the only active
+        reconstruction path. TSDF/agent-based reconstruction is intentionally
+        bypassed until it can match the validated stakeholder output.
         Call this from QThread.run() or directly from a test script.
         """
         self._stop_flag   = False
         self.succeed_list = []
         self.fail_list    = []
         self.reference_pcd = o3d.geometry.PointCloud()
-        # Fresh agent state per run so successive runs don't share history.
-        self.agent = RegistrationAgent(self.agent_config)
 
         if self.use_known_poses:
-            return self._run_known_pose_tsdf()
-        else:
-            return self._run_icp()
+            print('[reconstructor] TSDF requested but deprecated; using stakeholder ICP.')
+        return self._run_icp()
 
     # ------------------------------------------------------------------
     # Mode A: Known-pose TSDF integration
@@ -297,19 +298,14 @@ class Reconstructor:
 
     def _run_icp(self):
         """
-        Sequential ICP registration (original approach, fixed):
-        - Uses clean_pcd_for_registration (no voxel downsample) before ICP
-        - Voxel downsampling applied only to the final merged cloud
-        - gantry_step_m seeds the ICP initial transform (per-pair, pre-multiplied)
+        Sequential frame-to-frame colour ICP matching the stakeholder pipeline:
+        - identity initialization
+        - no agent veto/retry/fallback
+        - accept fitness > 0 (plus first few frames)
         """
         total          = len(self.pairs)
         last_transform = np.eye(4)
         target         = None
-        # `stable_target` is the most recently accepted source cloud. When the
-        # agent flags persistent rejects via should_fallback_reference(), we
-        # register the next frame against this stable anchor instead of the
-        # (likely also bad) most-recent cloud.
-        stable_target  = None
 
         print(f'[reconstructor] ICP mode: {total} frames')
 
@@ -363,9 +359,7 @@ class Reconstructor:
             # First frame: set as reference and target
             if i == 0:
                 target = source
-                stable_target = source
                 self.reference_pcd = copy.deepcopy(source)
-                self.agent.record_accept(1.0, 0.0, np.eye(4))
                 self.succeed_list.append({'frame': i, 'fitness': 1.0, 'rmse': 0.0,
                                           'recovered_via': None,
                                           'recovery_attempts': 0})
@@ -373,117 +367,51 @@ class Reconstructor:
                 self._save_intermediate()
                 continue
 
-            # Choose target: stable anchor if the chain has degraded.
-            use_stable = self.agent.should_fallback_reference() and stable_target is not None
-            active_target = stable_target if use_stable else target
-
-            # Initial ICP registration against the active target.
-            init_tf = np.eye(4)
-            if self.gantry_step_m != 0.0:
-                init_tf[self.gantry_axis, 3] = self.gantry_step_m
-
             try:
                 _, transformation, fitness, rmse = color_icp(
-                    source, active_target,
+                    source, target,
                     max_iter=self.max_iter,
                     voxel_size=self.voxel_size,
-                    init=init_tf,
                 )
             except Exception as e:
                 print(f'[reconstructor] Frame {i} ICP failed: {e}')
                 self.fail_list.append({'frame': i, 'reason': f'ICP error: {e}',
                                        'recovery_attempts': 0,
                                        'last_strategy': None})
-                self.agent.record_reject()
                 self._fire_on_frame(i, total, self.reference_pcd, 0.0, 0.0, 'FAILED')
                 continue
 
-            # Agent decision loop: accept / retry-with-recovery / reject.
-            attempt = 0
-            last_strategy = None
-            decision = self.agent.judge(
-                fitness, rmse, transformation,
-                expected_step_m=self.gantry_step_m,
-                gantry_axis=self.gantry_axis,
-                attempt=attempt,
-            )
-
-            while decision.action == 'retry':
-                strategy = decision.next_strategy
-                last_strategy = strategy
-                try:
-                    src2, tgt2, init2, kw, use_p2p = apply_strategy(
-                        strategy, source, active_target, init_tf,
-                        voxel_size=self.voxel_size,
-                        expected_step_m=self.gantry_step_m,
-                        gantry_axis=self.gantry_axis,
-                        max_iter=self.max_iter,
-                    )
-                    if use_p2p:
-                        _, transformation, fitness, rmse = point_to_plane_icp(
-                            src2, tgt2, init=init2, **kw,
-                        )
-                    else:
-                        _, transformation, fitness, rmse = color_icp(
-                            src2, tgt2, init=init2, **kw,
-                        )
-                except Exception as e:
-                    print(f'[reconstructor] Frame {i} recovery {strategy!r} '
-                          f'failed: {e}')
-                    fitness, rmse = 0.0, float('inf')
-
-                attempt += 1
-                decision = self.agent.judge(
-                    fitness, rmse, transformation,
-                    expected_step_m=self.gantry_step_m,
-                    gantry_axis=self.gantry_axis,
-                    attempt=attempt,
-                )
-
-            if decision.action == 'accept':
-                # When registering against the stable anchor we must NOT chain
-                # `last_transform` through the (skipped) intermediate frames.
-                # Re-anchor: treat this transform as the new pose w.r.t. the
-                # stable target's own pose (which is the last accepted
-                # last_transform value -- a no-op here since stable_target was
-                # the source the last time we accepted, so its world pose IS
-                # last_transform). So the formula stays the same.
+            if fitness > 0.0 or i < 3:
                 last_transform = np.dot(last_transform, transformation)
                 frame_pcd = copy.deepcopy(source)
                 frame_pcd.transform(last_transform)
                 self.reference_pcd += frame_pcd
                 target = source
-                stable_target = source
 
-                self.agent.record_accept(fitness, rmse, transformation)
-                status = 'RECOVERED' if attempt > 0 else 'OK'
+                status = 'OK'
                 self.succeed_list.append({
                     'frame': i, 'fitness': fitness, 'rmse': rmse,
-                    'recovered_via': last_strategy,
-                    'recovery_attempts': attempt,
+                    'recovered_via': None,
+                    'recovery_attempts': 0,
                 })
                 self._fire_on_frame(i, total, self.reference_pcd,
                                     fitness, rmse, status)
                 self._save_intermediate()
 
-                tag = f' via {last_strategy!r}' if attempt > 0 else ''
                 print(f'[reconstructor] Frame {i:4d}/{total} | '
                       f'fitness={fitness:.4f} | rmse={rmse:.4f} | '
-                      f'{status}{tag}')
+                      f'{status}')
             else:
-                self.agent.record_reject()
                 self.fail_list.append({
-                    'frame': i, 'reason': decision.reason,
+                    'frame': i, 'reason': 'fitness=0',
                     'fitness': fitness, 'rmse': rmse,
-                    'recovery_attempts': attempt,
-                    'last_strategy': last_strategy,
+                    'recovery_attempts': 0,
+                    'last_strategy': None,
                 })
                 self._fire_on_frame(i, total, self.reference_pcd,
                                     fitness, rmse, 'REJECTED')
-                anchor = ' [stable-anchor]' if use_stable else ''
                 print(f'[reconstructor] Frame {i:4d}/{total} | '
-                      f'REJECTED ({decision.reason}) '
-                      f'after {attempt} recovery attempt(s){anchor}')
+                      f'REJECTED (fitness=0)')
 
         print(f'[reconstructor] ICP complete. '
               f'Success={len(self.succeed_list)} Fail={len(self.fail_list)}')

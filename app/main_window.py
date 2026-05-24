@@ -12,6 +12,7 @@ from app.panels.log_panel     import LogPanel
 from app.panels.capture_panel import CapturePanel
 from app.panels.quality_panel import QualityPanel
 from app.panels.gantry_panel  import GantryPanel
+from app.panels.postprocess_panel import PostProcessPanel
 from app.controller           import Controller
 
 
@@ -58,6 +59,7 @@ class MainWindow(QMainWindow):
         )
         self.data_panel    = DataPanel()
         self.quality_panel = QualityPanel()
+        self.postprocess_panel = PostProcessPanel()
 
         # Stack into a scroll area so the left pane stays usable on small screens
         inner = QWidget()
@@ -68,6 +70,7 @@ class MainWindow(QMainWindow):
         inner_layout.addWidget(self.gantry_panel)
         inner_layout.addWidget(self.data_panel)
         inner_layout.addWidget(self.quality_panel)
+        inner_layout.addWidget(self.postprocess_panel)
         inner_layout.addStretch()
 
         scroll = QScrollArea()
@@ -173,6 +176,14 @@ class MainWindow(QMainWindow):
         self.controller.quality_ready.connect(self.quality_panel.show_report)
         self.controller.quality_error.connect(self.quality_panel.on_error)
 
+        # Post-processing panel -> controller -> post-processing panel
+        self.postprocess_panel.clean_requested.connect(self.controller.on_clean_ply_requested)
+        self.postprocess_panel.segment_requested.connect(self.controller.on_segment_requested)
+        self.postprocess_panel.traits_requested.connect(self.controller.on_traits_requested)
+        self.postprocess_panel.pipeline_requested.connect(self.controller.on_pipeline_requested)
+        self.controller.postprocess_ready.connect(self.postprocess_panel.on_postprocess_done)
+        self.controller.postprocess_error.connect(self.postprocess_panel.on_postprocess_error)
+
         # Controller -> UI updates
         self.controller.status_changed.connect(self.status.showMessage)
         self.controller.frame_processed.connect(self._on_frame)
@@ -231,9 +242,14 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(object, list, list)
     def _on_complete(self, final_pcd, succeed, fail):
+        import os
+
         self.action_export_ply.setEnabled(True)
         self.action_export_csv.setEnabled(True)
         self.data_panel.set_running(False)
+        recon_ply = os.path.join(os.path.dirname(self.data_panel.rgb_edit.text()), 'output', 'merge_pcd_live.ply')
+        if os.path.exists(recon_ply):
+            self.postprocess_panel.ply_edit.setText(recon_ply)
 
     @pyqtSlot(str)
     def _on_error(self, msg):

@@ -2,49 +2,41 @@ import numpy as np
 import open3d as o3d
 
 
-def clean_pcd(pcd, nb_neighbors=30, std_ratio=1.5, voxel_size=0.005):
+def clean_pcd(pcd, nb_neighbors=10, std_ratio=0.4, voxel_size=0.005):
     """
-    Downsample and remove statistical outliers from a point cloud.
-    Used for the final merged output only -- NOT before ICP registration.
+    Stakeholder-compatible point cloud cleanup.
+
+    The original notebook cleans without voxel downsampling:
+        remove_statistical_outlier(nb_neighbors=10, std_ratio=0.4)
+        remove_radius_outlier(nb_points=20, radius=3)
+
+    Our Open3D point clouds are in metres and have wider neighbour spacing
+    than the stakeholder's mm-scale helper output. A strict 0.003 m radius
+    deletes entire valid frames, so 0.03 m preserves surfaces while removing
+    isolated flying pixels.
+    `voxel_size` is accepted for backwards compatibility but intentionally
+    unused in stakeholder mode.
     Returns cleaned PointCloud. Handles empty input gracefully.
     """
     if pcd is None or pcd.is_empty():
         print('[utils] WARNING: clean_pcd received empty point cloud, skipping.')
         return pcd
 
-    # Voxel downsample first - reduces density and speeds up display/export
-    pcd = pcd.voxel_down_sample(voxel_size)
-
-    # Remove statistical outliers
     pcd, _ = pcd.remove_statistical_outlier(
         nb_neighbors=nb_neighbors,
         std_ratio=std_ratio
     )
+    pcd, _ = pcd.remove_radius_outlier(nb_points=20, radius=0.03)
     return pcd
 
 
-def clean_pcd_for_registration(pcd, nb_neighbors=10, std_ratio=0.4):
+def clean_pcd_for_registration(pcd):
     """
     Outlier removal WITHOUT voxel downsampling -- for use before ICP.
 
-    Voxel downsampling before ICP kills sub-voxel displacement signal.
-    The stakeholder's clean_pcd only does outlier removal (no downsample),
-    which is why their pipeline worked on this data.
-
-    nb_neighbors / std_ratio are intentionally more permissive than the
-    output clean_pcd so we keep as many points as possible for ICP.
+    Alias of stakeholder cleanup used before each ICP step.
     """
-    if pcd is None or pcd.is_empty():
-        return pcd
-
-    # Statistical outlier removal (matches stakeholder notebook params)
-    pcd, _ = pcd.remove_statistical_outlier(
-        nb_neighbors=nb_neighbors,
-        std_ratio=std_ratio,
-    )
-    # Radius outlier removal catches isolated flying pixels the stat filter misses
-    pcd, _ = pcd.remove_radius_outlier(nb_points=20, radius=0.05)
-    return pcd
+    return clean_pcd(pcd)
 
 
 def estimate_normals(pcd, radius=0.01, max_nn=30):

@@ -6,6 +6,7 @@ from file_io.exporter import save_ply, save_metrics_csv
 from app.worker       import ProcessingWorker
 from app.capture_worker import CaptureWorker
 from app.quality_worker import QualityWorker
+from app.postprocess_worker import PostProcessWorker
 from capture          import CaptureParams
 from capture.gantry   import GantryController
 from processing.quality import QualityParams, QualityThresholds
@@ -33,6 +34,8 @@ class Controller(QObject):
     quality_progress = pyqtSignal(int, int)
     quality_ready    = pyqtSignal(object)
     quality_error    = pyqtSignal(str)
+    postprocess_ready = pyqtSignal(str, object)
+    postprocess_error = pyqtSignal(str)
 
     # Capture lifecycle (panel needs this to disable jog during capture).
     capture_started  = pyqtSignal()
@@ -42,6 +45,7 @@ class Controller(QObject):
         self.worker          = None
         self.capture_worker  = None
         self.quality_worker  = None
+        self.postprocess_worker = None
         self.viewer          = PointCloudViewer()
         self.final_pcd       = None
         self.all_metrics     = []
@@ -86,23 +90,23 @@ class Controller(QObject):
         is_icl = 'icl' in rgb_dir.lower()
 
         depth_scale = 5000.0 if is_icl else 1000.0
-        depth_trunc = 4.0    if is_icl else 3.5    # gantry scene at ~2.82 m
-        voxel_size  = 0.02   if is_icl else 0.005
+        depth_trunc = 4.0
+        voxel_size  = 0.02 if is_icl else 0.01
 
-        max_iter     = 30    if is_icl else 80
-        bbox         = None  if is_icl else None
-        erode        = True  if is_icl else False
-        inpaint      = True  if is_icl else False
-        depth_min_mm = 0     if is_icl else 0
+        max_iter     = 30 if is_icl else 80
+        bbox         = None
+        erode        = False
+        inpaint      = False
+        depth_min_mm = 0
 
-        use_known_poses = False if is_icl else True
+        # Stakeholder pipeline only: RGBD -> clean_pcd -> frame-to-frame ICP.
+        use_known_poses = False
         gantry_axis     = 0
-        per_frame_step  = 0.0 if is_icl else 0.00127
-        gantry_step_m   = per_frame_step * step_size
+        gantry_step_m   = 0.0
         tsdf_voxel_m    = 0.005   # matches D405 noise floor (~5 mm RMSE) at 2.8 m
 
         self.worker = ProcessingWorker(
-            pairs=pairs, K=K, dist=dist,
+            pairs=pairs, K=K, dist=None,
             depth_scale=depth_scale,
             depth_trunc=depth_trunc,
             voxel_size=voxel_size,
@@ -274,6 +278,51 @@ class Controller(QObject):
     def _on_quality_error(self, msg):
         self.status_changed.emit(f'Quality error: {msg}')
         self.quality_error.emit(msg)
+
+    # ---------------------------------------------------------- postprocess
+    @pyqtSlot(str, str)
+    def on_clean_ply_requested(self, input_ply: str, output_dir: str):
+        self.status_changed.emit('Cleaning point cloud...')
+        self.postprocess_worker = PostProcessWorker('clean', input_ply, output_dir)
+        self.postprocess_worker.done.connect(self._on_postprocess_done)
+        self.postprocess_worker.error.connect(self._on_postprocess_error)
+        self.postprocess_worker.start()
+
+    @pyqtSlot(str, str, int)
+    def on_segment_requested(self, input_ply: str, output_dir: str, expected_plants: int):
+        self.status_changed.emit(f'Segmenting {expected_plants} plant(s)...')
+        self.postprocess_worker = PostProcessWorker('segment', input_ply, output_dir, expected_plants)
+        self.postprocess_worker.done.connect(self._on_postprocess_done)
+        self.postprocess_worker.error.connect(self._on_postprocess_error)
+        self.postprocess_worker.start()
+
+    @pyqtSlot(str, str)
+    def on_traits_requested(self, input_ply: str, output_dir: str):
+        self.status_changed.emit('Extracting plant traits...')
+        self.postprocess_worker = PostProcessWorker('traits', input_ply, output_dir)
+        self.postprocess_worker.done.connect(self._on_postprocess_done)
+        self.postprocess_worker.error.connect(self._on_postprocess_error)
+        self.postprocess_worker.start()
+
+    @pyqtSlot(str, str, int)
+    def on_pipeline_requested(self, input_ply: str, dataset_dir: str, expected_plants: int):
+        self.status_changed.emit('Running cleanup, segmentation, and per-plant trait extraction...')
+        self.postprocess_worker = PostProcessWorker('pipeline', input_ply, dataset_dir, expected_plants)
+        self.postprocess_worker.done.connect(self._on_postprocess_done)
+        self.postprocess_worker.error.connect(self._on_postprocess_error)
+        self.postprocess_worker.start()
+
+    @pyqtSlot(str, object)
+    def _on_postprocess_done(self, mode: str, result):
+        self.status_changed.emit(f'Post-processing complete: {mode}')
+        self.postprocess_ready.emit(mode, result)
+        self.postprocess_worker = None
+
+    @pyqtSlot(str)
+    def _on_postprocess_error(self, msg: str):
+        self.status_changed.emit(f'Post-processing error: {msg}')
+        self.postprocess_error.emit(msg)
+        self.postprocess_worker = None
 
     # ---------------------------------------------------------------- gantry
     @pyqtSlot(float)
