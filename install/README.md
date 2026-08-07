@@ -27,6 +27,32 @@ backend.
 - Python 3.10+ from python.org or Microsoft Store
 - [Intel RealSense SDK 2.0 runtime](https://github.com/IntelRealSense/librealsense/releases) (only required if you actually want to plug a camera in)
 
+#### L515 (LiDAR Camera) owners: extra steps
+
+Intel discontinued the L515 in August 2021 and dropped its enumeration
+from librealsense in releases >= 2.55. The default `pyrealsense2` wheel
+on PyPI is now too new to see an L515; `rs.context().query_devices()`
+returns 0 devices even when Windows clearly sees the camera.
+
+To use an L515 with PhenoFusion3D:
+
+1. **Use Python 3.10 or 3.11** (not 3.12+). The L515-compatible
+   `pyrealsense2==2.54.2.5684` wheel is only built up to Python 3.11.
+2. **Install Intel RealSense SDK 2.0 v2.54.2** for Windows from
+   [the librealsense releases page](https://github.com/IntelRealSense/librealsense/releases/tag/v2.54.2).
+   This also gives you `Intel RealSense Viewer` for sanity-testing the
+   camera independent of Python.
+3. **Install the L515 extras** instead of plain `windows`:
+
+    ```powershell
+    py -3.11 -m venv venv
+    .\venv\Scripts\Activate.ps1
+    pip install -e ".[windows,l515]"
+    ```
+
+   This pins `pyrealsense2>=2.54.0,<2.55`, which keeps L515 enumeration
+   working. D400 / D500 series users do not need this extras group.
+
 ## Install
 
 ### Linux
@@ -39,10 +65,24 @@ chmod +x install/install_linux.sh
 ```
 
 The script:
-- creates `venv/` with `--system-site-packages` so it can see the
+- picks a Python >= 3.10 interpreter (prefers `python3.12`, then `3.11`,
+  then `3.10`, then `python3`); if none is available it apt-installs
+  `python3.10` (using the `deadsnakes` PPA as a fallback on Ubuntu 20.04),
+- creates `.venv-linux/` with `--system-site-packages` so it can see the
   ROS-installed `rospy`,
 - installs the package in editable mode with `pip install -e ".[ros]"`,
+- detects missing native runtime libs by `ldd`-ing the Qt xcb platform
+  plugin and apt-installs them in a single sudo call (the most common
+  fresh-Ubuntu offenders are `libxcb-icccm4`, `libxcb-keysyms1`,
+  `libxcb-cursor0`, `libxkbcommon-x11-0`, `libegl1`, `libgl1`),
 - imports each dependency to confirm the install is working.
+
+The same Python-picking and native-lib install logic is duplicated in
+`launch.sh`, so on a fresh lab machine **just `bash launch.sh` is
+enough** -- it will create the venv, install Python deps, install
+missing system libs, and open the GUI in one shot. `install_linux.sh`
+exists primarily as the "ROS-first" path that sysadmins prefer to run
+once before any user touches the box.
 
 ### Windows
 
@@ -62,13 +102,18 @@ The script:
 
 ```bash
 # Linux
-source venv/bin/activate
-python main.py
+bash launch.sh
+
+# (manual alternative)
+# source .venv-linux/bin/activate
+# python main.py
 
 # Windows
 .\venv\Scripts\Activate.ps1
 python main.py
 ```
+
+`launch.sh` is the recommended Linux/WSL path for day-to-day usage. It uses a dedicated Linux environment (`.venv-linux`), installs missing Python packages, and applies a PyQt plugin-path fix to avoid common Qt `xcb` startup failures.
 
 ## Smoke test the camera
 
@@ -175,13 +220,30 @@ the above.
 - **`pyrealsense2` not found**
   - On Linux x86_64 / Windows, `pip install pyrealsense2` should just
     work. On ARM Linux you need to build librealsense from source.
+- **L515 plugged in but capture says "No Intel RealSense camera was found"**
+  - Symptom: Windows Device Manager shows the L515 healthy, but
+    `rs.context().query_devices()` returns 0. Cause: `pyrealsense2 >= 2.55`
+    dropped L515 support after Intel EOL'd the camera. Fix: use Python
+    3.10 / 3.11 and install with `pip install -e ".[windows,l515]"`
+    (see the L515 section above). On startup, `main.py` runs a self-check
+    that surfaces this diagnosis as a modal dialog before you click Capture.
 - **AppImage build fails with `python-appimage: command not found`**
   - The build script installs `python-appimage` into a private build
     venv at `build/appimage/venv/`. Delete that directory and rerun
     `./install/build_appimage.sh` to recreate it cleanly.
 - **AppImage launches but crashes with `qt.qpa.plugin: Could not load
   the Qt platform plugin "xcb"`**
-  - The host is missing X11 client libs. Install them with
-    `sudo apt install libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0`
-    (Ubuntu / Debian). This is a host requirement, not a build bug --
-    PyQt5 wheels assume xcb is present.
+  - The host is missing X11 client libs. The dev install path
+    (`bash launch.sh` / `./install/install_linux.sh`) auto-detects and
+    apt-installs them; for the AppImage you need to install them
+    manually on the host. The full set commonly required on a fresh
+    Ubuntu is:
+    ```bash
+    sudo apt install libxcb-icccm4 libxcb-keysyms1 libxcb-image0 \
+        libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 \
+        libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 \
+        libxcb-randr0 libxcb-cursor0 libxkbcommon0 libxkbcommon-x11-0 \
+        libegl1 libgl1
+    ```
+    This is a host requirement, not a build bug -- PyQt5 wheels assume
+    xcb is present.
