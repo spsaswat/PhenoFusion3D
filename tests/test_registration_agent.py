@@ -136,6 +136,46 @@ def test_accept_resets_consecutive_rejects():
     assert not agent.should_fallback_reference()
 
 
+def test_stable_reference_fallback_resets_after_recovered_accept():
+    cfg = AgentConfig(fallback_after_rejects=2)
+    agent = RegistrationAgent(cfg)
+    agent.record_reject()
+    agent.record_reject()
+    assert agent.should_fallback_reference()
+
+    d = agent.judge(0.9, 0.003, _T(tx=0.001), expected_step_m=0.001)
+    assert d.action == 'accept'
+    agent.record_accept(0.9, 0.003, _T(tx=0.001))
+    assert agent.consecutive_rejects == 0
+    assert not agent.should_fallback_reference()
+
+
+# --------------------------------------------------------------- TSDF gate
+
+def test_tsdf_depth_gate_rejects_empty_frame():
+    cfg = AgentConfig(min_depth_validity=0.10, min_tsdf_points=500)
+    agent = RegistrationAgent(cfg)
+    d = agent.judge_tsdf_frame(0.0, 0)
+    assert d.action == 'reject'
+    assert 'no valid depth' in d.reason
+
+
+def test_tsdf_depth_gate_warns_borderline_frame():
+    cfg = AgentConfig(min_depth_validity=0.10, warn_depth_validity=0.25,
+                      min_tsdf_points=500)
+    agent = RegistrationAgent(cfg)
+    d = agent.judge_tsdf_frame(0.18, 1000)
+    assert d.action == 'warn'
+
+
+def test_tsdf_depth_gate_accepts_good_frame():
+    cfg = AgentConfig(min_depth_validity=0.10, warn_depth_validity=0.25,
+                      min_tsdf_points=500)
+    agent = RegistrationAgent(cfg)
+    d = agent.judge_tsdf_frame(0.35, 5000)
+    assert d.action == 'accept'
+
+
 # ---------------------------------------------------------- recovery list
 
 def test_feature_init_disabled_by_default():

@@ -33,4 +33,19 @@ Thumbs.db
 .env
 
 notes.txt
-.cursor
+.cursor.venv/
+.venv-linux/
+venv/
+data/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+.venv-linux/
+venv/
+data/
+dist/
+build/
+__pycache__/
+*.pyc
