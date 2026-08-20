@@ -1,0 +1,33 @@
+# Guarantees "git clone -> ./setup.sh -> runnable" stays true.
+#
+# Runs setup.sh on a completely bare Ubuntu 20.04 container (same target as
+# the lab VMs) on every push/PR, and monthly on a schedule so breakage caused
+# by ecosystem drift (PyPI releases, apt repo changes, PPA EOL) is caught
+# even when nobody is committing.
+name: fresh-install
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 3 * *" # monthly drift check
+  workflow_dispatch:
+
+jobs:
+  ubuntu-2004:
+    runs-on: ubuntu-latest
+    container: ubuntu:20.04
+    timeout-minutes: 60
+    steps:
+      # The bare container has no git/curl/certs yet; checkout needs them.
+      - name: Bootstrap bare container
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            git ca-certificates curl
+      - uses: actions/checkout@v4
+      - name: Run setup.sh (fresh install + built-in verification)
+        run: ./setup.sh
+      - name: Re-run verification explicitly
+        run: ./setup.sh --verify-only

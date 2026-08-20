@@ -20,7 +20,9 @@ matplotlib>=3.8.0
 # Omit this line only if you will never use in-app capture and only load
 # RGB-D folders from disk. Not available as a prebuilt wheel on all ARM
 # platforms -- use system librealsense + docs in that case.
-pyrealsense2>=2.54.0
+# MUST stay on 2.54.x: the only SDK series supporting all project cameras
+# (L515 support removed in 2.55+; D435/D405 fully supported in 2.54).
+pyrealsense2>=2.54.0,<2.55
 
 # --- Developer tooling (optional) ---
 # pip install -e ".[dev]"   or uncomment:

@@ -16,8 +16,9 @@
 # Usage:
 #   chmod +x setup.sh
 #   ./setup.sh                    # base install (GUI + reconstruction, no camera)
-#   ./setup.sh --with-realsense   # + Intel librealsense2 SDK + pyrealsense2
-#   ./setup.sh --l515             # + L515-compatible pyrealsense2 (<2.55, implies --with-realsense)
+#   ./setup.sh --with-realsense   # + Intel librealsense2 SDK + pyrealsense2 2.54.x
+#                                 #   (supports all project cameras: L515, D435, D405)
+#   ./setup.sh --l515             # deprecated alias for --with-realsense
 #   ./setup.sh --with-ros         # + ROS Noetic base (ROS 1 for focal) for the gantry backend
 #   ./setup.sh --verify-only      # run only the verification step
 #
@@ -53,6 +54,52 @@ err()  { printf '\033[1;31m[setup] ERROR:\033[0m %s\n' "$*" >&2; }
 # hang a fresh install waiting for interactive input.
 SUDO="sudo DEBIAN_FRONTEND=noninteractive"
 [ "$(id -u)" -eq 0 ] && SUDO=""
+
+# Running the whole script via `sudo ./setup.sh` creates a venv owned by
+# root with Python under /root/.local -- unusable by the real user. Run it
+# as the normal user; the script calls sudo itself for the apt steps.
+# Block only when a real, named non-root user would be sabotaged. CI
+# containers run as root with a workspace owned by a UID that has no passwd
+# entry in the container ("UNKNOWN") -- that is fine, as is a root-only box.
+REPO_OWNER="$(stat -c '%U' . 2>/dev/null || echo root)"
+owner_is_real_user() {
+    [ "$REPO_OWNER" != "root" ] && id -u "$REPO_OWNER" >/dev/null 2>&1
+}
+if [ "$(id -u)" -eq 0 ] && [ -z "${CI:-}" ] \
+        && { { [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; } || owner_is_real_user; }; then
+    RUN_AS="${SUDO_USER:-$REPO_OWNER}"
+    err "Do not run this script as root: the venv it creates would be unusable"
+    err "by the repo's owner ($REPO_OWNER). Run it as $RUN_AS instead:"
+    err "    ./setup.sh $*"
+    err "(it will ask for the sudo password only for the apt steps)"
+    exit 1
+fi
+
+# Not everyone can sudo (lab machines, users not in sudoers). Check once up
+# front: if sudo is unusable, skip ALL apt steps instead of prompting for a
+# password over and over. The venv/pip steps never need root; the system
+# libraries must then already be present (verification will tell).
+HAVE_SUDO=true
+if [ "$(id -u)" -ne 0 ]; then
+    if ! command -v sudo >/dev/null 2>&1 || ! sudo -v; then
+        HAVE_SUDO=false
+        warn "sudo is not available for $(id -un); skipping all apt/system steps."
+        warn "If verification fails on missing system libraries, ask an admin to"
+        warn "run the apt portions (or add $(id -un) to sudoers) and re-run."
+    fi
+fi
+
+# On a fresh VM, unattended-upgrades often holds the dpkg lock for many
+# minutes right after boot. Wait for the lock (up to 10 min) instead of
+# failing with "Could not get lock /var/lib/dpkg/lock-frontend".
+apt_get() {
+    if [ "$HAVE_SUDO" = false ]; then
+        warn "(no sudo) skipping: apt-get $*"
+        return 0
+    fi
+    # shellcheck disable=SC2086
+    $SUDO apt-get -o DPkg::Lock::Timeout=600 "$@"
+}
 
 IS_WSL=false
 grep -qi microsoft /proc/version 2>/dev/null && IS_WSL=true
@@ -144,10 +191,10 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 log "Updating apt package lists (sudo required)..."
-$SUDO apt-get update -y || warn "apt update reported errors; continuing with cached lists."
+apt_get update -y || warn "apt update reported errors; continuing with cached lists."
 
 log "Installing base tools..."
-$SUDO apt-get install -y --no-install-recommends \
+apt_get install -y --no-install-recommends \
     software-properties-common ca-certificates curl gnupg lsb-release git \
     || warn "Some base tools failed to install; continuing."
 
@@ -188,7 +235,7 @@ apt_try_python() {
     pkgs=("python$v" "python$v-venv" "python$v-dev")
     apt_provides "python$v-distutils" && pkgs+=("python$v-distutils")  # gone in 3.12+
     log "Installing ${pkgs[*]} via apt..."
-    $SUDO apt-get install -y --no-install-recommends "${pkgs[@]}" || return 1
+    apt_get install -y --no-install-recommends "${pkgs[@]}" || return 1
     command -v "python$v" >/dev/null 2>&1 && python_ok "$(command -v "python$v")"
 }
 
@@ -211,9 +258,9 @@ if PYTHON_BIN="$(pick_python)"; then
     log "Using existing interpreter: $PYTHON_BIN ($("$PYTHON_BIN" -V 2>&1))"
 else
     log "No usable Python 3.10-3.12 on PATH. Trying apt (deadsnakes PPA)..."
-    if ! apt_provides python3.11 && ! apt_provides python3.10; then
+    if [ "$HAVE_SUDO" = true ] && ! apt_provides python3.11 && ! apt_provides python3.10; then
         $SUDO add-apt-repository -y ppa:deadsnakes/ppa || warn "Could not add deadsnakes PPA."
-        $SUDO apt-get update -y || true
+        apt_get update -y || true
     fi
     for v in 3.11 3.10 3.12; do
         apt_try_python "$v" && break || true
@@ -230,7 +277,7 @@ else
 fi
 
 # Compilers: only needed if pip has to build a package from source.
-$SUDO apt-get install -y --no-install-recommends build-essential \
+apt_get install -y --no-install-recommends build-essential \
     || warn "build-essential unavailable; fine as long as all wheels are prebuilt."
 
 ###############################################################################
@@ -248,10 +295,10 @@ QT_LIBS=(
     libglib2.0-0 libusb-1.0-0
 )
 log "Installing Qt/X11/OpenGL runtime libraries..."
-if ! $SUDO apt-get install -y --no-install-recommends "${QT_LIBS[@]}"; then
+if ! apt_get install -y --no-install-recommends "${QT_LIBS[@]}"; then
     warn "Batch install failed; retrying packages one by one..."
     for p in "${QT_LIBS[@]}"; do
-        $SUDO apt-get install -y --no-install-recommends "$p" \
+        apt_get install -y --no-install-recommends "$p" \
             || warn "Could not install $p (verification will show if it matters)."
     done
 fi
@@ -261,14 +308,16 @@ fi
 ###############################################################################
 
 if [ "$WITH_REALSENSE" = true ]; then
-    if [ ! -f /etc/apt/sources.list.d/librealsense.list ]; then
+    if [ "$HAVE_SUDO" = false ]; then
+        warn "(no sudo) skipping librealsense2 system SDK; pyrealsense2 pip wheel (bundles librealsense) is still installed below."
+    elif [ ! -f /etc/apt/sources.list.d/librealsense.list ]; then
         log "Adding Intel librealsense apt repo (focal is supported)..."
         $SUDO mkdir -p /etc/apt/keyrings
         curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp \
             | $SUDO tee /etc/apt/keyrings/librealsense.pgp >/dev/null
         echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" \
             | $SUDO tee /etc/apt/sources.list.d/librealsense.list >/dev/null
-        $SUDO apt-get update -y
+        apt_get update -y
     fi
     RS_PKGS=(librealsense2-utils librealsense2-dev)
     if [ "$IS_WSL" = true ]; then
@@ -276,7 +325,7 @@ if [ "$WITH_REALSENSE" = true ]; then
     else
         RS_PKGS+=(librealsense2-dkms)
     fi
-    $SUDO apt-get install -y --no-install-recommends "${RS_PKGS[@]}" \
+    apt_get install -y --no-install-recommends "${RS_PKGS[@]}" \
         || warn "librealsense2 install failed; camera capture will not work until fixed."
 fi
 
@@ -285,15 +334,17 @@ fi
 ###############################################################################
 
 if [ "$WITH_ROS" = true ]; then
-    if [ ! -f /etc/apt/sources.list.d/ros-latest.list ]; then
+    if [ "$HAVE_SUDO" = false ]; then
+        warn "(no sudo) skipping ROS Noetic install; the ROS backend needs an admin to install it."
+    elif [ ! -f /etc/apt/sources.list.d/ros-latest.list ]; then
         log "Adding ROS Noetic apt repo..."
         echo "deb http://packages.ros.org/ros/ubuntu focal main" \
             | $SUDO tee /etc/apt/sources.list.d/ros-latest.list >/dev/null
         curl -sSf https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
             | $SUDO apt-key add -
-        $SUDO apt-get update -y
+        apt_get update -y
     fi
-    $SUDO apt-get install -y --no-install-recommends ros-noetic-ros-base \
+    apt_get install -y --no-install-recommends ros-noetic-ros-base \
         || warn "ROS Noetic install failed (it reached EOL May 2025; mirrors may have moved)."
     log "Remember to 'source /opt/ros/noetic/setup.bash' BEFORE re-running this script so the venv inherits rospy."
 fi
@@ -323,12 +374,32 @@ python -m pip install --upgrade pip setuptools wheel
 # 7. Project + Python dependencies
 ###############################################################################
 
-if [ -f pyproject.toml ] || [ -f setup.py ]; then
-    log "Installing project in editable mode..."
+# Known-good version pins (constraints.txt): reproduce the tested dependency
+# set instead of whatever is newest on PyPI. Constraints never add packages,
+# only pin versions. If the pins don't resolve on this Python/platform, fall
+# back to an unconstrained install rather than failing.
+CONSTRAINTS=()
+[ -f constraints.txt ] && CONSTRAINTS=(-c constraints.txt)
+
+pip_install_project() {
     if [ "$WITH_ROS" = true ]; then
-        python -m pip install -e ".[ros]"
+        python -m pip install "$@" -e ".[ros]"
     else
-        python -m pip install -e "."
+        python -m pip install "$@" -e "."
+    fi
+}
+
+if [ -f pyproject.toml ] || [ -f setup.py ]; then
+    if [ ${#CONSTRAINTS[@]} -gt 0 ]; then
+        log "Installing project in editable mode (pinned via constraints.txt)..."
+        if ! pip_install_project "${CONSTRAINTS[@]}"; then
+            warn "Pinned install failed on this Python/platform; retrying without version pins..."
+            CONSTRAINTS=()
+            pip_install_project
+        fi
+    else
+        log "Installing project in editable mode..."
+        pip_install_project
     fi
 elif [ -f install/appimage/requirements.txt ]; then
     warn "No pyproject.toml/setup.py at $ROOT_DIR -- project source appears incomplete."
@@ -346,17 +417,16 @@ fi
 if python -m pip show opencv-python >/dev/null 2>&1; then
     log "Replacing opencv-python with opencv-python-headless (PyQt5/cv2 Qt conflict fix)..."
     python -m pip uninstall -y opencv-python
-    python -m pip install opencv-python-headless
+    python -m pip install "${CONSTRAINTS[@]}" opencv-python-headless \
+        || python -m pip install opencv-python-headless
 fi
 
 if [ "$WITH_REALSENSE" = true ]; then
-    if [ "$L515" = true ]; then
-        log "Installing L515-compatible pyrealsense2 (<2.55)..."
-        python -m pip install "pyrealsense2>=2.54.0,<2.55"
-    else
-        log "Installing pyrealsense2..."
-        python -m pip install pyrealsense2
-    fi
+    # 2.54.x is the one series that supports ALL project cameras:
+    # L515 support was removed in SDK 2.55+, while D435 and D405 are fully
+    # supported in 2.54. Never install a newer pyrealsense2.
+    log "Installing pyrealsense2 2.54.x (supports L515 + D435 + D405)..."
+    python -m pip install "pyrealsense2>=2.54.0,<2.55"
 fi
 
 ###############################################################################

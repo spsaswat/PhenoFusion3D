@@ -1,0 +1,94 @@
+================================================================
+PhenoFusion3D -- Command cheat sheet (fresh Linux machine + fixes)
+Last updated: 2026-08-20
+================================================================
+
+----------------------------------------------------------------
+1. FRESH MACHINE SETUP (Ubuntu 20.04)
+----------------------------------------------------------------
+Run everything as your NORMAL user. Never run setup.sh as root or
+with sudo -- it asks for the sudo password itself when needed.
+
+    git clone https://github.com/PhenoFusion-3D/PhenoFusion3D.git
+    cd PhenoFusion3D
+    ./setup.sh --with-realsense     # camera capture (L515 / D435 / D405)
+    # ./setup.sh                    # no-camera machine (GUI + reconstruction only)
+    # ./setup.sh --with-ros         # lab gantry machine only (adds ROS Noetic)
+
+Setup ends with "VERIFICATION PASSED" when everything works.
+
+----------------------------------------------------------------
+2. RUN THE APP
+----------------------------------------------------------------
+    cd PhenoFusion3D
+    source .venv-linux/bin/activate
+    python main.py
+
+(On the current VM the venv is ~/.venv-phenofusion instead:
+    ~/.venv-phenofusion/bin/python main.py    or    ~/launch_phenofusion.sh)
+
+----------------------------------------------------------------
+3. HEALTH CHECKS
+----------------------------------------------------------------
+Re-verify an existing install:
+    ./setup.sh --verify-only
+
+Is the camera visible to the OS?
+    lsusb | grep -i intel                # expect e.g. 8086:0b64 (L515)
+
+Is the camera visible to the RealSense SDK?
+    python -c "import pyrealsense2 as rs; [print(d.get_info(rs.camera_info.name), '| usb', d.get_info(rs.camera_info.usb_type_descriptor)) for d in rs.context().query_devices()]"
+    # 'usb 3.2' = good. 'usb 2.1' = low-res depth, NO color -- fix the port/controller.
+
+----------------------------------------------------------------
+4. VIRTUALBOX VM NOTES (camera)
+----------------------------------------------------------------
+- Host: install the VirtualBox Extension Pack (needed for USB 3).
+- VM Settings -> USB -> USB 3.0 (xHCI) Controller (VM powered off).
+- Attach camera: Devices -> USB -> Intel RealSense ... (per boot),
+  or add a permanent USB filter: VM Settings -> USB -> Add filter.
+- Run the app from the desktop terminal (GUI needs the display).
+
+----------------------------------------------------------------
+5. TROUBLESHOOTING (problems we actually hit, with fixes)
+----------------------------------------------------------------
+"Could not get lock /var/lib/dpkg/lock-frontend"
+    Ubuntu's auto-updater is running. Just wait (setup.sh now waits
+    up to 10 min automatically). To see who holds the lock:
+        sudo fuser -v /var/lib/dpkg/lock-frontend
+
+"vboxuser is not in the sudoers file"
+    As root:   usermod -aG sudo vboxuser
+    then log out and back in. (setup.sh also works without sudo if
+    the system libraries are already installed -- it skips apt.)
+
+Camera detected by lsusb but NOT by the SDK / app says no camera
+    Wrong pyrealsense2 version. Must be 2.54.x (L515 support was
+    removed in 2.55+; 2.54 also covers D435/D405):
+        pip install "pyrealsense2>=2.54.0,<2.55"
+    Then RESTART the app -- a running app keeps the old SDK loaded.
+
+App crashes: 'Could not load the Qt platform plugin "xcb"'
+    (a) missing system lib:    sudo apt install libxcb-xinerama0
+    (b) opencv-python's bundled Qt hijacks PyQt5 -- use headless:
+        pip uninstall -y opencv-python && pip install opencv-python-headless
+
+"Permission denied" on data/captures, .venv-linux, repo files
+    Something was run as root and left root-owned files. As root:
+        chown -R vboxuser:vboxuser /home/vboxuser/COMP3500/PhenoFusion3D
+    (Replace user/path to match the machine. A root-created
+    .venv-linux is unusable -- delete it and re-run setup.sh as
+    the normal user:  rm -rf .venv-linux )
+
+Color stream missing / depth stuck at 320x240
+    Camera is on USB 2. Move to a USB 3 port; in VirtualBox enable
+    the xHCI controller and reattach (see section 4).
+
+----------------------------------------------------------------
+6. GOLDEN RULES
+----------------------------------------------------------------
+- Never run setup.sh, the app, or pip as root.
+- Never upgrade pyrealsense2 past 2.54.x.
+- After changing the SDK or venv, restart the app.
+- constraints.txt holds the known-good versions; setup.sh applies
+  them automatically. Update it only after verifying the app runs.

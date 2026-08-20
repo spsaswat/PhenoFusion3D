@@ -9,6 +9,31 @@ Python tools for **RGB-D–based 3D reconstruction**: turn paired colour and dep
 
 ## Getting started
 
+### Ubuntu 20.04 — one command (recommended)
+
+A fresh clone is set up end-to-end by the bundled script: it installs the system
+libraries (Qt/X11/OpenGL), a suitable Python, the virtual environment, and all
+Python dependencies pinned to a known-good set (`constraints.txt`), then
+verifies everything imports and runs:
+
+```bash
+git clone https://github.com/PhenoFusion-3D/PhenoFusion3D.git
+cd PhenoFusion3D
+./setup.sh                    # GUI + reconstruction (no camera)
+# ./setup.sh --with-realsense # + camera capture (L515 / D435 / D405)
+# ./setup.sh --with-ros       # + ROS Noetic for the gantry backend
+source .venv-linux/bin/activate
+python main.py
+```
+
+Re-running the script is safe (every step is idempotent), and
+`./setup.sh --verify-only` re-checks an existing install. CI runs the full
+script on a bare Ubuntu 20.04 container on every push
+([.github/workflows/fresh-install.yml](.github/workflows/fresh-install.yml)),
+so a green build means a fresh clone is installable.
+
+### Other platforms
+
 For lab and dev installs (preferred), use the bundled installers — see [install/README.md](install/README.md):
 
 - **Lab Linux + ROS:** `./install/install_linux.sh`

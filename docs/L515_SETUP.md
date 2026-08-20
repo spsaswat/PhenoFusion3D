@@ -33,8 +33,7 @@ itself tells you which trap you hit. The most common ones are below.
 
 Intel discontinued the L515 in **August 2021**. The L515 enumeration
 code path was dropped from `librealsense` in releases **>= 2.55**. The
-default `pyrealsense2` wheel pulled by `pip install pyrealsense2` (and
-by `requirements.txt`'s `pyrealsense2>=2.54.0` with no upper bound) is
+default `pyrealsense2` wheel pulled by a bare `pip install pyrealsense2` is
 now `2.57.7` or newer, which **physically cannot see an L515** even
 when Windows itself has the camera fully enumerated and healthy on the
 USB bus. The error surfaced by the app is:
@@ -54,6 +53,13 @@ directly from this and shape everything below:
    pyrealsense2 install inside WSL can see an L515 plugged into the
    Windows host (regardless of SDK version). The L515 is a Windows
    device for the purposes of this project.
+
+> **Update (2026-08-20):** the project now pins `pyrealsense2>=2.54.0,<2.55`
+> **everywhere** (`pyproject.toml` extras, `requirements.txt`,
+> `constraints.txt`, `setup.sh`), not just for L515 owners. 2.54.x is the
+> only SDK series that supports **all** project cameras — L515, D435, and
+> D405 — so there is no reason to ever install a newer wheel. The historical
+> notes below describe the original L515-only fix.
 
 ---
 

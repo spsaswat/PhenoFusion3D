@@ -12,7 +12,7 @@ pytest>=7.4.0
 ruff>=0.4.0
 
 [ros]
-pyrealsense2>=2.54.0
+pyrealsense2<2.55,>=2.54.0
 
 [windows]
-pyrealsense2>=2.54.0
+pyrealsense2<2.55,>=2.54.0
