@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import time
 
 import pytest
 
@@ -80,3 +81,43 @@ def test_shutdown_is_idempotent(qapp):
     gc = GantryController()
     gc.shutdown()
     gc.shutdown()                               # second call must not raise
+
+
+def test_master_unreachable_fails_fast_without_blocking(qapp, monkeypatch):
+    """Regression test for the lab-rig freeze: with a pip-installed
+    rospy shim present but no roscore running, the first gantry command
+    used to run rospy.init_node() on the Qt main thread, which retries
+    master registration forever -> whole app unresponsive.
+
+    Now the command must return immediately, the failure must surface
+    through `error` with a message naming the master, and the failure
+    must be retryable (no app restart needed once roscore is started)."""
+    import capture.gantry as gantry_mod
+
+    monkeypatch.setattr(gantry_mod, '_ros_importable', lambda: True)
+    monkeypatch.setattr(
+        gantry_mod, 'ros_master_reachable',
+        lambda timeout_s=1.5: (False, 'http://localhost:11311 (refused)'),
+    )
+
+    gc = GantryController()
+    errors: list[str] = []
+    gc.error.connect(errors.append)
+
+    t0 = time.monotonic()
+    gc.start_jog(0.05)
+    # The click handler must never block the GUI thread.
+    assert time.monotonic() - t0 < 0.5
+
+    # Wait for the background init attempt to finish and report.
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        with gc._init_lock:
+            thread_done = gc._init_thread is None
+        if thread_done and any('not reachable' in e for e in errors):
+            break
+        time.sleep(0.05)
+
+    assert any('not reachable' in e for e in errors), errors
+    assert gc.is_available() is True      # importable + retryable
+    assert gc._init_attempted is False    # next click retries init

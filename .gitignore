@@ -49,3 +49,4 @@ dist/
 build/
 __pycache__/
 *.pyc
+phenofusion3d.log*

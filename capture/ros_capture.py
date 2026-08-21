@@ -110,6 +110,15 @@ class RosCapture(CaptureBackend):
                 pipeline.wait_for_frames()
 
             # ------------------ ROS init -----------------------------------
+            # Fail fast if roscore is down: rospy.init_node would retry
+            # registration forever and hang the capture worker.
+            from capture.gantry import ros_master_reachable
+            reachable, detail = ros_master_reachable()
+            if not reachable:
+                raise RuntimeError(
+                    f"ROS master not reachable at {detail}. Start roscore "
+                    "(and 'source /opt/ros/noetic/setup.bash') before capturing."
+                )
             try:
                 rospy.init_node("phenofusion_capture", anonymous=True, disable_signals=True)
             except rospy.exceptions.ROSException:
