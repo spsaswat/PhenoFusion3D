@@ -15,10 +15,13 @@
 #
 # Usage:
 #   chmod +x setup.sh
-#   ./setup.sh                    # base install (GUI + reconstruction, no camera)
-#   ./setup.sh --with-realsense   # + Intel librealsense2 SDK + pyrealsense2
-#   ./setup.sh --l515             # + L515-compatible pyrealsense2 (<2.55, implies --with-realsense)
-#   ./setup.sh --with-ros         # + ROS Noetic base (ROS 1 for focal) for the gantry backend
+#   ./setup.sh                    # FULL lab-rig setup: GUI + reconstruction
+#                                 # + Intel RealSense camera SDK + ROS Noetic
+#                                 # gantry backend (~/.bashrc ROS sourcing,
+#                                 # pip-shim rospy cleanup included)
+#   ./setup.sh --l515             # use the L515-compatible pyrealsense2 (<2.55)
+#   ./setup.sh --no-realsense     # skip the camera SDK (dev box)
+#   ./setup.sh --no-ros           # skip ROS / gantry backend (dev box)
 #   ./setup.sh --verify-only      # run only the verification step
 #
 # sudo: required for the apt steps only. Run as a normal user; the script
@@ -30,15 +33,18 @@ cd "$(dirname "$0")"
 ROOT_DIR="$(pwd)"
 VENV_DIR="${PHENOFUSION_LINUX_VENV:-.venv-linux}"
 
-WITH_REALSENSE=false
-WITH_ROS=false
+# Camera + ROS gantry are set up by default; opt out on dev boxes.
+WITH_REALSENSE=true
+WITH_ROS=true
 L515=false
 VERIFY_ONLY=false
 for arg in "$@"; do
     case "$arg" in
-        --with-realsense) WITH_REALSENSE=true ;;
+        --no-realsense)   WITH_REALSENSE=false ;;
+        --no-ros)         WITH_ROS=false ;;
         --l515)           L515=true; WITH_REALSENSE=true ;;
-        --with-ros)       WITH_ROS=true ;;
+        # Older invocations -- now the default, accepted as no-ops.
+        --with-realsense|--with-ros|--lab-rig) ;;
         --verify-only)    VERIFY_ONLY=true ;;
         *) echo "Unknown option: $arg" >&2; exit 2 ;;
     esac
@@ -75,6 +81,14 @@ verify() {
         err "venv not found at $VENV_DIR. Run ./setup.sh first."
         return 1
     fi
+    # Verify under the same environment the app should run in: with ROS
+    # sourced when it is installed (rospy reaches Python via PYTHONPATH).
+    if [ -f /opt/ros/noetic/setup.bash ]; then
+        set +u
+        # shellcheck disable=SC1091
+        source /opt/ros/noetic/setup.bash
+        set -u
+    fi
     local rc=0
     "$VENV_DIR/bin/python" - <<'PY' || rc=$?
 import importlib, sys, os
@@ -91,12 +105,44 @@ for mod in required:
         print(f"  FAIL  {mod}: {e}")
 
 # Optional capture backends -- warn only.
-for mod in ("pyrealsense2", "rospy"):
+try:
+    import pyrealsense2 as rs
     try:
-        importlib.import_module(mod)
-        print(f"  OK    {mod} (capture backend available)")
+        devs = [d.get_info(rs.camera_info.name) for d in rs.context().devices]
     except Exception:
-        print(f"  --    {mod} not available (capture backend disabled; fine for dev/no-camera use)")
+        devs = []
+    if devs:
+        print(f"  OK    pyrealsense2 (camera(s) detected: {', '.join(devs)})")
+    else:
+        print("  OK    pyrealsense2 (no camera connected right now -- plug in to capture)")
+except Exception:
+    print("  --    pyrealsense2 not available (camera capture disabled; fine for dev use)")
+
+try:
+    import rospy
+    origin = getattr(rospy, "__file__", "?")
+    if "/opt/ros/" in origin:
+        print(f"  OK    rospy (real ROS install: {origin})")
+    else:
+        print(f"  WARN  rospy imported from {origin}")
+        print("        -> this is the unofficial PyPI shim, not ROS. Run:")
+        print("           .venv-linux/bin/pip uninstall -y rospy rosgraph roslib rosmaster")
+        print("           and 'source /opt/ros/noetic/setup.bash' instead.")
+except Exception:
+    print("  --    rospy not available (gantry backend disabled; fine for dev use)")
+    if os.path.exists("/opt/ros/noetic/setup.bash"):
+        print("        -> ROS IS installed; 'source /opt/ros/noetic/setup.bash' to enable it.")
+
+# Informational: is a ROS master up right now? (Gantry needs roscore.)
+import socket
+from urllib.parse import urlparse
+uri = os.environ.get("ROS_MASTER_URI", "http://localhost:11311")
+p = urlparse(uri)
+try:
+    with socket.create_connection((p.hostname or "localhost", p.port or 11311), timeout=1.0):
+        print(f"  OK    ROS master reachable at {uri}")
+except OSError:
+    print(f"  --    no ROS master at {uri} (start 'roscore' before using the gantry)")
 
 # Smoke tests: Qt event loop + Open3D geometry, both headless.
 try:
@@ -295,7 +341,30 @@ if [ "$WITH_ROS" = true ]; then
     fi
     $SUDO apt-get install -y --no-install-recommends ros-noetic-ros-base \
         || warn "ROS Noetic install failed (it reached EOL May 2025; mirrors may have moved)."
-    log "Remember to 'source /opt/ros/noetic/setup.bash' BEFORE re-running this script so the venv inherits rospy."
+
+    ROS_SETUP=/opt/ros/noetic/setup.bash
+    if [ -f "$ROS_SETUP" ]; then
+        # Source ROS for the remainder of THIS run so the venv and the
+        # verification step see the real rospy. ROS setup scripts touch
+        # unset variables, so relax nounset around the source.
+        log "Sourcing $ROS_SETUP for this run..."
+        set +u
+        # shellcheck disable=SC1090
+        source "$ROS_SETUP"
+        set -u
+
+        # Persist for every future shell: launching the app without ROS
+        # sourced is what produces 'No module named rospy' at runtime.
+        if [ -w "$HOME/.bashrc" ] || [ ! -e "$HOME/.bashrc" ]; then
+            if ! grep -qF "$ROS_SETUP" "$HOME/.bashrc" 2>/dev/null; then
+                log "Adding 'source $ROS_SETUP' to ~/.bashrc (needed by the gantry backend in every shell)..."
+                printf '\n# PhenoFusion3D: expose rospy to every shell (gantry backend)\nsource %s\n' \
+                    "$ROS_SETUP" >> "$HOME/.bashrc"
+            fi
+        fi
+    else
+        warn "$ROS_SETUP not found -- ROS install did not complete; gantry backend will stay offline."
+    fi
 fi
 
 ###############################################################################
@@ -347,6 +416,23 @@ if python -m pip show opencv-python >/dev/null 2>&1; then
     log "Replacing opencv-python with opencv-python-headless (PyQt5/cv2 Qt conflict fix)..."
     python -m pip uninstall -y opencv-python
     python -m pip install opencv-python-headless
+fi
+
+# The PyPI 'rospy' package is an unofficial shim, NOT a ROS install. If it
+# ever lands in the venv (someone runs 'pip install rospy' to silence a
+# missing-module error) it shadows real ROS detection and used to freeze
+# the gantry panel. Real rospy lives under /opt/ros and reaches the app
+# via PYTHONPATH, so anything in the venv's own site-packages is a shim.
+VENV_SITE="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+SHIM_FOUND=""
+for pkg in rospy rosgraph roslib rosmaster; do
+    [ -d "$VENV_SITE/$pkg" ] && SHIM_FOUND="$SHIM_FOUND $pkg"
+done
+if [ -n "$SHIM_FOUND" ]; then
+    warn "Removing pip-installed ROS shim packages from the venv:$SHIM_FOUND"
+    warn "(real rospy comes from apt ROS + 'source /opt/ros/noetic/setup.bash', never from pip)"
+    # shellcheck disable=SC2086
+    python -m pip uninstall -y $SHIM_FOUND || true
 fi
 
 if [ "$WITH_REALSENSE" = true ]; then
