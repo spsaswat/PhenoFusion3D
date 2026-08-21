@@ -297,7 +297,21 @@ class GantryController(QObject):
             from sensor_msgs.msg import JointState
         except Exception as e:
             log.exception("importing rospy / core msgs failed")
-            return False, False, f"ROS core msgs unavailable: {e}"
+            hint = ""
+            # /opt/ros rospy found via PYTHONPATH, but its pure-Python
+            # deps were apt-installed for the SYSTEM python (3.8) and are
+            # invisible to this venv's newer interpreter. Those deps ARE
+            # official PyPI packages (unlike 'rospy' itself), so pip is
+            # the right fix here.
+            if (isinstance(e, ModuleNotFoundError) and e.name in
+                    ("rospkg", "catkin_pkg", "yaml", "defusedxml",
+                     "netifaces", "gnupg", "empy")):
+                hint = (
+                    " -- rospy's Python deps are missing from the venv. Run: "
+                    "pip install rospkg catkin_pkg PyYAML defusedxml netifaces "
+                    "(then click again; no restart needed)."
+                )
+            return False, True, f"ROS core msgs unavailable: {e}{hint}"
 
         rospy_path = getattr(rospy, "__file__", "?")
         log.info("rospy imported from: %s", rospy_path)

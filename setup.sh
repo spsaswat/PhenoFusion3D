@@ -435,6 +435,20 @@ if [ -n "$SHIM_FOUND" ]; then
     python -m pip uninstall -y $SHIM_FOUND || true
 fi
 
+# rospy's pure-Python deps (rospkg & friends) are apt-installed for the
+# SYSTEM Python 3.8 only, so the 3.10-3.12 venv can't see them and
+# 'import rospy' dies with "No module named 'rospkg'". These particular
+# packages are official PyPI releases (unlike 'rospy' itself), so pip
+# them into the venv. netifaces is optional (C extension, may need to
+# build) -- rosgraph has a socket-based fallback if it's absent.
+if [ "$WITH_ROS" = true ]; then
+    log "Installing rospy's Python deps into the venv (rospkg, catkin_pkg, ...)..."
+    python -m pip install rospkg catkin_pkg PyYAML defusedxml \
+        || warn "Failed to install rospy Python deps; gantry backend may not import."
+    python -m pip install netifaces \
+        || warn "netifaces failed to build; continuing (rosgraph falls back to socket lookup)."
+fi
+
 if [ "$WITH_REALSENSE" = true ]; then
     if [ "$L515" = true ]; then
         log "Installing L515-compatible pyrealsense2 (<2.55)..."

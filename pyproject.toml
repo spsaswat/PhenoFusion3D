@@ -25,10 +25,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Lab Linux machine: ROS itself is system-installed (apt), only the camera
-# SDK comes from pip. rospy is provided by the ROS distro on PYTHONPATH.
+# Lab Linux machine: ROS itself is system-installed (apt); rospy comes from
+# the ROS distro via PYTHONPATH -- never from pip. But rospy's pure-Python
+# deps below ARE official PyPI packages, and they must live in the venv
+# because apt installs them only for the system Python 3.8 while the venv
+# runs 3.10-3.12.
 ros = [
     "pyrealsense2>=2.54.0",
+    "rospkg>=1.5",
+    "catkin_pkg>=1.0",
+    "PyYAML>=5.1",
+    "defusedxml>=0.7",
 ]
 # Windows / dev: camera-only capture, no gantry control
 windows = [
