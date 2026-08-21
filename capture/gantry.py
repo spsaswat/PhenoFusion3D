@@ -61,6 +61,42 @@ def ros_master_reachable(timeout_s: float = 1.5) -> Tuple[bool, str]:
         return False, f"{uri} ({e})"
 
 
+def ros_preflight(timeout_s: float = 1.5) -> Optional[str]:
+    """Bounded checks that ROS init can succeed. Returns an error string
+    describing the problem (and its fix), or None when clear.
+
+    Two known forever-hangs in rospy are covered:
+      - init_node retries master registration endlessly when roscore is
+        down  -> TCP-probe ROS_MASTER_URI first;
+      - init_node spins waiting for the node's own XML-RPC server when
+        the node address doesn't resolve -> resolve it first.
+    """
+    reachable, detail = ros_master_reachable(timeout_s)
+    if not reachable:
+        return (
+            f"ROS master not reachable at {detail}. "
+            "Start roscore (and 'source /opt/ros/noetic/setup.bash') "
+            "on this machine, then try again."
+        )
+
+    node_addr = (os.environ.get("ROS_HOSTNAME")
+                 or os.environ.get("ROS_IP")
+                 or socket.gethostname())
+    try:
+        socket.getaddrinfo(node_addr, None)
+        log.debug("node address '%s' resolves", node_addr)
+    except OSError as e:
+        log.error("node address '%s' does not resolve: %s", node_addr, e)
+        return (
+            f"This machine's ROS node address '{node_addr}' does not "
+            f"resolve ({e}) -- rospy would hang forever starting its "
+            f"node server. Fix: add '127.0.0.1 {node_addr}' to "
+            "/etc/hosts, or launch with ROS_HOSTNAME=localhost, "
+            "then try again."
+        )
+    return None
+
+
 class GantryController(QObject):
     """
     Singleton-style gantry controller. Safe to instantiate on any OS;
@@ -326,37 +362,13 @@ class GantryController(QObject):
     def _init_ros(self) -> Tuple[bool, bool, Optional[str]]:
         """One-shot ROS init, run on the background init thread.
         Returns (ok, retryable, error_message)."""
-        # Fail fast if the master isn't there -- BEFORE importing rospy
-        # or calling init_node, which would otherwise retry forever.
-        self._init_stage = "probing ROS master"
-        reachable, detail = ros_master_reachable()
-        if not reachable:
-            return False, True, (
-                f"ROS master not reachable at {detail}. "
-                "Start roscore (and 'source /opt/ros/noetic/setup.bash') "
-                "on this machine, then try again."
-            )
-
-        # rospy binds its node's XML-RPC server to ROS_HOSTNAME / ROS_IP /
-        # the machine hostname. If that name doesn't resolve, init_node
-        # spins forever waiting for the server URI -- catch it here with
-        # a clear fix instead of hitting the watchdog timeout.
-        self._init_stage = "checking hostname resolution"
-        node_addr = (os.environ.get("ROS_HOSTNAME")
-                     or os.environ.get("ROS_IP")
-                     or socket.gethostname())
-        try:
-            socket.getaddrinfo(node_addr, None)
-            log.debug("node address '%s' resolves", node_addr)
-        except OSError as e:
-            log.error("node address '%s' does not resolve: %s", node_addr, e)
-            return False, True, (
-                f"This machine's ROS node address '{node_addr}' does not "
-                f"resolve ({e}) -- rospy would hang forever starting its "
-                f"node server. Fix: add '127.0.0.1 {node_addr}' to "
-                "/etc/hosts, or launch with ROS_HOSTNAME=localhost, "
-                "then try again."
-            )
+        # Fail fast on the known rospy forever-hangs (master down,
+        # unresolvable node hostname) BEFORE importing rospy or calling
+        # init_node.
+        self._init_stage = "ROS preflight (master probe + hostname)"
+        problem = ros_preflight()
+        if problem is not None:
+            return False, True, problem
 
         self._init_stage = "importing rospy"
         try:

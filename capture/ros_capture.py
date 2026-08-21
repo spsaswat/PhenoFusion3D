@@ -26,12 +26,16 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 import os
+import threading
 from typing import Callable
 
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
+
+log = logging.getLogger("phenofusion.capture")
 
 
 def ros_available() -> bool:
@@ -48,6 +52,8 @@ class RosCapture(CaptureBackend):
     def __init__(self, serial_number: str | None = None):
         super().__init__()
         self.serial_number = serial_number or self.DEFAULT_SERIAL
+        # Color frames buffered during the run, written by _flush_rgb().
+        self._pending_rgb: list = []
 
     def _run(
         self,
@@ -60,6 +66,15 @@ class RosCapture(CaptureBackend):
                 "is only available on the lab Linux machine with ROS sourced. "
                 "Use the 'RealSense Only' backend on Windows."
             )
+
+        # Fail fast on the known rospy forever-hangs (roscore down,
+        # unresolvable node hostname) BEFORE opening the camera -- a hang
+        # here used to leave the pipeline started but the loop never
+        # reached: 'auto mode does not capture'.
+        from capture.gantry import ros_preflight
+        problem = ros_preflight()
+        if problem is not None:
+            raise RuntimeError(problem)
 
         # Lazy imports
         import rospy
@@ -109,23 +124,62 @@ class RosCapture(CaptureBackend):
                 pipeline.wait_for_frames()
                 pipeline.wait_for_frames()
 
-            # ------------------ ROS init -----------------------------------
-            # Fail fast if roscore is down: rospy.init_node would retry
-            # registration forever and hang the capture worker.
-            from capture.gantry import ros_master_reachable
-            reachable, detail = ros_master_reachable()
-            if not reachable:
+            # ------------------ ROS init (mirrors stakeholder) -------------
+            # init_node under a watchdog: even after preflight, rospy has
+            # internal waits with no timeout, and a hang here must surface
+            # as an error, not a silent never-capturing worker.
+            init_err: list = []
+
+            def _do_init():
+                try:
+                    rospy.init_node("phenofusion_capture",
+                                    anonymous=True, disable_signals=True)
+                except rospy.exceptions.ROSException:
+                    # Already initialised in this process (gantry panel)
+                    log.info("rospy node already initialised in this process")
+                except Exception as e:
+                    init_err.append(e)
+
+            t = threading.Thread(target=_do_init, daemon=True,
+                                 name="ros-capture-init")
+            t.start()
+            t.join(15.0)
+            if t.is_alive():
                 raise RuntimeError(
-                    f"ROS master not reachable at {detail}. Start roscore "
-                    "(and 'source /opt/ros/noetic/setup.bash') before capturing."
+                    "rospy.init_node did not complete within 15s -- see "
+                    "phenofusion3d.log; check roscore health and hostname "
+                    "resolution (ROS_HOSTNAME=localhost often fixes this)."
                 )
-            try:
-                rospy.init_node("phenofusion_capture", anonymous=True, disable_signals=True)
-            except rospy.exceptions.ROSException:
-                # Already initialised in this process
-                pass
+            if init_err:
+                raise RuntimeError(f"rospy.init_node failed: {init_err[0]}")
+            log.info("capture ROS node ready")
 
             cmd_vel_publisher = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+
+            # Light publisher -- stakeholder parity (/write_pin). The
+            # stakeholder loop has the switch_light calls commented out,
+            # so we create it but do not publish.
+            try:
+                from std_msgs.msg import UInt16
+                rospy.Publisher("/write_pin", UInt16, queue_size=10)
+            except Exception:
+                pass
+
+            # Go-home publisher (stakeholder returns the gantry to home
+            # after capture). Optional: without position_controller_ros
+            # msgs, capture still works but skips the go-home.
+            goto_publisher = None
+            GotoActionGoal = Header = GoalID = None
+            try:
+                from position_controller_ros.msg import GotoActionGoal
+                from std_msgs.msg import Header
+                from actionlib_msgs.msg import GoalID
+                goto_publisher = rospy.Publisher(
+                    "/go_to_position_server/goal", GotoActionGoal, queue_size=10
+                )
+            except Exception as e:
+                log.warning("position_controller_ros msgs unavailable (%s); "
+                            "gantry will not auto-home after capture.", e)
 
             # joint_states callback updates current_position
             self._current_position = 0.0
@@ -144,8 +198,24 @@ class RosCapture(CaptureBackend):
             def stop_moving():
                 cmd_vel_publisher.publish(Twist())
 
-            # ------------------ capture loop -------------------------------
+            def go_home():
+                if goto_publisher is None:
+                    return
+                msg = GotoActionGoal()
+                msg.header = Header()
+                msg.goal_id = GoalID()
+                msg.goal.position = 0.005   # matches stakeholder go_home()
+                msg.goal.velocity = 0.2
+                goto_publisher.publish(msg)
+                log.info("go_home goal published")
+
+            # ------------------ capture loop (mirrors stakeholder) ---------
+            # Stakeholder buffers COLOR frames in RAM and writes them after
+            # the run (depth is written immediately) -- PNG-encoding color
+            # at full rate is too slow and drops the capture frame rate.
+            self._pending_rgb = []
             i = 0
+            completed = False
             try:
                 while not rospy.is_shutdown() and not self._stop_flag:
                     start_moving()
@@ -156,6 +226,7 @@ class RosCapture(CaptureBackend):
 
                     if self._current_position != 0.0 and self._current_position >= params.end_position_m:
                         stop_moving()
+                        completed = True
                         break
 
                     # Stakeholder calls capture_images twice per loop -- replicate
@@ -165,6 +236,13 @@ class RosCapture(CaptureBackend):
                     on_progress(i, 0)
             finally:
                 stop_moving()
+                log.info("capture loop ended after %d frames "
+                         "(position %.3f m); writing %d buffered RGB frames",
+                         i, self._current_position, len(self._pending_rgb))
+                self._flush_rgb()
+                if completed:
+                    # Stakeholder: return to home once the pass is done.
+                    go_home()
                 joint_sub.unregister()
 
             return i
@@ -187,8 +265,18 @@ class RosCapture(CaptureBackend):
         depth_img = np.asanyarray(depth_frame.get_data())
         color_img = np.asanyarray(color_frame.get_data())
 
-        self._cv2.imwrite(os.path.join(self.out_dir, "rgb",   f"{idx}.png"), color_img)
+        # Stakeholder parity: write depth now, buffer color in RAM and
+        # write it after the run -- encoding color PNGs inline is too
+        # slow and would drop the capture frame rate mid-pass.
+        self._pending_rgb.append(
+            (color_img.copy(), os.path.join(self.out_dir, "rgb", f"{idx}.png"))
+        )
         self._cv2.imwrite(os.path.join(self.out_dir, "depth", f"{idx}.png"), depth_img)
+
+    def _flush_rgb(self) -> None:
+        for img, path in self._pending_rgb:
+            self._cv2.imwrite(path, img)
+        self._pending_rgb = []
 
     def _save_intrinsics(self, profile, rs) -> None:
         for stream_kind, fname in (
