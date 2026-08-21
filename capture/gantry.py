@@ -82,6 +82,12 @@ class GantryController(QObject):
     HOME_POSITION_M:   float = 0.005    # matches stakeholder go_home()
     HOME_VELOCITY_MPS: float = 0.2
 
+    # Watchdog for the background ROS init. rospy.init_node has internal
+    # waits WITHOUT timeouts (e.g. it spins forever if the node's own
+    # XML-RPC server can't start because the hostname doesn't resolve),
+    # so we bound the whole init ourselves.
+    INIT_TIMEOUT_S: float = 15.0
+
     # rospy topic names -- centralised so swaps are one-liners.
     TOPIC_CMD_VEL:      str = "/cmd_vel"
     TOPIC_JOINT_STATES: str = "/joint_states"
@@ -102,6 +108,10 @@ class GantryController(QObject):
         # thread -- rospy.init_node can block indefinitely (e.g. pip-shim
         # rospy + no roscore) and must not freeze the GUI event loop.
         self._init_thread: Optional[threading.Thread] = None
+        # Which step of _init_ros is currently running -- shown in the
+        # panel while connecting and in the timeout error, so a hang
+        # points at the exact culprit.
+        self._init_stage: str = "idle"
 
         # Populated by _init_ros() on first use.
         self._rospy = None
@@ -232,8 +242,12 @@ class GantryController(QObject):
                 return False
 
             if self._init_thread is not None and self._init_thread.is_alive():
-                log.debug("gantry command ignored: ROS init still in progress")
-                self.error.emit("Connecting to ROS master... try again in a moment.")
+                log.debug("gantry command ignored: ROS init still in "
+                          "progress (stage: %s)", self._init_stage)
+                self.error.emit(
+                    f"Connecting to ROS ({self._init_stage})... "
+                    "try again in a moment."
+                )
                 return False
 
             if self._init_attempted:
@@ -253,14 +267,45 @@ class GantryController(QObject):
             return False
 
     def _init_worker(self) -> None:
-        """Background-thread wrapper around `_init_ros()`. Publishes the
-        outcome under the lock and reports it through `error` (which the
-        panel renders as its status line)."""
-        try:
-            ok, retryable, err = self._init_ros()
-        except Exception as e:                       # belt and braces
-            log.exception("unexpected failure during ROS init")
-            ok, retryable, err = False, False, f"ROS init failed: {e}"
+        """Background-thread wrapper around `_init_ros()`. Runs the init
+        on an inner thread bounded by INIT_TIMEOUT_S -- rospy has
+        internal waits with no timeout, and a hung init must not leave
+        the panel saying 'connecting' forever. Publishes the outcome
+        under the lock and reports it through `error` (which the panel
+        renders as its status line)."""
+        result: dict = {}
+
+        def _run() -> None:
+            try:
+                result["v"] = self._init_ros()
+            except Exception as e:                   # belt and braces
+                log.exception("unexpected failure during ROS init")
+                result["v"] = (False, False, f"ROS init failed: {e}")
+
+        inner = threading.Thread(target=_run,
+                                 name="gantry-ros-init-inner", daemon=True)
+        inner.start()
+        inner.join(self.INIT_TIMEOUT_S)
+
+        if "v" in result:
+            ok, retryable, err = result["v"]
+        else:
+            stage = self._init_stage
+            log.error("ROS init timed out after %.0fs, stuck at stage: %s "
+                      "(master=%s). Likely hostname-resolution trouble -- "
+                      "rospy waits forever for its own XML-RPC server if "
+                      "the machine's hostname doesn't resolve. Check "
+                      "/etc/hosts, or launch with ROS_IP=127.0.0.1 / "
+                      "ROS_HOSTNAME=localhost.",
+                      self.INIT_TIMEOUT_S, stage, ros_master_uri())
+            ok, retryable, err = False, True, (
+                f"ROS init timed out after {int(self.INIT_TIMEOUT_S)}s "
+                f"(stuck at: {stage}). The master answered the port probe "
+                "but node registration never completed. Common fix: "
+                "'export ROS_HOSTNAME=localhost' (or add this machine's "
+                "hostname to /etc/hosts), restart the app, and try again. "
+                "See phenofusion3d.log."
+            )
 
         with self._init_lock:
             self._initialised = ok
@@ -283,6 +328,7 @@ class GantryController(QObject):
         Returns (ok, retryable, error_message)."""
         # Fail fast if the master isn't there -- BEFORE importing rospy
         # or calling init_node, which would otherwise retry forever.
+        self._init_stage = "probing ROS master"
         reachable, detail = ros_master_reachable()
         if not reachable:
             return False, True, (
@@ -291,6 +337,28 @@ class GantryController(QObject):
                 "on this machine, then try again."
             )
 
+        # rospy binds its node's XML-RPC server to ROS_HOSTNAME / ROS_IP /
+        # the machine hostname. If that name doesn't resolve, init_node
+        # spins forever waiting for the server URI -- catch it here with
+        # a clear fix instead of hitting the watchdog timeout.
+        self._init_stage = "checking hostname resolution"
+        node_addr = (os.environ.get("ROS_HOSTNAME")
+                     or os.environ.get("ROS_IP")
+                     or socket.gethostname())
+        try:
+            socket.getaddrinfo(node_addr, None)
+            log.debug("node address '%s' resolves", node_addr)
+        except OSError as e:
+            log.error("node address '%s' does not resolve: %s", node_addr, e)
+            return False, True, (
+                f"This machine's ROS node address '{node_addr}' does not "
+                f"resolve ({e}) -- rospy would hang forever starting its "
+                f"node server. Fix: add '127.0.0.1 {node_addr}' to "
+                "/etc/hosts, or launch with ROS_HOSTNAME=localhost, "
+                "then try again."
+            )
+
+        self._init_stage = "importing rospy"
         try:
             import rospy
             from geometry_msgs.msg import Twist
@@ -330,6 +398,7 @@ class GantryController(QObject):
 
         # Optional position-controller msgs -- without them, jog/stop
         # still work but go_to/go_home are disabled gracefully.
+        self._init_stage = "importing position_controller_ros msgs"
         try:
             from position_controller_ros.msg import GotoActionGoal
             from std_msgs.msg import Header
@@ -349,6 +418,7 @@ class GantryController(QObject):
         # init_node is process-global. RosCapture also calls init_node;
         # the second caller will hit ROSException, which is fine.
         try:
+            self._init_stage = "rospy.init_node (node registration)"
             t0 = time.monotonic()
             try:
                 rospy.init_node('phenofusion_gantry',
@@ -358,6 +428,7 @@ class GantryController(QObject):
             except rospy.exceptions.ROSException:
                 log.info("rospy node already initialised in this process")
 
+            self._init_stage = "creating publishers/subscriber"
             self._cmd_vel_pub = rospy.Publisher(
                 self.TOPIC_CMD_VEL, Twist, queue_size=10
             )
@@ -379,6 +450,7 @@ class GantryController(QObject):
             log.exception("ROS init failed")
             return False, False, f"ROS init failed: {e}"
 
+        self._init_stage = "done"
         return True, False, None
 
     def _on_joint_states(self, msg) -> None:

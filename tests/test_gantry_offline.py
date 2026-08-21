@@ -121,3 +121,39 @@ def test_master_unreachable_fails_fast_without_blocking(qapp, monkeypatch):
     assert any('not reachable' in e for e in errors), errors
     assert gc.is_available() is True      # importable + retryable
     assert gc._init_attempted is False    # next click retries init
+
+
+def test_hung_init_hits_watchdog_and_recovers(qapp, monkeypatch):
+    """rospy.init_node has internal waits with no timeout (it spins
+    forever if the node hostname doesn't resolve). If init hangs, the
+    watchdog must report a timeout naming the stuck stage and leave the
+    controller retryable -- the panel must never say 'connecting'
+    forever."""
+    import capture.gantry as gantry_mod
+
+    monkeypatch.setattr(gantry_mod, '_ros_importable', lambda: True)
+
+    gc = GantryController()
+    monkeypatch.setattr(gc, 'INIT_TIMEOUT_S', 0.3)
+
+    def hung_init():
+        gc._init_stage = 'rospy.init_node (node registration)'
+        time.sleep(10)
+        return True, False, None
+
+    monkeypatch.setattr(gc, '_init_ros', hung_init)
+
+    errors: list[str] = []
+    gc.error.connect(errors.append)
+    gc.start_jog(0.05)
+
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        if any('timed out' in e for e in errors):
+            break
+        time.sleep(0.05)
+
+    timeout_errs = [e for e in errors if 'timed out' in e]
+    assert timeout_errs, errors
+    assert 'rospy.init_node' in timeout_errs[0]   # names the stuck stage
+    assert gc._init_attempted is False            # retryable, no restart
