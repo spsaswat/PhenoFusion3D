@@ -14,9 +14,10 @@ from capture.ros_capture import ros_available
 def get_backend(prefer: str = "auto") -> CaptureBackend:
     """
     prefer:
-        "auto"        -- ROS if actually usable (rospy importable AND the
-                         ROS master answers), else RealSense-only
-        "ros"         -- ROS + gantry (raises on Windows)
+        "auto"        -- the stakeholder script when a real gantry is
+                         there, else RealSense-only
+        "stakeholder" -- run rospy_thread_fin_1.py as the backend
+        "ros"         -- the built-in port of that loop (raises on Windows)
         "realsense"   -- camera-only
     """
     prefer = (prefer or "auto").lower()
@@ -25,6 +26,10 @@ def get_backend(prefer: str = "auto") -> CaptureBackend:
         # Camera + gantry together, simulating whichever is absent.
         from capture.ros_capture import QuickScanCapture
         return QuickScanCapture()
+
+    if prefer in ("stakeholder", "script"):
+        from capture.stakeholder_capture import StakeholderScriptCapture
+        return StakeholderScriptCapture()
 
     if prefer == "ros":
         from capture.ros_capture import RosCapture
@@ -46,10 +51,12 @@ def get_backend(prefer: str = "auto") -> CaptureBackend:
             from capture.simulation import detect_gantry
             gantry_ok, gantry_detail = detect_gantry()
             if gantry_ok:
-                log.info("auto backend: real ROS gantry available (%s)",
-                         gantry_detail)
-                from capture.ros_capture import RosCapture
-                return RosCapture()
+                # With a real gantry, run the stakeholder's own program --
+                # it is the capture the lab trusts.
+                log.info("auto backend: real ROS gantry available (%s); "
+                         "using the stakeholder script", gantry_detail)
+                from capture.stakeholder_capture import StakeholderScriptCapture
+                return StakeholderScriptCapture()
             log.warning("auto backend: gantry unusable (%s); falling back "
                         "to camera-only capture.", gantry_detail)
         from capture.realsense_capture import RealSenseCapture
