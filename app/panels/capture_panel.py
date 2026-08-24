@@ -45,17 +45,36 @@ class CapturePanel(QWidget):
         backend_row.addWidget(QLabel('Backend:'))
         self.backend_combo = QComboBox()
         self.backend_combo.addItem('Auto', 'auto')
-        ros_item = 'ROS + Gantry' if ros_available() else 'ROS + Gantry (unavailable)'
+        # The lab's own program is the primary gantry capture path; the
+        # in-app port of the same loop stays available behind it.
+        script_item = ('Stakeholder script (rospy_thread_fin_1.py)'
+                       if ros_available() else
+                       'Stakeholder script (unavailable -- no rospy)')
+        self.backend_combo.addItem(script_item, 'stakeholder')
+        ros_item = ('ROS + Gantry (built-in loop)' if ros_available()
+                    else 'ROS + Gantry (unavailable)')
         self.backend_combo.addItem(ros_item, 'ros')
         self.backend_combo.addItem('RealSense Only', 'realsense')
         if not ros_available():
-            self.backend_combo.model().item(1).setEnabled(False)
+            for index in (1, 2):
+                self.backend_combo.model().item(index).setEnabled(False)
             self.backend_combo.setToolTip(
-                'rospy not importable on this machine -- ROS backend disabled.'
+                'rospy not importable on this machine -- ROS backends disabled.'
             )
-            self.backend_combo.setCurrentIndex(2)  # RealSense
+            self.backend_combo.setCurrentIndex(3)  # RealSense
+        self.backend_combo.currentIndexChanged.connect(self._on_backend_changed)
         backend_row.addWidget(self.backend_combo, stretch=1)
         layout.addLayout(backend_row)
+
+        # What the stakeholder script hardcodes. Shown so its settings are
+        # visible rather than silently overriding the fields below.
+        self.script_lbl = QLabel('')
+        self.script_lbl.setWordWrap(True)
+        self.script_lbl.setVisible(False)
+        self.script_lbl.setStyleSheet('font-size:11px; padding:4px; '
+                                      'border-radius:4px; background:#1e293b; '
+                                      'color:#cbd5e1;')
+        layout.addWidget(self.script_lbl)
 
         # Output root
         layout.addWidget(QLabel('Output folder:'))
@@ -189,6 +208,31 @@ class CapturePanel(QWidget):
 
         self._last_out = None
         self._simulated = False
+
+    def _on_backend_changed(self, _index: int) -> None:
+        """Show the stakeholder script's own settings when it is selected,
+        and grey out the fields it ignores."""
+        is_script = self.backend_combo.currentData() == 'stakeholder'
+        self.script_lbl.setVisible(is_script)
+        for widget in (self.vel_spin, self.end_spin, self.fps_spin,
+                       self.dur_spin):
+            widget.setEnabled(not is_script)
+        if not is_script:
+            return
+        try:
+            from capture.stakeholder_capture import (find_script,
+                                                     script_parameters)
+            script = find_script()
+            settings = script_parameters(script)
+            rows = ''.join(f'<br>&nbsp;&nbsp;{key}: <b>{value}</b>'
+                           for key, value in settings.items())
+            self.script_lbl.setText(
+                f'Capture runs <b>{os.path.basename(script)}</b> unmodified. '
+                f'It uses its own settings:{rows}'
+                '<br><i>The velocity / end / FPS fields above do not apply.</i>'
+            )
+        except Exception as e:
+            self.script_lbl.setText(f'Stakeholder script unavailable: {e}')
 
     def _browse_out(self):
         path = QFileDialog.getExistingDirectory(self, 'Output folder root')
