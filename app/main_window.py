@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QStatusBar, QMenuBar, QAction,
     QFileDialog, QMessageBox, QLabel
 )
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 from PyQt5.QtGui import QFont
 
 from app.panels.data_panel    import DataPanel
@@ -21,8 +21,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('PhenoFusion3D')
-        self.setMinimumSize(1280, 800)
-        self.resize(1400, 900)
+        # Never demand more room than the screen has: the lab VM runs at
+        # 800x600, where a hard 1280x800 minimum pushed the controls off
+        # the bottom of the display with no way to resize them back.
+        self._fit_to_screen(preferred=(1400, 900), minimum=(1280, 800))
 
         self.controller = Controller(self)
 
@@ -30,6 +32,23 @@ class MainWindow(QMainWindow):
         self._build_layout()
         self._build_statusbar()
         self._connect_signals()
+
+        # Probe the hardware once the window is up, so the capture panel
+        # says from the start what is real and what will be simulated.
+        QTimer.singleShot(0, self.controller.refresh_hardware_status)
+
+    def _fit_to_screen(self, preferred, minimum):
+        """Size the window to `preferred`, shrinking to fit the available
+        screen. The minimum is clamped too, so a small display can still
+        resize the window down instead of losing the bottom controls."""
+        from PyQt5.QtWidgets import QApplication
+        screen = QApplication.primaryScreen()
+        avail = screen.availableGeometry() if screen else None
+        max_w = avail.width() if avail else preferred[0]
+        max_h = avail.height() if avail else preferred[1]
+
+        self.setMinimumSize(min(minimum[0], max_w), min(minimum[1], max_h))
+        self.resize(min(preferred[0], max_w), min(preferred[1], max_h))
 
     # ------------------------------------------------------------------
     # Layout
@@ -147,9 +166,14 @@ class MainWindow(QMainWindow):
         # Capture panel -> controller -> capture panel
         self.capture_panel.capture_requested.connect(self.controller.on_capture_clicked)
         self.capture_panel.capture_stop_requested.connect(self.controller.on_capture_stop)
+        self.capture_panel.selftest_requested.connect(self.controller.on_selftest_requested)
+        self.capture_panel.rescan_requested.connect(self.controller.refresh_hardware_status)
         self.controller.capture_progress.connect(self.capture_panel.on_progress)
         self.controller.capture_complete.connect(self._on_capture_complete)
         self.controller.capture_error.connect(self.capture_panel.on_error)
+        self.controller.capture_notice.connect(self.capture_panel.show_notice)
+        self.controller.hardware_status.connect(self.capture_panel.show_hardware)
+        self.controller.selftest_ready.connect(self._on_selftest_ready)
 
         # Gantry panel -> controller -> gantry panel
         self.gantry_panel.jog_requested.connect(self.controller.on_gantry_jog)
@@ -193,6 +217,19 @@ class MainWindow(QMainWindow):
         # Export actions -> controller
         self.action_export_ply.triggered.connect(self._export_ply)
         self.action_export_csv.triggered.connect(self._export_csv)
+
+    @pyqtSlot(object)
+    def _on_selftest_ready(self, result):
+        """Show the camera / gantry self-test outcome, saying plainly
+        whether it ran against real or simulated hardware."""
+        self.capture_panel.set_running(False)
+        box = QMessageBox(self)
+        box.setWindowTitle(f'{result.subject.capitalize()} test')
+        box.setIcon(QMessageBox.Information if result.ok else QMessageBox.Warning)
+        tag = 'SIMULATED' if result.simulated else 'REAL'
+        box.setText(f'{tag} {result.subject}: {result.headline}')
+        box.setInformativeText('\n'.join(result.details))
+        box.exec_()
 
     @pyqtSlot(str, int)
     def _on_capture_complete(self, out_dir, n_frames):

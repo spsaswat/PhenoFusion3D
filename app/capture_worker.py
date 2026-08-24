@@ -16,6 +16,7 @@ class CaptureWorker(QThread):
     frame_captured = pyqtSignal(int, int)        # idx, total_estimate (0=unknown)
     finished       = pyqtSignal(str, int)        # out_dir, n_frames
     error          = pyqtSignal(str)
+    notice         = pyqtSignal(str)             # e.g. "SIMULATED camera..."
 
     def __init__(self, backend_pref: str, params: CaptureParams):
         super().__init__()
@@ -31,6 +32,7 @@ class CaptureWorker(QThread):
                 on_progress=lambda i, t: self.frame_captured.emit(i, t),
                 on_done=lambda d, n: self.finished.emit(d, n),
                 on_error=lambda msg: self.error.emit(msg),
+                on_notice=lambda msg: self.notice.emit(msg),
             )
             # Note: on_done is called inside backend.start(); nothing else to do
             if out_dir is None:

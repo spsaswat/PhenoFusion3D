@@ -58,6 +58,10 @@ class CaptureSession:
     n_frames: int = 0
     # frame_index (int) -> gantry position (metres) when available
     frame_positions: dict = field(default_factory=dict)
+    # Which hardware was real vs simulated for this run. Recorded so a
+    # dataset can never be mistaken for a real capture after the fact.
+    camera_source: str = "real"
+    gantry_source: str = "real"
 
 
 class CaptureBackend(abc.ABC):
@@ -77,6 +81,18 @@ class CaptureBackend(abc.ABC):
         self._stop_flag = False
         self.session: Optional[CaptureSession] = None
         self.out_dir: Optional[str] = None
+        # Set when any part of the run uses simulated hardware, so the UI
+        # can say so plainly instead of passing fake data off as real.
+        self.simulated: bool = False
+        self._on_notice: Optional[Callable[[str], None]] = None
+
+    def _notice(self, message: str) -> None:
+        """Surface an out-of-band message (e.g. 'running simulated')."""
+        if self._on_notice is not None:
+            try:
+                self._on_notice(message)
+            except Exception:
+                pass
 
     # ---- subclasses implement these ---------------------------------------
     @abc.abstractmethod
@@ -95,6 +111,7 @@ class CaptureBackend(abc.ABC):
         on_progress: Optional[Callable[[int, int], None]] = None,
         on_done: Optional[Callable[[str, int], None]] = None,
         on_error: Optional[Callable[[str], None]] = None,
+        on_notice: Optional[Callable[[str], None]] = None,
     ) -> Optional[str]:
         """
         Run the capture synchronously (the QThread worker takes care of
@@ -102,6 +119,7 @@ class CaptureBackend(abc.ABC):
         on failure.
         """
         self._stop_flag = False
+        self._on_notice = on_notice
         try:
             self.out_dir = self._make_out_dir(params.out_root)
             self.session = CaptureSession(

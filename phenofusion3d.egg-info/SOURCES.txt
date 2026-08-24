@@ -5,8 +5,10 @@ app/__init__.py
 app/capture_worker.py
 app/controller.py
 app/main_window.py
+app/o3d_check.py
 app/postprocess_worker.py
 app/quality_worker.py
+app/selftest_worker.py
 app/worker.py
 app/panels/__init__.py
 app/panels/capture_panel.py
@@ -21,6 +23,8 @@ capture/base.py
 capture/gantry.py
 capture/realsense_capture.py
 capture/ros_capture.py
+capture/selftest.py
+capture/simulation.py
 file_io/__init__.py
 file_io/exporter.py
 file_io/loader.py

@@ -109,9 +109,12 @@ def test_master_unreachable_fails_fast_without_blocking(qapp, monkeypatch):
     # The click handler must never block the GUI thread.
     assert time.monotonic() - t0 < 0.5
 
-    # Wait for the background init attempt to finish and report.
+    # Wait for the background init attempt to finish and report. The
+    # error signal is emitted from the init thread, so Qt queues it to
+    # the main thread -- the event loop must run for it to be delivered.
     deadline = time.monotonic() + 5.0
     while time.monotonic() < deadline:
+        qapp.processEvents()
         with gc._init_lock:
             thread_done = gc._init_thread is None
         if thread_done and any('not reachable' in e for e in errors):
@@ -147,8 +150,11 @@ def test_hung_init_hits_watchdog_and_recovers(qapp, monkeypatch):
     gc.error.connect(errors.append)
     gc.start_jog(0.05)
 
+    # The watchdog emits `error` from its background thread; pump the
+    # event loop so the queued signal actually reaches errors.append.
     deadline = time.monotonic() + 5.0
     while time.monotonic() < deadline:
+        qapp.processEvents()
         if any('timed out' in e for e in errors):
             break
         time.sleep(0.05)

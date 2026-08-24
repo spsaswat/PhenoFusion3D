@@ -31,6 +31,16 @@ log = logging.getLogger("phenofusion.gantry")
 DEFAULT_MASTER_URI = "http://localhost:11311"
 
 
+def _reinstall_log_handlers() -> None:
+    """rospy.init_node() steals the root logger's handlers; restore ours.
+    Best-effort -- never let a logging problem break the gantry."""
+    try:
+        from logging_setup import reinstall_handlers
+        reinstall_handlers()
+    except Exception:
+        pass
+
+
 def _ros_importable() -> bool:
     return importlib.util.find_spec("rospy") is not None
 
@@ -435,9 +445,14 @@ class GantryController(QObject):
             try:
                 rospy.init_node('phenofusion_gantry',
                                 anonymous=True, disable_signals=True)
+                # init_node replaces the root logger's handlers with
+                # rospy's own -- put ours back or the app stops logging
+                # to phenofusion3d.log from here on.
+                _reinstall_log_handlers()
                 log.info("rospy.init_node ok (%.0f ms)",
                          (time.monotonic() - t0) * 1000)
             except rospy.exceptions.ROSException:
+                _reinstall_log_handlers()
                 log.info("rospy node already initialised in this process")
 
             self._init_stage = "creating publishers/subscriber"

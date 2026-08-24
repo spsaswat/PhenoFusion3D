@@ -17,6 +17,10 @@ Requires-Dist: pyqtgraph>=0.13.0
 Requires-Dist: matplotlib>=3.8.0
 Provides-Extra: ros
 Requires-Dist: pyrealsense2>=2.54.0; extra == "ros"
+Requires-Dist: rospkg>=1.5; extra == "ros"
+Requires-Dist: catkin_pkg>=1.0; extra == "ros"
+Requires-Dist: PyYAML>=5.1; extra == "ros"
+Requires-Dist: defusedxml>=0.7; extra == "ros"
 Provides-Extra: windows
 Requires-Dist: pyrealsense2>=2.54.0; extra == "windows"
 Provides-Extra: dev

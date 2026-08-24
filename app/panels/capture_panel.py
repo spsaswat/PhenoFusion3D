@@ -22,6 +22,10 @@ class CapturePanel(QWidget):
     # backend_pref, out_root, velocity_mps, end_position_m, fps, duration_s
     capture_requested      = pyqtSignal(str, str, float, float, int, float)
     capture_stop_requested = pyqtSignal()
+    # "camera" / "gantry" -- run that piece on its own
+    selftest_requested     = pyqtSignal(str)
+    # re-probe what hardware is attached
+    rescan_requested       = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -99,6 +103,52 @@ class CapturePanel(QWidget):
         fps_row.addWidget(self.dur_spin)
         layout.addLayout(fps_row)
 
+        # ---- hardware status: is each piece real or simulated? ----
+        self.hw_lbl = QLabel('Hardware: checking...')
+        self.hw_lbl.setWordWrap(True)
+        self.hw_lbl.setStyleSheet('font-size:11px; padding:4px; '
+                                  'border-radius:4px; background:#1e293b; '
+                                  'color:#cbd5e1;')
+        layout.addWidget(self.hw_lbl)
+
+        # ---- Quick Scan: camera + gantry together, one click ----
+        self.quick_btn = QPushButton('Quick Scan  (camera + gantry)')
+        self.quick_btn.setToolTip(
+            'Run a full scan: the gantry moves while the camera captures. '
+            'Falls back to simulated hardware for whichever piece is not '
+            'connected, and tells you when it does.'
+        )
+        self.quick_btn.setStyleSheet(
+            'QPushButton { background:#2563eb; color:white; border-radius:4px; '
+            'padding:8px; font-weight:bold; }'
+            'QPushButton:disabled { background:#94a3b8; }'
+        )
+        self.quick_btn.clicked.connect(self._on_quick_scan)
+        layout.addWidget(self.quick_btn)
+
+        # ---- individual checks ----
+        test_row = QHBoxLayout()
+        self.test_cam_btn = QPushButton('Test Camera')
+        self.test_cam_btn.setToolTip('Grab a burst of frames and report '
+                                     'resolution, rate and depth validity.')
+        self.test_cam_btn.clicked.connect(
+            lambda: self.selftest_requested.emit('camera'))
+        test_row.addWidget(self.test_cam_btn)
+
+        self.test_gantry_btn = QPushButton('Test Gantry')
+        self.test_gantry_btn.setToolTip('Jog the axis 5 cm and report the '
+                                        'distance actually measured.')
+        self.test_gantry_btn.clicked.connect(
+            lambda: self.selftest_requested.emit('gantry'))
+        test_row.addWidget(self.test_gantry_btn)
+
+        self.rescan_btn = QPushButton('Re-detect')
+        self.rescan_btn.setFixedWidth(80)
+        self.rescan_btn.setToolTip('Re-check which hardware is connected.')
+        self.rescan_btn.clicked.connect(self.rescan_requested.emit)
+        test_row.addWidget(self.rescan_btn)
+        layout.addLayout(test_row)
+
         # Buttons
         btn_row = QHBoxLayout()
         self.capture_btn = QPushButton('Capture')
@@ -138,6 +188,7 @@ class CapturePanel(QWidget):
         layout.addWidget(self.open_btn)
 
         self._last_out = None
+        self._simulated = False
 
     def _browse_out(self):
         path = QFileDialog.getExistingDirectory(self, 'Output folder root')
@@ -145,7 +196,15 @@ class CapturePanel(QWidget):
             self.out_edit.setText(path)
 
     def _on_capture(self):
-        backend_pref = self.backend_combo.currentData()
+        self._emit_capture(self.backend_combo.currentData())
+
+    def _on_quick_scan(self):
+        """Camera + gantry in one pass, simulating whichever is missing."""
+        self._emit_capture('quickscan')
+
+    def _emit_capture(self, backend_pref: str):
+        self._simulated = False
+        self._clear_notice()
         self.set_running(True)
         self.progress.setValue(0)
         self.status_lbl.setText('Starting capture...')
@@ -161,29 +220,65 @@ class CapturePanel(QWidget):
 
     def set_running(self, running: bool):
         self.capture_btn.setEnabled(not running)
+        self.quick_btn.setEnabled(not running)
+        self.test_cam_btn.setEnabled(not running)
+        self.test_gantry_btn.setEnabled(not running)
         self.stop_btn.setEnabled(running)
         self.backend_combo.setEnabled(not running)
 
+    # ---- hardware status / simulation reporting -------------------------
+
+    def show_hardware(self, camera_ok: bool, camera_detail: str,
+                      gantry_ok: bool, gantry_detail: str) -> None:
+        """Render the REAL/SIMULATED status of each piece of hardware."""
+        def row(name, ok, detail):
+            tag = 'REAL' if ok else 'SIMULATED'
+            colour = '#4ade80' if ok else '#fbbf24'
+            return (f'<b>{name}:</b> <span style="color:{colour}">{tag}</span>'
+                    f' &mdash; {detail}')
+        self.hw_lbl.setText(
+            row('Camera', camera_ok, camera_detail) + '<br>' +
+            row('Gantry', gantry_ok, gantry_detail) +
+            ('' if (camera_ok and gantry_ok) else
+             '<br><i>Quick Scan will simulate whatever is not connected.</i>')
+        )
+
+    def show_notice(self, text: str) -> None:
+        """Loud, unmissable banner while a simulated run is in progress."""
+        self._simulated = True
+        self.status_lbl.setText(text)
+        self.status_lbl.setStyleSheet(
+            'color:#78350f; background:#fcd34d; font-size:11px; '
+            'font-weight:bold; padding:4px; border-radius:4px;'
+        )
+
+    def _clear_notice(self) -> None:
+        self.status_lbl.setStyleSheet('color:#64748b; font-size:11px;')
+
     def on_progress(self, idx: int, total: int):
+        prefix = 'SIMULATED - ' if self._simulated else ''
         if total > 0:
             pct = min(100, int(100 * idx / max(1, total)))
             self.progress.setValue(pct)
-            self.status_lbl.setText(f'Captured {idx}/{total} frames')
+            self.status_lbl.setText(f'{prefix}Captured {idx}/{total} frames')
         else:
             # Unknown total (ROS / manual) -- pulse
             self.progress.setRange(0, 0)
-            self.status_lbl.setText(f'Captured {idx} frames')
+            self.status_lbl.setText(f'{prefix}Captured {idx} frames')
 
     def on_finished(self, out_dir: str, n_frames: int):
         self.set_running(False)
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
-        self.status_lbl.setText(f'Done. {n_frames} frames -> {out_dir}')
+        prefix = 'SIMULATED run - ' if self._simulated else ''
+        self.status_lbl.setText(f'{prefix}Done. {n_frames} frames -> {out_dir}')
         self._last_out = out_dir
         self.open_btn.setVisible(True)
 
     def on_error(self, msg: str):
         self.set_running(False)
+        self._simulated = False
+        self._clear_notice()
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
         self.status_lbl.setText(f'ERROR: {msg}')

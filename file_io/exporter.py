@@ -1,6 +1,5 @@
 import os
 import csv
-import open3d as o3d
 
 
 def save_ply(pcd, output_path):
@@ -8,6 +7,9 @@ def save_ply(pcd, output_path):
     Save an Open3D PointCloud to a PLY file.
     Returns True on success, False on failure.
     """
+    # Imported here, not at module top: on hosts without AVX the open3d
+    # import kills the process, and CSV export must not depend on it.
+    import open3d as o3d
     if pcd is None or pcd.is_empty():
         print('[exporter] WARNING: Point cloud is empty, nothing to save.')
         return False

@@ -95,7 +95,7 @@ import importlib, sys, os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")  # headless-safe Qt check
 
 failures = []
-required = ["PyQt5", "open3d", "cv2", "numpy", "natsort", "tqdm", "pyqtgraph", "matplotlib"]
+required = ["PyQt5", "cv2", "numpy", "natsort", "tqdm", "pyqtgraph", "matplotlib"]
 for mod in required:
     try:
         m = importlib.import_module(mod)
@@ -103,6 +103,24 @@ for mod in required:
     except Exception as e:
         failures.append(mod)
         print(f"  FAIL  {mod}: {e}")
+
+# open3d gets its own subprocess: on a CPU/VM without AVX the wheel dies
+# with SIGILL, which would kill THIS process and report nothing useful.
+import subprocess
+_p = subprocess.run([sys.executable, "-c", "import open3d; print(open3d.__version__)"],
+                    capture_output=True, text=True)
+if _p.returncode == 0:
+    print(f"  OK    {'open3d':12s} {_p.stdout.strip()}")
+elif _p.returncode == -4:      # SIGILL
+    print("  WARN  open3d installed but CRASHES on this CPU (Illegal instruction):")
+    print("        the CPU/VM does not expose AVX. Capture, the gantry and Quick")
+    print("        Scan all work; reconstruction and quality checks stay disabled")
+    print("        until the host exposes AVX (VirtualBox >= 7.1, or disable")
+    print("        Hyper-V / Core Isolation on the Windows host).")
+else:
+    failures.append("open3d")
+    _tail = (_p.stderr or "").strip().splitlines()
+    print(f"  FAIL  open3d: {_tail[-1] if _tail else _p.returncode}")
 
 # Optional capture backends -- warn only.
 try:
@@ -307,23 +325,73 @@ fi
 ###############################################################################
 
 if [ "$WITH_REALSENSE" = true ]; then
+    # RealSense (spun out of Intel) rotated the repo signing key on
+    # 2025-11-27 but never updated the published librealsense.pgp, and
+    # the repo's InRelease file is currently mis-signed upstream, so apt
+    # rejects the repo even WITH the right key
+    # (github.com/realsenseai/librealsense issue #14634). The whole apt
+    # phase is therefore best-effort: the app's camera support comes
+    # from the pip pyrealsense2 wheel; apt only adds realsense-viewer,
+    # headers, and dkms kernel patches. The one piece we must have
+    # regardless is the udev rules (non-root camera access) -- installed
+    # from GitHub below when the apt packages are unavailable.
+    RS_KEYRING=/etc/apt/keyrings/librealsense.pgp
+    RS_NEW_FPR=5381411D24E659FB18195FA5FB0B24895113F120
     if [ ! -f /etc/apt/sources.list.d/librealsense.list ]; then
         log "Adding Intel librealsense apt repo (focal is supported)..."
         $SUDO mkdir -p /etc/apt/keyrings
         curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp \
-            | $SUDO tee /etc/apt/keyrings/librealsense.pgp >/dev/null
-        echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" \
+            | $SUDO tee "$RS_KEYRING" >/dev/null
+        echo "deb [signed-by=$RS_KEYRING] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" \
             | $SUDO tee /etc/apt/sources.list.d/librealsense.list >/dev/null
-        $SUDO apt-get update -y
     fi
-    RS_PKGS=(librealsense2-utils librealsense2-dev)
-    if [ "$IS_WSL" = true ]; then
-        warn "WSL detected: skipping librealsense2-dkms (no custom kernel modules in WSL2). USB cameras need usbipd-win passthrough."
-    else
-        RS_PKGS+=(librealsense2-dkms)
+    # Append the rotated 2025 key (fingerprint-pinned) if it isn't in
+    # the keyring yet -- the published .pgp only carries the 2018 key.
+    if ! gpg --show-keys --with-colons "$RS_KEYRING" 2>/dev/null | grep -q "$RS_NEW_FPR"; then
+        log "Adding RealSense's rotated 2025 signing key ($RS_NEW_FPR)..."
+        rs_tmp=$(mktemp -d)
+        if curl -sSfL "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$RS_NEW_FPR" \
+                -o "$rs_tmp/new.asc" \
+            && gpg --dearmor <"$rs_tmp/new.asc" >"$rs_tmp/new.gpg" 2>/dev/null \
+            && gpg --show-keys --with-colons "$rs_tmp/new.gpg" | grep -q "$RS_NEW_FPR"; then
+            $SUDO tee -a "$RS_KEYRING" <"$rs_tmp/new.gpg" >/dev/null
+        else
+            warn "Could not fetch/verify RealSense's rotated signing key; the repo may stay unverifiable."
+        fi
+        rm -rf "$rs_tmp"
     fi
-    $SUDO apt-get install -y --no-install-recommends "${RS_PKGS[@]}" \
-        || warn "librealsense2 install failed; camera capture will not work until fixed."
+    RS_REPO_OK=true
+    if ! $SUDO apt-get update -y; then
+        warn "apt update fails with the librealsense repo enabled (upstream signing is broken -- see librealsense issue #14634). Disabling the repo for now; re-run ./setup.sh later to retry. Camera capture still works via the pip pyrealsense2 wheel."
+        $SUDO rm -f /etc/apt/sources.list.d/librealsense.list
+        RS_REPO_OK=false
+        $SUDO apt-get update -y \
+            || warn "apt update still failing after disabling the librealsense repo -- some other repo is unhealthy; continuing anyway."
+    fi
+    if [ "$RS_REPO_OK" = true ]; then
+        RS_PKGS=(librealsense2-utils librealsense2-dev)
+        if [ "$IS_WSL" = true ]; then
+            warn "WSL detected: skipping librealsense2-dkms (no custom kernel modules in WSL2). USB cameras need usbipd-win passthrough."
+        else
+            RS_PKGS+=(librealsense2-dkms)
+        fi
+        $SUDO apt-get install -y --no-install-recommends "${RS_PKGS[@]}" \
+            || warn "librealsense2 install failed; camera capture will not work until fixed."
+    fi
+    # udev rules: the pip pyrealsense2 wheel does not ship them, and
+    # without them the camera is only accessible as root.
+    if ! dpkg -s librealsense2-utils >/dev/null 2>&1 \
+        && [ ! -f /etc/udev/rules.d/99-realsense-libusb.rules ]; then
+        log "Installing RealSense udev rules from GitHub (non-root camera access for the pip wheel)..."
+        if curl -sSfL https://raw.githubusercontent.com/realsenseai/librealsense/master/config/99-realsense-libusb.rules \
+                | $SUDO tee /etc/udev/rules.d/99-realsense-libusb.rules >/dev/null; then
+            $SUDO udevadm control --reload-rules || true
+            $SUDO udevadm trigger || true
+        else
+            $SUDO rm -f /etc/udev/rules.d/99-realsense-libusb.rules
+            warn "Could not install udev rules; the camera will need root, or install librealsense2-utils once the apt repo is fixed."
+        fi
+    fi
 fi
 
 ###############################################################################
