@@ -30,6 +30,16 @@ log = logging.getLogger("phenofusion.gantry")
 
 DEFAULT_MASTER_URI = "http://localhost:11311"
 
+# Signature of the last master-probe failure, so a repeated
+# failure is logged once at WARNING and then at DEBUG.
+_last_master_failure: Optional[str] = None
+# Last logged node-address decision, so the repeating preflight
+# announces it once instead of every few seconds.
+_last_node_address: Optional[str] = None
+# Which of ROS_HOSTNAME / ROS_IP this app set itself (if any), so a
+# value we pinned is not later mistaken for one the user exported.
+_node_address_source: Optional[str] = None
+
 
 def _reinstall_log_handlers() -> None:
     """rospy.init_node() steals the root logger's handlers; restore ours.
@@ -49,6 +59,83 @@ def ros_master_uri() -> str:
     return os.environ.get("ROS_MASTER_URI", DEFAULT_MASTER_URI)
 
 
+_LOOPBACK_HOSTS = frozenset({
+    "localhost", "127.0.0.1", "::1", "ip6-localhost", "ip6-loopback",
+})
+
+
+def _local_ip_towards(host: str, port: int) -> Optional[str]:
+    """The address this machine would use to reach (host, port).
+
+    That is exactly the address the master has to call back on. UDP
+    connect() only fixes a route -- nothing is sent.
+    """
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.connect((host, port))
+            return sock.getsockname()[0]
+        finally:
+            sock.close()
+    except OSError:
+        return None
+
+
+def configure_ros_node_address() -> str:
+    """Pin the address rospy advertises to the master. Returns a
+    one-line description of what was chosen and why.
+
+    Node registration is the step that most often half-works: init_node
+    registers whatever address rospy derives from the machine's
+    hostname, and from then on the master's callbacks -- and every peer
+    connecting to our publishers -- are sent there. On a box whose
+    hostname resolves to something unreachable (a VM's
+    *.myguest.virtualbox.org name, a stale /etc/hosts line, an
+    IPv6-only answer) registration appears to succeed but nothing ever
+    connects, which the UI can only show as a hang.
+
+    Policy, applied before rospy is imported:
+      - an explicit ROS_IP / ROS_HOSTNAME from the user always wins;
+      - master on this machine    -> ROS_HOSTNAME=localhost, so
+        registration is pure loopback with no name resolution at all;
+      - master on another machine -> ROS_IP = this machine's address on
+        the route to that master, so the master can call back.
+    """
+    global _node_address_source
+    for var in ("ROS_HOSTNAME", "ROS_IP"):
+        value = os.environ.get(var)
+        if value:
+            if _node_address_source == var:
+                return f"{var}={value} (pinned by this app)"
+            return f"{var}={value} (set in the environment; left alone)"
+
+    parsed = urlparse(ros_master_uri())
+    master_host = parsed.hostname or "localhost"
+    master_port = parsed.port or 11311
+
+    if master_host in _LOOPBACK_HOSTS:
+        os.environ["ROS_HOSTNAME"] = "localhost"
+        _node_address_source = "ROS_HOSTNAME"
+        log.info("ROS master is on this machine; pinned "
+                 "ROS_HOSTNAME=localhost for node registration")
+        return ("ROS_HOSTNAME=localhost (master is local; avoids "
+                "registering an unreachable hostname)")
+
+    local_ip = _local_ip_towards(master_host, master_port)
+    if local_ip:
+        os.environ["ROS_IP"] = local_ip
+        _node_address_source = "ROS_IP"
+        log.info("ROS master is remote (%s); pinned ROS_IP=%s so it can "
+                 "call back", master_host, local_ip)
+        return (f"ROS_IP={local_ip} (address this machine reaches the "
+                f"master {master_host} on)")
+
+    log.warning("could not work out this machine's address towards the "
+                "ROS master at %s; leaving rospy to guess", master_host)
+    return (f"could not determine this machine's address towards "
+            f"{master_host}; rospy will guess from the hostname")
+
+
 def ros_master_reachable(timeout_s: float = 1.5) -> Tuple[bool, str]:
     """Bounded TCP probe of the ROS master (roscore).
 
@@ -56,6 +143,7 @@ def ros_master_reachable(timeout_s: float = 1.5) -> Tuple[bool, str]:
     master is down, so it must never be called before this probe says
     the master is actually there. Returns (ok, detail-string).
     """
+    global _last_master_failure
     uri = ros_master_uri()
     parsed = urlparse(uri)
     host = parsed.hostname or "localhost"
@@ -65,9 +153,18 @@ def ros_master_reachable(timeout_s: float = 1.5) -> Tuple[bool, str]:
         with socket.create_connection((host, port), timeout=timeout_s):
             log.debug("ROS master reachable at %s (%.0f ms)",
                       uri, (time.monotonic() - t0) * 1000)
+            _last_master_failure = None
             return True, uri
     except OSError as e:
-        log.warning("ROS master NOT reachable at %s: %s", uri, e)
+        # The UI re-probes every few seconds; logging every identical
+        # failure at WARNING buries everything else in the log file.
+        signature = f"{uri}|{e}"
+        if signature != _last_master_failure:
+            log.warning("ROS master NOT reachable at %s: %s "
+                        "(further identical probes logged at DEBUG)", uri, e)
+            _last_master_failure = signature
+        else:
+            log.debug("ROS master still NOT reachable at %s: %s", uri, e)
         return False, f"{uri} ({e})"
 
 
@@ -81,12 +178,24 @@ def ros_preflight(timeout_s: float = 1.5) -> Optional[str]:
       - init_node spins waiting for the node's own XML-RPC server when
         the node address doesn't resolve -> resolve it first.
     """
+    # Decide what address we will register under BEFORE rospy is
+    # imported -- rospy reads ROS_HOSTNAME / ROS_IP out of the
+    # environment when it registers the node.
+    choice = configure_ros_node_address()
+    global _last_node_address
+    if choice != _last_node_address:          # preflight runs every few seconds
+        log.info("ROS node address: %s", choice)
+        _last_node_address = choice
+
     reachable, detail = ros_master_reachable(timeout_s)
     if not reachable:
         return (
             f"ROS master not reachable at {detail}. "
             "Start roscore (and 'source /opt/ros/noetic/setup.bash') "
-            "on this machine, then try again."
+            "on this machine, then try again. If the gantry's roscore "
+            "runs on another machine, point the app at it with "
+            "'export ROS_MASTER_URI=http://<that-machine>:11311' before "
+            "launching."
         )
 
     node_addr = (os.environ.get("ROS_HOSTNAME")
@@ -475,7 +584,11 @@ class GantryController(QObject):
             time.sleep(0.3)
         except Exception as e:
             log.exception("ROS init failed")
-            return False, False, f"ROS init failed: {e}"
+            # Retryable: this is usually a transient master/registration
+            # problem, and marking it final meant the user had to restart
+            # the whole app before the gantry could ever connect.
+            return False, True, f"ROS init failed: {e} -- fix the cause " \
+                "(see phenofusion3d.log), then click again to retry."
 
         self._init_stage = "done"
         return True, False, None

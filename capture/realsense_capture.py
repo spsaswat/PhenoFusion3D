@@ -26,10 +26,28 @@ import os
 import time
 from typing import Callable
 
-import cv2
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
+
+
+def _import_cv2():
+    """OpenCV, imported at call time with an actionable error.
+
+    A module-level 'import cv2' makes a missing or half-installed OpenCV
+    break the import of the whole capture package, which reaches the user
+    as a bare "No module named 'cv2'" with no hint of the fix.
+    """
+    try:
+        import cv2
+        return cv2
+    except ImportError as e:
+        raise RuntimeError(
+            f"OpenCV (cv2) is not usable in this environment: {e}. Capture "
+            "needs it to write PNG frames. Reinstall it into the app's venv: "
+            "'.venv-linux/bin/pip install --force-reinstall "
+            "opencv-python-headless'."
+        ) from e
 
 
 class RealSenseCapture(CaptureBackend):
@@ -40,6 +58,7 @@ class RealSenseCapture(CaptureBackend):
         params: CaptureParams,
         on_progress: Callable[[int, int], None],
     ) -> int:
+        cv2 = _import_cv2()
         try:
             import pyrealsense2 as rs
         except ImportError as e:
@@ -110,16 +129,17 @@ class RealSenseCapture(CaptureBackend):
     # ---------------------------------------------------------------- helpers
     def _select_device(self, rs):
         """Pick the first connected Intel RealSense device with color + depth."""
-        ctx = rs.context()
-        devices = list(ctx.query_devices())
+        from capture.simulation import (no_camera_message, usb_diagnosis,
+                                        _query_devices)
+        # Enumerate through the shared helper so a stale cached context
+        # cannot report "no camera" for one that is actually plugged in.
+        devices = _query_devices(rs)
+        if not devices:
+            devices = _query_devices(rs, rebuild=True)
         if not devices:
             raise RuntimeError(
-                "No Intel RealSense camera was found by pyrealsense2/librealsense. "
-                "PhenoFusion3D asks the Intel RealSense SDK for RGB-D devices "
-                "directly, not ordinary webcam indexes. Open Intel RealSense "
-                "Viewer and confirm the camera appears with a depth stream. If "
-                "it does not, install/reinstall Intel RealSense SDK 2.0/runtime, "
-                "reconnect the camera on a USB 3 port, then restart this app."
+                no_camera_message("librealsense enumerated no devices"
+                                  + usb_diagnosis())
             )
 
         rgbd_devices = [

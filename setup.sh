@@ -103,6 +103,13 @@ for mod in required:
     except Exception as e:
         failures.append(mod)
         print(f"  FAIL  {mod}: {e}")
+        if mod == "cv2":
+            # Seen on the lab rig: pip's metadata says opencv is installed
+            # but site-packages/cv2 is gone (interrupted install, or the
+            # disk filled). Capture cannot write a single frame like this.
+            print("        -> OpenCV is missing or half-installed. Fix with:")
+            print("           .venv-linux/bin/pip install --force-reinstall "
+                  "opencv-python-headless")
 
 # open3d gets its own subprocess: on a CPU/VM without AVX the wheel dies
 # with SIGILL, which would kill THIS process and report nothing useful.

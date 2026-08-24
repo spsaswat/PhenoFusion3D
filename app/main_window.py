@@ -182,6 +182,10 @@ class MainWindow(QMainWindow):
         self.gantry_panel.go_home_requested.connect(self.controller.on_gantry_home)
         self.controller.gantry.position_changed.connect(self.gantry_panel.update_position)
         self.controller.gantry.error.connect(self.gantry_panel.show_status)
+        self.controller.hardware_status.connect(
+            lambda _c, _cd, gantry_ok, gantry_detail:
+                self.gantry_panel.show_connection(gantry_ok, gantry_detail)
+        )
         # Disable jog/go-to during capture so two motion sources don't fight.
         self.controller.capture_started.connect(
             lambda: self.gantry_panel.set_capture_active(True)
