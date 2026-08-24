@@ -23,19 +23,17 @@ actually be used instead of pretending its own spin-boxes apply.
 from __future__ import annotations
 
 import ast
-import json
 import logging
 import os
 import re
-import shlex
 import shutil
 import signal
 import subprocess
-import sys
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 from capture.base import CaptureBackend, CaptureParams
+from capture.ros_runtime import RosRuntime, resolve
 
 log = logging.getLogger("phenofusion.stakeholder")
 
@@ -48,26 +46,6 @@ _SCRIPT_SEARCH_DIRS = (
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                  "stakeholder_reference"),
 )
-
-# Missing pure-Python ROS dependencies that pip can fix, mapped to the
-# install that fixes them. rospy itself is NEVER pip-installable -- the
-# PyPI package of that name is an unrelated shim.
-_PIP_FIXABLE = {
-    "rospkg": "rospkg",
-    "catkin_pkg": "catkin_pkg",
-    "yaml": "PyYAML",
-    "defusedxml": "defusedxml",
-    "netifaces": "netifaces",
-    "empy": "empy",
-    "gnupg": "python-gnupg",
-    "numpy": "numpy",
-    "cv2": "opencv-python-headless",
-    "pyrealsense2": "pyrealsense2",
-}
-
-# Modules that only a sourced catkin workspace can provide.
-_WORKSPACE_MODULES = {"position_controller_ros"}
-
 
 def find_script() -> str:
     """Absolute path to the stakeholder script."""
@@ -132,175 +110,13 @@ def script_parameters(script_path: str) -> Dict[str, str]:
     return found
 
 
-# ------------------------------------------------------- interpreter choice
+def choose_runtime(script_path: str) -> RosRuntime:
+    """A runtime able to satisfy every import the script makes.
 
-def _candidate_interpreters() -> List[str]:
-    """Interpreters that might be able to run the script, best first.
-
-    The app's own venv is tried first (it has pyrealsense2/cv2), then the
-    system python, which on a ROS box is the one apt installed rospy's
-    dependencies for.
+    The module list comes from the script itself, so the app and the
+    script can never disagree about what the script needs.
     """
-    candidates = [sys.executable, "/usr/bin/python3", shutil.which("python3")]
-    ordered: List[str] = []
-    seen = set()
-    for path in candidates:
-        if not path or not os.path.exists(path):
-            continue
-        real = os.path.realpath(path)
-        if real in seen:
-            continue
-        seen.add(real)
-        ordered.append(path)
-    return ordered
-
-
-def _setup_bash_scripts() -> List[List[str]]:
-    """Sets of setup.bash files worth sourcing, most complete first.
-
-    A catkin workspace's devel/setup.bash is what provides
-    position_controller_ros; /opt/ros/<distro>/setup.bash provides rospy
-    and the core message packages.
-    """
-    distro_setups = []
-    for distro in ("noetic", "melodic"):
-        path = f"/opt/ros/{distro}/setup.bash"
-        if os.path.isfile(path):
-            distro_setups.append(path)
-
-    workspace_setups = []
-    explicit = os.environ.get("PHENOFUSION_ROS_WS")
-    search_roots = [explicit] if explicit else []
-    home = os.path.expanduser("~")
-    search_roots += [os.path.join(home, name) for name in
-                     ("catkin_ws", "ros_ws", "ws", "workspace")]
-    for root in search_roots:
-        if not root:
-            continue
-        candidate = os.path.join(root, "devel", "setup.bash")
-        if os.path.isfile(candidate):
-            workspace_setups.append(candidate)
-
-    combinations: List[List[str]] = []
-    for distro in distro_setups:
-        for workspace in workspace_setups:
-            combinations.append([distro, workspace])
-    combinations += [[s] for s in workspace_setups]
-    combinations += [[s] for s in distro_setups]
-    return combinations
-
-
-def _env_after_sourcing(setup_scripts: List[str]) -> Optional[Dict[str, str]]:
-    """The environment left behind by sourcing those setup.bash files."""
-    sourcing = " && ".join(f". {shlex.quote(s)}" for s in setup_scripts)
-    command = (f"{sourcing} && "
-               "python3 -c 'import json,os; print(json.dumps(dict(os.environ)))'")
-    try:
-        done = subprocess.run(["bash", "-c", command], capture_output=True,
-                              text=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        log.debug("sourcing %s failed: %s", setup_scripts, e)
-        return None
-    if done.returncode != 0:
-        log.debug("sourcing %s exited %d: %s",
-                  setup_scripts, done.returncode, done.stderr.strip()[:200])
-        return None
-    try:
-        return json.loads(done.stdout.strip().splitlines()[-1])
-    except (ValueError, IndexError):
-        return None
-
-
-def _probe_imports(interpreter: str, modules: List[str],
-                   env: Dict[str, str]) -> Dict[str, str]:
-    """{module: error} for every module this interpreter cannot import."""
-    probe = (
-        "import json, sys\n"
-        f"modules = {modules!r}\n"
-        "failures = {}\n"
-        "for name in modules:\n"
-        "    try:\n"
-        "        __import__(name)\n"
-        "    except BaseException as e:\n"
-        "        failures[name] = '%s: %s' % (type(e).__name__, e)\n"
-        "print(json.dumps(failures))\n"
-    )
-    try:
-        done = subprocess.run([interpreter, "-c", probe], capture_output=True,
-                              text=True, timeout=120, env=env)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return {"<interpreter>": f"could not run {interpreter}: {e}"}
-    if done.returncode != 0:
-        return {"<interpreter>": (done.stderr.strip().splitlines() or
-                                  [f"exit {done.returncode}"])[-1]}
-    try:
-        return json.loads(done.stdout.strip().splitlines()[-1])
-    except (ValueError, IndexError):
-        return {"<interpreter>": "probe produced no result"}
-
-
-def _fix_hint(interpreter: str, failures: Dict[str, str]) -> str:
-    """The command that would make this interpreter able to run it."""
-    pip_targets = sorted({_PIP_FIXABLE[m] for m in failures
-                          if m in _PIP_FIXABLE})
-    workspace = sorted(set(failures) & _WORKSPACE_MODULES)
-    hints = []
-    if pip_targets:
-        hints.append(f"{interpreter} -m pip install "
-                     + " ".join(pip_targets))
-    if workspace:
-        hints.append(
-            f"source your catkin workspace's devel/setup.bash so "
-            f"{', '.join(workspace)} is on PYTHONPATH (or set "
-            "PHENOFUSION_ROS_WS=/path/to/your_ws before launching the app)")
-    if "rospy" in failures and "rospy" not in _PIP_FIXABLE:
-        hints.append("source /opt/ros/noetic/setup.bash before launching "
-                     "(never 'pip install rospy' -- that is an unrelated "
-                     "package)")
-    return "; ".join(hints)
-
-
-def choose_runtime(script_path: str) -> Tuple[str, Dict[str, str], str]:
-    """Pick (interpreter, environment, description) able to run the script.
-
-    Raises RuntimeError naming every interpreter tried and exactly what
-    each one was missing -- 'cannot import rospkg' with no further detail
-    is the single most common way this fails on the rig.
-    """
-    modules = script_imports(script_path)
-    log.info("stakeholder script imports: %s", ", ".join(modules))
-
-    environments: List[Tuple[str, Dict[str, str]]] = [
-        ("current environment", dict(os.environ))
-    ]
-    for setups in _setup_bash_scripts():
-        sourced = _env_after_sourcing(setups)
-        if sourced:
-            environments.append(
-                (" + ".join(os.path.basename(os.path.dirname(s)) or s
-                            for s in setups), sourced))
-
-    report: List[str] = []
-    for env_name, env in environments:
-        for interpreter in _candidate_interpreters():
-            failures = _probe_imports(interpreter, modules, env)
-            if not failures:
-                description = f"{interpreter} ({env_name})"
-                log.info("stakeholder script will run with %s", description)
-                return interpreter, env, description
-            missing = ", ".join(f"{m} ({e})" for m, e in sorted(failures.items()))
-            hint = _fix_hint(interpreter, failures)
-            report.append(f"  - {interpreter} [{env_name}]: missing {missing}"
-                          + (f"\n      fix: {hint}" if hint else ""))
-            log.info("stakeholder preflight: %s [%s] missing %s",
-                     interpreter, env_name, ", ".join(sorted(failures)))
-
-    raise RuntimeError(
-        f"No Python on this machine can run {os.path.basename(script_path)} "
-        "-- it needs ROS, the gantry's message package and the RealSense "
-        "SDK all importable by the SAME interpreter. Tried:\n"
-        + "\n".join(report)
-    )
+    return resolve(script_imports(script_path))
 
 
 # ==================================================================== backend
@@ -327,7 +143,9 @@ class StakeholderScriptCapture(CaptureBackend):
         script = find_script()
         self._script_path = script
 
-        interpreter, env, description = choose_runtime(script)
+        runtime = choose_runtime(script)
+        interpreter, env, description = (runtime.interpreter, runtime.env,
+                                         runtime.description)
         settings = script_parameters(script)
         self._notice(
             f"Running the stakeholder script {os.path.basename(script)} "

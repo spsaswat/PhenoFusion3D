@@ -39,6 +39,22 @@ def test_ros_importability_matches_helper():
     assert _ros_importable() == (importlib.util.find_spec('rospy') is not None)
 
 
+def test_ros_available_is_about_the_machine_not_this_interpreter(monkeypatch):
+    """The GUI interpreter often cannot import rospy on a rig where ROS
+    is installed and working. Gating the ROS features on this process's
+    own import disabled them exactly where they were needed."""
+    from capture import ros_capture
+    from capture import ros_runtime
+
+    monkeypatch.setattr(ros_capture.importlib.util, 'find_spec',
+                        lambda name: None)
+    monkeypatch.setattr(ros_runtime, 'ros_is_installed', lambda: True)
+    assert ros_capture.ros_available() is True
+
+    monkeypatch.setattr(ros_runtime, 'ros_is_installed', lambda: False)
+    assert ros_capture.ros_available() is False
+
+
 def test_controller_constructs_without_ros(qapp):
     gc = GantryController()
     assert gc.current_position_m() == 0.0
@@ -109,57 +125,70 @@ def test_master_unreachable_fails_fast_without_blocking(qapp, monkeypatch):
     # The click handler must never block the GUI thread.
     assert time.monotonic() - t0 < 0.5
 
-    # Wait for the background init attempt to finish and report. The
-    # error signal is emitted from the init thread, so Qt queues it to
-    # the main thread -- the event loop must run for it to be delivered.
+    # Wait for the background attempt to finish and report. The error
+    # signal is emitted from that thread, so Qt queues it to the main
+    # thread -- the event loop must run for it to be delivered.
     deadline = time.monotonic() + 5.0
     while time.monotonic() < deadline:
         qapp.processEvents()
-        with gc._init_lock:
-            thread_done = gc._init_thread is None
+        with gc._lock:
+            thread_done = gc._start_thread is None
         if thread_done and any('not reachable' in e for e in errors):
             break
         time.sleep(0.05)
 
     assert any('not reachable' in e for e in errors), errors
-    assert gc.is_available() is True      # importable + retryable
-    assert gc._init_attempted is False    # next click retries init
+    assert gc.is_available() is True      # retryable
+    assert gc._start_attempted is False   # next click tries again
 
 
-def test_hung_init_hits_watchdog_and_recovers(qapp, monkeypatch):
-    """rospy.init_node has internal waits with no timeout (it spins
-    forever if the node hostname doesn't resolve). If init hangs, the
-    watchdog must report a timeout naming the stuck stage and leave the
-    controller retryable -- the panel must never say 'connecting'
-    forever."""
+def test_hung_helper_hits_watchdog_and_recovers(qapp, monkeypatch):
+    """Bringing ROS up has waits with no timeout of their own (rospy's
+    init_node spins forever if the node hostname doesn't resolve). If the
+    helper never reports ready, the wait must time out, surface as an
+    error and leave the controller retryable -- the panel must never say
+    'connecting' forever."""
     import capture.gantry as gantry_mod
+    from capture import ros_client, ros_runtime
 
-    monkeypatch.setattr(gantry_mod, '_ros_importable', lambda: True)
+    monkeypatch.setattr(gantry_mod, 'ros_preflight', lambda *a, **k: None)
+
+    # A helper that starts but never announces itself. `resolve` is
+    # imported inside start(), so the module it lives in is the patch
+    # target -- not the module that calls it.
+    monkeypatch.setattr(ros_client.RosAgentClient, 'START_TIMEOUT_S', 0.3)
+    monkeypatch.setattr(
+        ros_runtime, 'resolve',
+        lambda *a, **k: ros_client_runtime(monkeypatch))
 
     gc = GantryController()
-    monkeypatch.setattr(gc, 'INIT_TIMEOUT_S', 0.3)
-
-    def hung_init():
-        gc._init_stage = 'rospy.init_node (node registration)'
-        time.sleep(10)
-        return True, False, None
-
-    monkeypatch.setattr(gc, '_init_ros', hung_init)
-
     errors: list[str] = []
     gc.error.connect(errors.append)
     gc.start_jog(0.05)
 
-    # The watchdog emits `error` from its background thread; pump the
-    # event loop so the queued signal actually reaches errors.append.
-    deadline = time.monotonic() + 5.0
+    deadline = time.monotonic() + 10.0
     while time.monotonic() < deadline:
         qapp.processEvents()
-        if any('timed out' in e for e in errors):
+        if any('did not become ready' in e for e in errors):
             break
         time.sleep(0.05)
 
-    timeout_errs = [e for e in errors if 'timed out' in e]
-    assert timeout_errs, errors
-    assert 'rospy.init_node' in timeout_errs[0]   # names the stuck stage
-    assert gc._init_attempted is False            # retryable, no restart
+    stalled = [e for e in errors if 'did not become ready' in e]
+    assert stalled, errors
+    assert gc._start_attempted is False           # retryable, no restart
+    gc.shutdown()
+
+
+def ros_client_runtime(monkeypatch):
+    """A runtime whose 'agent' starts and then says nothing."""
+    import os
+    import sys
+    import tempfile
+    from capture.ros_runtime import RosRuntime
+    from capture import ros_client
+
+    silent = os.path.join(tempfile.mkdtemp(), "silent_agent.py")
+    with open(silent, "w") as f:
+        f.write("import sys, time\nfor _ in range(100): time.sleep(1)\n")
+    monkeypatch.setattr(ros_client, "AGENT_PATH", silent)
+    return RosRuntime(sys.executable, dict(os.environ), "silent stand-in")

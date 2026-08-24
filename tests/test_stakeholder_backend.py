@@ -28,7 +28,9 @@ import time
 import pytest
 
 from capture.base import CaptureParams
+from capture import ros_runtime
 from capture import stakeholder_capture as sc
+from capture.ros_runtime import RosRuntime
 
 
 STAND_IN = textwrap.dedent('''
@@ -69,7 +71,7 @@ def stand_in(tmp_path, monkeypatch):
     monkeypatch.setattr(sc, "find_script", lambda: str(script))
     monkeypatch.setattr(
         sc, "choose_runtime",
-        lambda path: (sys.executable, dict(os.environ), "stand-in"))
+        lambda path: RosRuntime(sys.executable, dict(os.environ), "stand-in"))
     return str(script)
 
 
@@ -102,11 +104,14 @@ def test_imports_are_read_from_the_script():
 
 
 def test_preflight_names_every_interpreter_and_its_fix(monkeypatch):
-    """The old failure was a bare 'cannot import rospkg'."""
-    monkeypatch.setattr(sc, "_candidate_interpreters", lambda: ["/usr/bin/python3"])
-    monkeypatch.setattr(sc, "_setup_bash_scripts", lambda: [])
-    monkeypatch.setattr(sc, "_probe_imports",
+    """The old failure was a bare 'cannot import rospkg' -- no mention of
+    which interpreter, or of how to repair it."""
+    monkeypatch.setattr(ros_runtime, "_candidate_interpreters",
+                        lambda: ["/usr/bin/python3"])
+    monkeypatch.setattr(ros_runtime, "_setup_bash_scripts", lambda: [])
+    monkeypatch.setattr(ros_runtime, "_probe_imports",
                         lambda interp, mods, env: {"rospkg": "ModuleNotFoundError"})
+    ros_runtime.forget()
 
     with pytest.raises(RuntimeError) as excinfo:
         sc.choose_runtime(sc.find_script())
@@ -114,7 +119,37 @@ def test_preflight_names_every_interpreter_and_its_fix(monkeypatch):
     message = str(excinfo.value)
     assert "/usr/bin/python3" in message
     assert "rospkg" in message
-    assert "pip install rospkg" in message      # the actual fix, not just the symptom
+    # ROS packages are supplied by the ROS install, never by pip: the app
+    # must point at sourcing them, and must not offer to install them.
+    assert "source /opt/ros" in message
+    assert "pip install rospkg" not in message
+
+
+def test_ros_packages_are_never_offered_for_installation(monkeypatch):
+    """pip-installing anything named after a ROS package shadows the real
+    one -- 'rospy' on PyPI is an unrelated shim. Only app-side
+    dependencies may be suggested."""
+    hint = ros_runtime._fix_hint("/usr/bin/python3", {
+        "rospkg": "ModuleNotFoundError",
+        "rospy": "ModuleNotFoundError",
+        "sensor_msgs": "ModuleNotFoundError",
+        "position_controller_ros": "ModuleNotFoundError",
+        "cv2": "ModuleNotFoundError",
+    })
+    for package in ("rospkg", "rospy", "sensor_msgs", "position_controller_ros"):
+        assert f"pip install {package}" not in hint
+        assert f"install {package}" not in hint
+    assert "devel/setup.bash" in hint            # the workspace one
+    assert "source /opt/ros" in hint             # the distro ones
+    assert "pip install opencv-python-headless" in hint   # app-side is fine
+
+
+def test_pinned_realsense_is_never_version_bumped():
+    """The lab rig is pinned to pyrealsense2 2.54 and must not be moved."""
+    hint = ros_runtime._fix_hint("/usr/bin/python3",
+                                 {"pyrealsense2": "ModuleNotFoundError"})
+    assert "pip install pyrealsense2" in hint
+    assert "==" not in hint and ">=" not in hint and "<" not in hint
 
 
 # ------------------------------------------------------------- the run
