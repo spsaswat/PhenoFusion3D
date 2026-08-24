@@ -114,14 +114,19 @@ class RealCamera:
             pipeline.wait_for_frames()
 
     def _resolve_serial(self, rs) -> str:
-        devices = list(rs.context().query_devices())
+        from capture.simulation import (no_camera_message, usb_diagnosis,
+                                        _query_devices)
+        # Go through the shared enumerator: it retries with a fresh
+        # librealsense context, so a camera plugged in after the app
+        # started is still found.
+        devices = _query_devices(rs)
+        if not devices:
+            devices = _query_devices(rs, rebuild=True)
         if not devices:
             raise RuntimeError(
-                "No Intel RealSense camera detected. Connect the D405 to a "
-                "USB 3 port and check it appears in 'rs-enumerate-devices' "
-                "(on the lab VM the camera must also be passed through: "
-                "VirtualBox Extension Pack + a USB 3.0/xHCI controller). "
-                "Capture was not started and the gantry was not moved."
+                no_camera_message("librealsense enumerated no devices"
+                                  + usb_diagnosis())
+                + " Capture was not started and the gantry was not moved."
             )
         serials = []
         for dev in devices:
@@ -400,14 +405,8 @@ class RosCapture(CaptureBackend):
         params: CaptureParams,
         on_progress: Callable[[int, int], None],
     ) -> int:
-        try:
-            import cv2
-        except ImportError as e:
-            raise RuntimeError(
-                "opencv-python is required for capture. Install with "
-                "'pip install opencv-python' or 'opencv-python-headless'."
-            ) from e
-        self._cv2 = cv2
+        from capture.realsense_capture import _import_cv2
+        self._cv2 = _import_cv2()
 
         # Choose hardware first so a missing device fails before anything
         # is opened or the gantry is commanded to move.

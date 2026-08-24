@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import threading
 import time
 from typing import Optional, Tuple
@@ -35,19 +36,158 @@ _rs_context = None
 _rs_context_lock = threading.Lock()
 
 
-def _realsense_context(rs):
+def _realsense_context(rs, rebuild: bool = False):
     """One shared librealsense context, reused across probes.
 
     Building a fresh context costs ~106 ms; querying an existing one
-    costs ~2 ms. The context tracks device arrival/removal itself, so
-    reusing it still notices a camera plugged in while the app runs --
-    which is what makes continuous auto-detection affordable.
+    costs ~2 ms, which is what makes probing every few seconds
+    affordable.
+
+    A cached context is supposed to track device arrival itself, but it
+    only does so where librealsense's hotplug notifications actually get
+    delivered -- inside a VM, or over some USB stacks, they do not, and
+    the cached context then reports "no devices" forever even after the
+    camera is plugged in. `rebuild=True` throws the stale context away
+    and enumerates from scratch.
     """
     global _rs_context
     with _rs_context_lock:
-        if _rs_context is None:
+        if _rs_context is None or rebuild:
             _rs_context = rs.context()
         return _rs_context
+
+
+def _query_devices(rs, rebuild: bool = False):
+    ctx = _realsense_context(rs, rebuild=rebuild)
+    return list(ctx.query_devices())
+
+
+def usb_diagnosis() -> str:
+    """Why librealsense sees no camera, judged from the OS's own view of
+    the USB bus. Returns '' when there is nothing useful to add.
+
+    The RealSense SDK can only report what the kernel exposes, so
+    'no camera connected' has very different fixes depending on whether
+    the device reached the machine at all. Linux-only (sysfs); silent
+    everywhere else.
+    """
+    try:
+        if not os.path.isdir("/sys/bus/usb/devices"):
+            return ""
+
+        # Every USB device currently on the bus, minus the root hubs.
+        intel_devices = []
+        n_devices = 0
+        for entry in sorted(os.listdir("/sys/bus/usb/devices")):
+            base = os.path.join("/sys/bus/usb/devices", entry)
+            try:
+                with open(os.path.join(base, "idVendor")) as f:
+                    vendor = f.read().strip()
+                with open(os.path.join(base, "idProduct")) as f:
+                    product = f.read().strip()
+            except OSError:
+                continue                      # interfaces, not devices
+            if vendor == "1d6b":              # Linux Foundation root hub
+                continue
+            n_devices += 1
+            if vendor == "8086":              # Intel -- RealSense's vendor id
+                intel_devices.append(f"{vendor}:{product}")
+
+        if intel_devices:
+            # The camera reached the kernel but librealsense cannot open
+            # it -- almost always the udev rules.
+            return (
+                f" -- an Intel USB device ({', '.join(intel_devices)}) IS on "
+                "this machine's USB bus, so the camera is plugged in but "
+                "librealsense cannot open it. Install the udev rules: "
+                "'sudo cp /usr/lib/udev/rules.d/99-realsense-libusb.rules "
+                "/etc/udev/rules.d/ && sudo udevadm control --reload-rules "
+                "&& sudo udevadm trigger', then replug the camera."
+            )
+
+        # No Intel device on the bus. Does this machine even have a port
+        # the D405 could enumerate on?
+        has_usb3 = False
+        controllers = []
+        for entry in sorted(os.listdir("/sys/bus/pci/devices")):
+            try:
+                with open(os.path.join("/sys/bus/pci/devices", entry,
+                                       "class")) as f:
+                    cls = f.read().strip()
+            except OSError:
+                continue
+            if not cls.startswith("0x0c03"):
+                continue                      # not a USB controller
+            if cls == "0x0c0330":
+                has_usb3 = True
+                controllers.append("USB 3 (xHCI)")
+            elif cls == "0x0c0320":
+                controllers.append("USB 2 (EHCI)")
+            elif cls == "0x0c0310":
+                controllers.append("USB 1.1 (OHCI)")
+            else:
+                controllers.append("USB 1.1 (UHCI)")
+
+        virt = _virtualisation()
+        if virt and not has_usb3:
+            return (
+                f" -- no USB device of any kind is attached to this "
+                f"{virt} virtual machine (it exposes only "
+                f"{', '.join(sorted(set(controllers))) or 'no USB controller'}"
+                "), so the D405 is not being passed through from the host. "
+                "On the host: install the VirtualBox Extension Pack, set "
+                "the VM's USB controller to USB 3.0 (xHCI), add a device "
+                "filter for 'Intel(R) RealSense(TM) Depth Camera', then "
+                "attach the camera via Devices > USB while the VM runs."
+            )
+        if virt:
+            return (
+                f" -- this is a {virt} virtual machine and no Intel device "
+                "is on its USB bus; pass the D405 through from the host "
+                "(Devices > USB), then re-detect."
+            )
+        if not has_usb3:
+            return (
+                " -- this machine exposes no USB 3 (xHCI) controller "
+                f"({', '.join(sorted(set(controllers))) or 'none found'}); "
+                "the D405 needs a USB 3 port."
+            )
+        if n_devices == 0:
+            return (" -- no USB devices at all are on this machine's bus; "
+                    "check the cable and the port.")
+        return (f" -- {n_devices} USB device(s) are on the bus but none is "
+                "an Intel RealSense; check the cable (it must be a data "
+                "cable, not charge-only) and try another USB 3 port.")
+    except Exception:                          # diagnosis must never throw
+        return ""
+
+
+def _virtualisation() -> str:
+    """'VirtualBox', 'KVM', ... or '' on bare metal."""
+    try:
+        with open("/sys/class/dmi/id/product_name") as f:
+            name = f.read().strip()
+        if name and name.lower() not in ("", "unknown"):
+            for known in ("VirtualBox", "VMware", "KVM", "QEMU", "Hyper-V",
+                          "Virtual Machine"):
+                if known.lower() in name.lower():
+                    return known
+    except OSError:
+        pass
+    return ""
+
+
+def no_camera_message(detail: str) -> str:
+    """The one place the 'no camera' wording lives, so the badge, the
+    capture backends and the self-test all say the same thing."""
+    return (
+        f"No Intel RealSense camera was found ({detail}). PhenoFusion3D "
+        "asks the RealSense SDK for RGB-D devices directly, not for "
+        "ordinary webcam indexes -- confirm the camera streams depth in "
+        "'realsense-viewer' (or 'rs-enumerate-devices'). If it does not "
+        "appear there either, the problem is below the app: USB "
+        "passthrough, cable, port, or the librealsense udev rules."
+    )
 
 
 def detect_camera() -> Tuple[bool, str]:
@@ -59,13 +199,18 @@ def detect_camera() -> Tuple[bool, str]:
     try:
         import pyrealsense2 as rs
     except ImportError:
-        return False, "pyrealsense2 is not installed"
+        return False, ("pyrealsense2 is not installed -- run "
+                       "'pip install pyrealsense2' in the app's venv")
     try:
-        devices = list(_realsense_context(rs).query_devices())
+        devices = _query_devices(rs)
+        if not devices:
+            # The cached context may simply have missed a hotplug; pay
+            # the ~106 ms rebuild before believing "no camera".
+            devices = _query_devices(rs, rebuild=True)
     except Exception as e:
         return False, f"RealSense query failed: {e}"
     if not devices:
-        return False, "no RealSense camera connected"
+        return False, "no RealSense camera connected" + usb_diagnosis()
     names = []
     for dev in devices:
         try:
@@ -79,7 +224,8 @@ def detect_gantry(timeout_s: float = 3.0) -> Tuple[bool, str]:
     """(present, detail). Requires a reachable ROS master AND somebody
     actually publishing /joint_states -- a master with no gantry driver
     is not a usable gantry."""
-    from capture.gantry import ros_preflight, _ros_importable
+    from capture.gantry import (ros_preflight, ros_master_uri,
+                                _ros_importable)
 
     if not _ros_importable():
         return False, "rospy is not importable"
@@ -95,16 +241,40 @@ def detect_gantry(timeout_s: float = 3.0) -> Tuple[bool, str]:
 
     # rospy.wait_for_message needs an initialised node; if the app hasn't
     # initialised one yet, report based on the publisher count instead.
-    try:
-        import rosgraph
-        master = rosgraph.Master("/phenofusion_probe")
-        _, _, _ = master.getSystemState()
-        pubs = dict(master.getSystemState()[0])
-        if "/joint_states" not in pubs or not pubs["/joint_states"]:
-            return False, "no node is publishing /joint_states"
-        return True, "publishers: " + ", ".join(pubs["/joint_states"])
-    except Exception as e:
-        return False, f"could not query ROS master: {e}"
+    #
+    # getSystemState is XML-RPC over a socket with NO timeout of its own.
+    # This probe runs on the hardware-poll thread AND inside
+    # get_backend("auto") on the capture thread, so an unbounded call
+    # here shows up as the app hanging with no error at all.
+    #
+    # It is bounded with a throwaway thread rather than
+    # socket.setdefaulttimeout(), which is process-global and would put a
+    # timeout on rospy's own long-lived sockets opened in the same window.
+    result: dict = {}
+
+    def _query() -> None:
+        try:
+            import rosgraph
+            master = rosgraph.Master("/phenofusion_probe")
+            result["publishers"] = dict(master.getSystemState()[0])
+        except Exception as e:                    # noqa: BLE001
+            result["error"] = e
+
+    thread = threading.Thread(target=_query, name="gantry-probe", daemon=True)
+    thread.start()
+    thread.join(timeout_s)
+    if thread.is_alive():
+        return False, (f"the ROS master at {ros_master_uri()} accepted the "
+                       f"connection but did not answer within "
+                       f"{timeout_s:.0f}s")
+    if "error" in result:
+        return False, f"could not query ROS master: {result['error']}"
+
+    publishers = result.get("publishers") or {}
+    if not publishers.get("/joint_states"):
+        return False, ("no node is publishing /joint_states -- roscore is "
+                       "up but the gantry driver is not running")
+    return True, "publishers: " + ", ".join(publishers["/joint_states"])
 
 
 # ------------------------------------------------------------------ camera

@@ -168,18 +168,12 @@ class GantryPanel(QWidget):
         for w in widgets:
             w.setEnabled(available)
         if available:
-            self.badge.setText('READY')
-            self.badge.setStyleSheet(
-                'background:#16a34a; color:white; border-radius:4px; '
-                'padding:2px; font-weight:bold; font-size:11px;'
-            )
+            # Optimistic until the first hardware probe reports back via
+            # show_connection().
+            self._set_badge('READY')
             self.setToolTip('')
         else:
-            self.badge.setText('OFFLINE')
-            self.badge.setStyleSheet(
-                'background:#94a3b8; color:white; border-radius:4px; '
-                'padding:2px; font-weight:bold; font-size:11px;'
-            )
+            self._set_badge('OFFLINE')
             self.setToolTip(self._OFFLINE_TOOLTIP)
             self.status_lbl.setText(self._OFFLINE_TOOLTIP)
 
@@ -190,6 +184,37 @@ class GantryPanel(QWidget):
 
     def show_status(self, text: str) -> None:
         self.status_lbl.setText(text)
+
+    # Badge colours by state, so "is the gantry actually there?" is
+    # answerable at a glance instead of only after clicking Jog.
+    _BADGE_STYLES = {
+        "READY":   "#16a34a",       # driver publishing -- commands will land
+        "NO ROS":  "#f59e0b",       # master/driver missing -- clicks do nothing
+        "OFFLINE": "#94a3b8",       # rospy not importable on this machine
+    }
+
+    def _set_badge(self, text: str) -> None:
+        colour = self._BADGE_STYLES.get(text, "#94a3b8")
+        self.badge.setText(text)
+        self.badge.setStyleSheet(
+            f'background:{colour}; color:white; border-radius:4px; '
+            'padding:2px; font-weight:bold; font-size:11px;'
+        )
+
+    def show_connection(self, gantry_ok: bool, detail: str) -> None:
+        """Reflect what the hardware probe actually found.
+
+        Without this the badge read READY whenever rospy merely imported,
+        so a rig with no roscore and no driver still looked connected and
+        the only symptom was jog doing nothing.
+        """
+        if not self._available:
+            return
+        self._set_badge("READY" if gantry_ok else "NO ROS")
+        if gantry_ok:
+            self.status_lbl.setText(f'Gantry driver detected -- {detail}')
+        else:
+            self.status_lbl.setText(f'Gantry not detected: {detail}')
 
     def set_capture_active(self, active: bool) -> None:
         """Disable jog / go-to during an active capture so the user
