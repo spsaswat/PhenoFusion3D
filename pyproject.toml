@@ -27,14 +27,14 @@ dependencies = [
 [project.optional-dependencies]
 # pyrealsense2 MUST stay on 2.54.x: it is the only SDK series supporting all
 # project cameras (L515 support was removed in 2.55+; D435/D405 work in 2.54).
-# Lab Linux machine: ROS itself is system-installed (apt), only the camera
-# SDK comes from pip. rospy is provided by the ROS distro on PYTHONPATH.
+# Lab Linux machine: ROS is system-installed. The GUI starts a helper with
+# ROS's Python, so rospy is never imported by the GUI virtualenv.
 ros = [
-    "pyrealsense2>=2.54.0,<2.55",
+    "pyrealsense2==2.54.2.5684",
 ]
 # Windows / dev: camera-only capture, no gantry control
 windows = [
-    "pyrealsense2>=2.54.0,<2.55",
+    "pyrealsense2==2.54.2.5684",
 ]
 # Developer tooling
 dev = [

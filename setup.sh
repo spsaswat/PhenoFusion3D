@@ -30,6 +30,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 ROOT_DIR="$(pwd)"
 VENV_DIR="${PHENOFUSION_LINUX_VENV:-.venv-linux}"
+ROS_VENV_DIR="${PHENOFUSION_ROS_VENV:-.venv-ros}"
 
 WITH_REALSENSE=false
 WITH_ROS=false
@@ -39,7 +40,7 @@ for arg in "$@"; do
     case "$arg" in
         --with-realsense) WITH_REALSENSE=true ;;
         --l515)           L515=true; WITH_REALSENSE=true ;;
-        --with-ros)       WITH_ROS=true ;;
+        --with-ros)       WITH_ROS=true; WITH_REALSENSE=true ;;
         --verify-only)    VERIFY_ONLY=true ;;
         *) echo "Unknown option: $arg" >&2; exit 2 ;;
     esac
@@ -137,8 +138,9 @@ for mod in required:
         failures.append(mod)
         print(f"  FAIL  {mod}: {e}")
 
-# Optional capture backends -- warn only.
-for mod in ("pyrealsense2", "rospy"):
+# Optional camera backend -- warn only. rospy is intentionally NOT imported
+# in the GUI virtualenv; the bounded shell check below uses ROS's Python.
+for mod in ("pyrealsense2",):
     try:
         importlib.import_module(mod)
         print(f"  OK    {mod} (capture backend available)")
@@ -172,6 +174,25 @@ except Exception as e:
 
 sys.exit(1 if failures else 0)
 PY
+    if [ "$WITH_ROS" = true ]; then
+        local ros_python="${PHENOFUSION_ROS_PYTHON:-$ROS_VENV_DIR/bin/python}"
+        [ -x "$ros_python" ] || ros_python=/usr/bin/python3
+        if [ ! -x "$ros_python" ]; then
+            warn "ROS Python not found at $ros_python."
+            warn "Set PHENOFUSION_ROS_PYTHON to the interpreter used by the working stakeholder script."
+            rc=1
+        elif ! timeout 10 "$ros_python" -c \
+            'import rospy; from geometry_msgs.msg import Twist; from sensor_msgs.msg import JointState; from position_controller_ros.msg import GotoActionGoal; import pyrealsense2, cv2, numpy' \
+            >/dev/null 2>&1; then
+            warn "ROS helper verification failed or timed out under $ros_python."
+            warn "Source /opt/ros/noetic/setup.bash and the gantry workspace devel/setup.bash,"
+            warn "then ensure the same interpreter can import rospy, position_controller_ros,"
+            warn "pyrealsense2, cv2, and numpy. The GUI itself no longer imports rospy."
+            rc=1
+        else
+            log "ROS helper imports passed under $ros_python (bounded 10 s check)."
+        fi
+    fi
     if [ $rc -eq 0 ]; then
         log "VERIFICATION PASSED. Launch with: source $VENV_DIR/bin/activate && python main.py"
     else
@@ -346,7 +367,12 @@ if [ "$WITH_ROS" = true ]; then
     fi
     apt_get install -y --no-install-recommends ros-noetic-ros-base \
         || warn "ROS Noetic install failed (it reached EOL May 2025; mirrors may have moved)."
-    log "Remember to 'source /opt/ros/noetic/setup.bash' BEFORE re-running this script so the venv inherits rospy."
+    if [ -r /opt/ros/noetic/setup.bash ]; then
+        # shellcheck disable=SC1091
+        source /opt/ros/noetic/setup.bash
+    fi
+    log "Before launching, source ROS Noetic and the gantry workspace."
+    log "The GUI delegates ROS to /usr/bin/python3 (or PHENOFUSION_ROS_PYTHON)."
 fi
 
 ###############################################################################
@@ -362,7 +388,7 @@ if venv_ok; then
     log "Reusing existing venv at $VENV_DIR ($("$VENV_DIR/bin/python" -V))."
 else
     [ -d "$VENV_DIR" ] && { warn "Recreating incompatible venv $VENV_DIR..."; rm -rf "$VENV_DIR"; }
-    log "Creating venv at $VENV_DIR ($("$PYTHON_BIN" -V), --system-site-packages so system rospy is visible)..."
+    log "Creating venv at $VENV_DIR ($("$PYTHON_BIN" -V), --system-site-packages for lab SDKs)..."
     "$PYTHON_BIN" -m venv --system-site-packages "$VENV_DIR"
 fi
 
@@ -425,8 +451,28 @@ if [ "$WITH_REALSENSE" = true ]; then
     # 2.54.x is the one series that supports ALL project cameras:
     # L515 support was removed in SDK 2.55+, while D435 and D405 are fully
     # supported in 2.54. Never install a newer pyrealsense2.
-    log "Installing pyrealsense2 2.54.x (supports L515 + D435 + D405)..."
-    python -m pip install "pyrealsense2>=2.54.0,<2.55"
+    log "Installing pyrealsense2 2.54.2.5684 (supports L515 + D435 + D405)..."
+    python -m pip install "pyrealsense2==2.54.2.5684"
+fi
+
+if [ "$WITH_ROS" = true ]; then
+    # ROS Noetic uses Ubuntu 20.04's Python 3.8. Keep a tiny helper venv for
+    # camera packages instead of trying to import rospy into the GUI's newer
+    # Python 3.10-3.12 environment.
+    apt_get install -y --no-install-recommends python3-venv python3-pip \
+        || warn "Could not install the system Python venv tools."
+    if [ ! -x "$ROS_VENV_DIR/bin/python" ]; then
+        log "Creating ROS helper environment at $ROS_VENV_DIR (/usr/bin/python3)..."
+        /usr/bin/python3 -m venv --system-site-packages "$ROS_VENV_DIR"
+    fi
+    log "Installing camera dependencies into the ROS helper environment..."
+    "$ROS_VENV_DIR/bin/python" -m pip install --upgrade "pip<25" setuptools wheel
+    "$ROS_VENV_DIR/bin/python" -m pip install \
+        "numpy>=1.21,<1.25" \
+        "opencv-python-headless>=4.8,<4.9" \
+        "pyrealsense2==2.54.2.5684"
+    export PHENOFUSION_ROS_PYTHON="$ROOT_DIR/$ROS_VENV_DIR/bin/python"
+    log "ROS helper interpreter: $PHENOFUSION_ROS_PYTHON"
 fi
 
 ###############################################################################

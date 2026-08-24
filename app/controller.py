@@ -156,12 +156,16 @@ class Controller(QObject):
         self.reconstruction_complete.emit(final_pcd, succeed, fail)
 
     # ---------------------------------------------------------------- capture
-    @pyqtSlot(str, str, float, float, int, float)
-    def on_capture_clicked(self, backend_pref, out_root, velocity_mps,
+    @pyqtSlot(str, str, str, float, float, int, float)
+    def on_capture_clicked(self, backend_pref, out_root, camera_serial, velocity_mps,
                            end_position_m, fps, duration_s):
+        # Integrated ROS capture owns the gantry ROS node for the scan.
+        if backend_pref.lower() in ('auto', 'ros'):
+            self.gantry.shutdown()
         params = CaptureParams(
             out_root=out_root or 'data/captures',
             fps=fps,
+            camera_serial=camera_serial,
             velocity_mps=velocity_mps,
             end_position_m=end_position_m,
             duration_s=duration_s,
@@ -172,6 +176,7 @@ class Controller(QObject):
         self.capture_worker.frame_captured.connect(self.capture_progress)
         self.capture_worker.finished.connect(self._on_capture_finished)
         self.capture_worker.error.connect(self._on_capture_error)
+        self.capture_worker.status.connect(self.status_changed)
         self.capture_worker.start()
 
     @pyqtSlot()

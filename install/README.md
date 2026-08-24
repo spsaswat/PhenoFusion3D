@@ -10,15 +10,15 @@ new machine. End-users only need to run the launcher script.
 | Lab Linux machine (rover / gantry rig) | `ros` -- ROS + RealSense + gantry | Intel RealSense D405 + ROS-controlled linear gantry |
 | Windows dev / testing | `realsense` -- RealSense camera only | Intel RealSense D405 connected via USB |
 
-The ROS backend is only available where `rospy` can be imported. On
-Windows the Capture panel automatically falls back to the RealSense-only
-backend.
+The ROS backend runs in a helper under the system ROS Python. The PyQt
+virtualenv never imports `rospy`. On Windows the Capture panel uses the
+RealSense-only backend.
 
 ## Prerequisites
 
 ### Lab Linux
-- Ubuntu 20.04 or 22.04
-- ROS Noetic (Ubuntu 20) or ROS Humble (Ubuntu 22), already sourced via `source /opt/ros/<distro>/setup.bash`
+- Ubuntu 20.04
+- ROS Noetic, sourced via `source /opt/ros/noetic/setup.bash`
 - `librealsense2` SDK runtime (`sudo apt install librealsense2-dkms librealsense2-utils librealsense2-dev`)
 - Python 3.10+
 
@@ -50,7 +50,7 @@ To use an L515 with PhenoFusion3D:
     pip install -e ".[windows,l515]"
     ```
 
-   This pins `pyrealsense2>=2.54.0,<2.55`, which keeps L515 enumeration
+   This pins `pyrealsense2==2.54.2.5684`, which keeps L515 enumeration
    working. D400 / D500 series users do not need this extras group.
 
 ## Install
@@ -60,29 +60,18 @@ To use an L515 with PhenoFusion3D:
 ```bash
 git clone <repo-url>
 cd PhenoFusion3D
-chmod +x install/install_linux.sh
-./install/install_linux.sh
+chmod +x setup.sh
+./setup.sh --with-ros
 ```
 
 The script:
-- picks a Python >= 3.10 interpreter (prefers `python3.12`, then `3.11`,
-  then `3.10`, then `python3`); if none is available it apt-installs
-  `python3.10` (using the `deadsnakes` PPA as a fallback on Ubuntu 20.04),
-- creates `.venv-linux/` with `--system-site-packages` so it can see the
-  ROS-installed `rospy`,
+- picks or installs a Python 3.10-3.12 interpreter for the GUI,
+- creates `.venv-linux/` for the GUI while ROS stays in its system Python,
+- creates `.venv-ros/` from `/usr/bin/python3` for the stakeholder
+  ROS script and installs its compatible RealSense/OpenCV dependencies,
 - installs the package in editable mode with `pip install -e ".[ros]"`,
-- detects missing native runtime libs by `ldd`-ing the Qt xcb platform
-  plugin and apt-installs them in a single sudo call (the most common
-  fresh-Ubuntu offenders are `libxcb-icccm4`, `libxcb-keysyms1`,
-  `libxcb-cursor0`, `libxkbcommon-x11-0`, `libegl1`, `libgl1`),
-- imports each dependency to confirm the install is working.
-
-The same Python-picking and native-lib install logic is duplicated in
-`launch.sh`, so on a fresh lab machine **just `bash launch.sh` is
-enough** -- it will create the venv, install Python deps, install
-missing system libs, and open the GUI in one shot. `install_linux.sh`
-exists primarily as the "ROS-first" path that sysadmins prefer to run
-once before any user touches the box.
+- installs the Qt/X11/OpenGL and RealSense system libraries,
+- checks GUI imports normally and checks ROS imports with a 10-second timeout.
 
 ### Windows
 
@@ -102,18 +91,18 @@ The script:
 
 ```bash
 # Linux
-bash launch.sh
-
-# (manual alternative)
-# source .venv-linux/bin/activate
-# python main.py
+source /opt/ros/noetic/setup.bash
+source /path/to/gantry_ws/devel/setup.bash
+source .venv-linux/bin/activate
+python main.py
 
 # Windows
 .\venv\Scripts\Activate.ps1
 python main.py
 ```
 
-`launch.sh` is the recommended Linux/WSL path for day-to-day usage. It uses a dedicated Linux environment (`.venv-linux`), installs missing Python packages, and applies a PyQt plugin-path fix to avoid common Qt `xcb` startup failures.
+The two `source` commands are required so the ROS helper can locate the
+gantry's custom `position_controller_ros` messages.
 
 ## Smoke test the camera
 
@@ -213,8 +202,8 @@ the above.
 ## Common issues
 
 - **`rospy` import fails on Linux**
-  - Make sure ROS is sourced *before* running `install_linux.sh` so the
-    venv inherits the ROS PYTHONPATH.
+  - Run `./setup.sh --with-ros`, then source ROS Noetic and the gantry
+    workspace before launching. The GUI virtualenv does not import `rospy`.
 - **`PyQt5` plugin error on Windows**
   - Re-install PyQt5: `pip install --force-reinstall PyQt5`.
 - **`pyrealsense2` not found**
@@ -234,7 +223,7 @@ the above.
 - **AppImage launches but crashes with `qt.qpa.plugin: Could not load
   the Qt platform plugin "xcb"`**
   - The host is missing X11 client libs. The dev install path
-    (`bash launch.sh` / `./install/install_linux.sh`) auto-detects and
+    (`./setup.sh --with-ros`) auto-detects and
     apt-installs them; for the AppImage you need to install them
     manually on the host. The full set commonly required on a fresh
     Ubuntu is:

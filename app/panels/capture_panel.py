@@ -19,8 +19,8 @@ from capture import ros_available
 
 class CapturePanel(QWidget):
 
-    # backend_pref, out_root, velocity_mps, end_position_m, fps, duration_s
-    capture_requested      = pyqtSignal(str, str, float, float, int, float)
+    # backend, output, camera serial, velocity, end position, FPS, duration
+    capture_requested = pyqtSignal(str, str, str, float, float, int, float)
     capture_stop_requested = pyqtSignal()
 
     def __init__(self):
@@ -47,11 +47,27 @@ class CapturePanel(QWidget):
         if not ros_available():
             self.backend_combo.model().item(1).setEnabled(False)
             self.backend_combo.setToolTip(
-                'rospy not importable on this machine -- ROS backend disabled.'
+                'ROS Noetic was not detected -- ROS backend disabled.'
             )
             self.backend_combo.setCurrentIndex(2)  # RealSense
         backend_row.addWidget(self.backend_combo, stretch=1)
         layout.addLayout(backend_row)
+
+        serial_row = QHBoxLayout()
+        serial_row.addWidget(QLabel('Camera serial:'))
+        self.serial_combo = QComboBox()
+        self.serial_combo.setEditable(True)
+        self.serial_combo.addItem('Auto', '')
+        self.serial_combo.addItems([
+            '128422272123',  # D405
+            '017322071325',  # D435
+            'f1230450',      # L515
+        ])
+        self.serial_combo.setToolTip(
+            'Leave as Auto, choose a known lab camera, or type its serial.'
+        )
+        serial_row.addWidget(self.serial_combo, stretch=1)
+        layout.addLayout(serial_row)
 
         # Output root
         layout.addWidget(QLabel('Output folder:'))
@@ -153,6 +169,8 @@ class CapturePanel(QWidget):
         self.capture_requested.emit(
             backend_pref,
             self.out_edit.text(),
+            '' if self.serial_combo.currentText().strip().lower() == 'auto'
+            else self.serial_combo.currentText().strip(),
             self.vel_spin.value(),
             self.end_spin.value(),
             self.fps_spin.value(),
@@ -163,6 +181,7 @@ class CapturePanel(QWidget):
         self.capture_btn.setEnabled(not running)
         self.stop_btn.setEnabled(running)
         self.backend_combo.setEnabled(not running)
+        self.serial_combo.setEnabled(not running)
 
     def on_progress(self, idx: int, total: int):
         if total > 0:

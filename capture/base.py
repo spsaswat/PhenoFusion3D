@@ -31,6 +31,8 @@ class CaptureParams:
     width: int = 1280
     height: int = 720
     fps: int = 30
+    # Empty means auto-select; otherwise require this RealSense serial.
+    camera_serial: str = ""
 
     # ROS / gantry only -- ignored by realsense backend
     velocity_mps: float = 0.038        # gantry linear X velocity (m/s)
@@ -55,6 +57,8 @@ class CaptureSession:
     velocity_mps: float
     gantry_axis: int
     end_position_m: float
+    camera_serial: str = ""
+    camera_model: str = ""
     n_frames: int = 0
     # frame_index (int) -> gantry position (metres) when available
     frame_positions: dict = field(default_factory=dict)

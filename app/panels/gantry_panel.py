@@ -7,7 +7,7 @@ Hold-to-move jog (mouse press = move, release = stop), absolute
 go-to-position with safety clamp, go-home, big red stop button, and a
 live position read-back driven by /joint_states.
 
-When rospy isn't importable on the host (Windows / WSL without ROS),
+When ROS Noetic isn't detected on the host (Windows / WSL without ROS),
 all controls disable themselves and a tooltip explains why -- no crash,
 no popup spam.
 """
@@ -36,7 +36,7 @@ class GantryPanel(QWidget):
     stop_requested    = pyqtSignal()
 
     _OFFLINE_TOOLTIP = (
-        "rospy not importable on this machine -- gantry controls are "
+        "ROS Noetic was not detected -- gantry controls are "
         "only available on the lab Linux rig with ROS sourced."
     )
 

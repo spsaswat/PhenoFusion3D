@@ -2,9 +2,8 @@
 # (aligned with pyproject.toml [project] and optional capture extras).
 # Requires: Python >=3.10
 #
-# ROS (rospy, sensor_msgs, etc.) is NOT listed here -- install from your
-# ROS distro on lab Linux and use a venv with --system-site-packages
-# (see install/install_linux.sh).
+# ROS (rospy, sensor_msgs, etc.) is NOT listed here. The GUI runs the ROS
+# helper with the system ROS Python; see setup.sh --with-ros.
 
 # --- Core: GUI, reconstruction, quality pipeline ---
 open3d>=0.17.0
@@ -22,7 +21,7 @@ matplotlib>=3.8.0
 # platforms -- use system librealsense + docs in that case.
 # MUST stay on 2.54.x: the only SDK series supporting all project cameras
 # (L515 support removed in 2.55+; D435/D405 fully supported in 2.54).
-pyrealsense2>=2.54.0,<2.55
+pyrealsense2==2.54.2.5684
 
 # --- Developer tooling (optional) ---
 # pip install -e ".[dev]"   or uncomment:

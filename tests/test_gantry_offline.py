@@ -11,7 +11,6 @@ position label updating) is documented in the plan.
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 
 import pytest
@@ -24,6 +23,7 @@ except Exception:                               # pragma: no cover
     pytest.skip("PyQt5 unavailable", allow_module_level=True)
 
 from capture.gantry import GantryController, _ros_importable
+from capture.ros_runtime import ros_environment_available
 
 
 @pytest.fixture(scope='module')
@@ -33,9 +33,8 @@ def qapp():
 
 
 def test_ros_importability_matches_helper():
-    """`_ros_importable()` must agree with importlib's view -- a
-    sanity-check that we don't silently ship a buggy probe."""
-    assert _ros_importable() == (importlib.util.find_spec('rospy') is not None)
+    """The compatibility probe must remain non-importing and deterministic."""
+    assert _ros_importable() == ros_environment_available()
 
 
 def test_controller_constructs_without_ros(qapp):
@@ -45,11 +44,12 @@ def test_controller_constructs_without_ros(qapp):
     assert gc.is_available() in (True, False)
 
 
-@pytest.mark.skipif(_ros_importable(),
-                    reason="rospy is importable -- skipping no-ROS path")
-def test_no_ros_calls_are_safe(qapp):
+def test_no_ros_calls_are_safe(qapp, monkeypatch):
     """On a non-ROS host, every public call must return cleanly and
     flip is_available() to False after the first attempt."""
+    monkeypatch.setattr(
+        'capture.gantry.ros_environment_available', lambda: False
+    )
     gc = GantryController()
     errors: list[str] = []
     gc.error.connect(errors.append)
@@ -62,7 +62,7 @@ def test_no_ros_calls_are_safe(qapp):
 
     assert gc.is_available() is False
     # At least one error message must have been emitted explaining why.
-    assert any('rospy' in e.lower() for e in errors), errors
+    assert any('ros noetic' in e.lower() for e in errors), errors
 
 
 def test_goto_clamps_out_of_range(qapp):

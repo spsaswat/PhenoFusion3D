@@ -31,3 +31,11 @@ jobs:
         run: ./setup.sh
       - name: Re-run verification explicitly
         run: ./setup.sh --verify-only
+      - name: Run ROS boundary regressions (offline)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          .venv-linux/bin/python -m pip install "pytest>=7.4"
+          .venv-linux/bin/python -m pytest -q \
+            tests/test_gantry_offline.py \
+            tests/test_ros_process_integration.py

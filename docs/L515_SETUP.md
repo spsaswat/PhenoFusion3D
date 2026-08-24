@@ -54,7 +54,7 @@ directly from this and shape everything below:
    Windows host (regardless of SDK version). The L515 is a Windows
    device for the purposes of this project.
 
-> **Update (2026-08-20):** the project now pins `pyrealsense2>=2.54.0,<2.55`
+> **Update (2026-08-20):** the project now pins `pyrealsense2==2.54.2.5684`
 > **everywhere** (`pyproject.toml` extras, `requirements.txt`,
 > `constraints.txt`, `setup.sh`), not just for L515 owners. 2.54.x is the
 > only SDK series that supports **all** project cameras — L515, D435, and
@@ -68,16 +68,16 @@ directly from this and shape everything below:
 ### `pyproject.toml`
 
 Added a new optional-dependencies group `l515` that pins the SDK to
-`>=2.54.0,<2.55` so an L515 owner explicitly opts into the L515-stable
+`==2.54.2.5684` so an L515 owner explicitly opts into the L515-stable
 line:
 
 ```toml
 [project.optional-dependencies]
 windows = [
-    "pyrealsense2>=2.54.0",
+    "pyrealsense2==2.54.2.5684",
 ]
 l515 = [
-    "pyrealsense2>=2.54.0,<2.55",
+    "pyrealsense2==2.54.2.5684",
 ]
 ```
 
@@ -88,7 +88,7 @@ that live in the repo root and raise `SystemExit` at import time.
 
 ### `requirements.txt`
 
-Added an inline comment block above `pyrealsense2>=2.54.0` documenting
+Added an inline comment block above `pyrealsense2==2.54.2.5684` documenting
 the L515 caveat, so an L515 owner sees the warning at the same place
 where they would otherwise pin the dependency.
 
@@ -244,7 +244,7 @@ count: 1
 
 ## Decision log: things considered and not done
 
-- **Pinning `pyrealsense2>=2.54.0,<2.55` in the default `[windows]` /
+- **Pinning `pyrealsense2==2.54.2.5684` in the default `[windows]` /
   `[ros]` extras**: rejected. D400 / D500 owners benefit from the
   newer SDK and are the project's primary target. The `[l515]`
   opt-in is correct here.

@@ -21,7 +21,7 @@ git clone https://github.com/PhenoFusion-3D/PhenoFusion3D.git
 cd PhenoFusion3D
 ./setup.sh                    # GUI + reconstruction (no camera)
 # ./setup.sh --with-realsense # + camera capture (L515 / D435 / D405)
-# ./setup.sh --with-ros       # + ROS Noetic for the gantry backend
+# ./setup.sh --with-ros       # + ROS Noetic + RealSense gantry capture
 source .venv-linux/bin/activate
 python main.py
 ```
@@ -34,9 +34,9 @@ so a green build means a fresh clone is installable.
 
 ### Other platforms
 
-For lab and dev installs (preferred), use the bundled installers — see [install/README.md](install/README.md):
+For other platforms, see the bundled installers in [install/README.md](install/README.md):
 
-- **Lab Linux + ROS:** `./install/install_linux.sh`
+- **Lab Linux + ROS:** `./setup.sh --with-ros`
 - **Windows (camera-only):** `.\install\install_windows.ps1`
 
 For a manual install (any OS), from the repository root:
@@ -60,9 +60,22 @@ Do not commit large datasets or generated point clouds; see `.gitignore` (`data/
 
 The **Data Capture** panel drives an RGB-D capture without leaving the app.
 
-- **Backend = Auto** picks ROS+gantry on the lab machine and RealSense-only on Windows.
-- **ROS + Gantry** (lab Linux) wraps `stakeholder_reference/rospy_thread_fin_1.py` with the same `Twist`-based velocity command, the same `align(rs.stream.color)` pipeline and the same intrinsics save logic. UI-tunable parameters: velocity (m/s), end position (m), FPS.
+- **Backend = Auto** tries ROS+gantry on the lab machine, then falls back to camera-only capture if ROS cannot start before the first frame.
+- **ROS + Gantry** runs the stakeholder scan in the ROS system Python, outside PyQt. It keeps the same topics, two-frame loop, alignment, velocity, stop position, and go-home goal without allowing a slow `rospy` import to freeze the GUI.
 - **RealSense Only** (Windows / dev) captures from the camera directly for `Duration (s)` seconds. Useful for sanity tests.
+- **Camera serial** can be left at Auto, selected from the three stakeholder cameras, or typed manually. The selected model, serial, and actual profile are saved in `session.json`.
+
+Launch ROS mode from a shell with both environments sourced:
+
+```bash
+source /opt/ros/noetic/setup.bash
+source /path/to/gantry_ws/devel/setup.bash
+source .venv-linux/bin/activate
+python main.py
+```
+
+Set `PHENOFUSION_ROS_PYTHON` only if the working stakeholder script uses
+an interpreter other than the generated `.venv-ros/bin/python`.
 
 Output layout (consumed directly by the loader):
 

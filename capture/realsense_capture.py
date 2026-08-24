@@ -48,7 +48,7 @@ class RealSenseCapture(CaptureBackend):
                 "'pip install pyrealsense2' (Windows / Linux x86_64)."
             ) from e
 
-        device = self._select_device(rs)
+        device = self._select_device(rs, params.camera_serial)
         pipeline = rs.pipeline()
         profile, color_format = self._start_pipeline(pipeline, device, rs, params)
 
@@ -108,7 +108,7 @@ class RealSenseCapture(CaptureBackend):
                 pass
 
     # ---------------------------------------------------------------- helpers
-    def _select_device(self, rs):
+    def _select_device(self, rs, preferred_serial: str = ""):
         """Pick the first connected Intel RealSense device with color + depth."""
         ctx = rs.context()
         devices = list(ctx.query_devices())
@@ -134,6 +134,16 @@ class RealSenseCapture(CaptureBackend):
                 f"device with both color and depth streams. Found: {found}. "
                 "The capture backend needs the RealSense depth interface, not "
                 "only the RGB webcam interface."
+            )
+
+        if preferred_serial:
+            for device in rgbd_devices:
+                if self._device_serial(device, rs) == preferred_serial:
+                    return device
+            found = ", ".join(self._device_label(device, rs) for device in rgbd_devices)
+            raise RuntimeError(
+                f"RealSense serial {preferred_serial!r} is not connected. "
+                f"Available RGB-D devices: {found}"
             )
 
         return rgbd_devices[0]
@@ -241,6 +251,13 @@ class RealSenseCapture(CaptureBackend):
     def _update_session_from_profile(self, profile, rs) -> None:
         if self.session is None:
             return
+        device = profile.get_device()
+        self.session.camera_serial = self._device_serial(device, rs)
+        try:
+            if device.supports(rs.camera_info.name):
+                self.session.camera_model = device.get_info(rs.camera_info.name)
+        except Exception:
+            pass
         try:
             vsp = rs.video_stream_profile(profile.get_stream(rs.stream.color))
             intr = vsp.get_intrinsics()

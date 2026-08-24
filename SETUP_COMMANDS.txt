@@ -65,7 +65,7 @@ Is the camera visible to the RealSense SDK?
 Camera detected by lsusb but NOT by the SDK / app says no camera
     Wrong pyrealsense2 version. Must be 2.54.x (L515 support was
     removed in 2.55+; 2.54 also covers D435/D405):
-        pip install "pyrealsense2>=2.54.0,<2.55"
+        pip install "pyrealsense2==2.54.2.5684"
     Then RESTART the app -- a running app keeps the old SDK loaded.
 
 App crashes: 'Could not load the Qt platform plugin "xcb"'

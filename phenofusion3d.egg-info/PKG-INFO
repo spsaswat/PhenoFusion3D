@@ -16,9 +16,9 @@ Requires-Dist: PyQt5>=5.15.0
 Requires-Dist: pyqtgraph>=0.13.0
 Requires-Dist: matplotlib>=3.8.0
 Provides-Extra: ros
-Requires-Dist: pyrealsense2<2.55,>=2.54.0; extra == "ros"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "ros"
 Provides-Extra: windows
-Requires-Dist: pyrealsense2<2.55,>=2.54.0; extra == "windows"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "windows"
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: ruff>=0.4.0; extra == "dev"

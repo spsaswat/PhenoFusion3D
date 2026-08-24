@@ -35,6 +35,7 @@ Thumbs.db
 notes.txt
 .cursor.venv/
 .venv-linux/
+.venv-ros/
 venv/
 data/
 dist/
