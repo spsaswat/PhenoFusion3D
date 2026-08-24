@@ -504,28 +504,48 @@ for pkg in rospy rosgraph roslib rosmaster; do
     [ -d "$VENV_SITE/$pkg" ] && SHIM_FOUND="$SHIM_FOUND $pkg"
 done
 if [ -n "$SHIM_FOUND" ]; then
-    warn "Removing pip-installed ROS shim packages from the venv:$SHIM_FOUND"
-    warn "(real rospy comes from apt ROS + 'source /opt/ros/noetic/setup.bash', never from pip)"
-    # shellcheck disable=SC2086
-    python -m pip uninstall -y $SHIM_FOUND || true
+    # Report, never remove. On a lab machine ROS is preinstalled and may
+    # legitimately be visible in the venv; uninstalling here would break a
+    # working rig. The app does not depend on this either way -- it runs
+    # ROS work under whichever interpreter can already import it.
+    warn "ROS packages are present in the venv's own site-packages:$SHIM_FOUND"
+    warn "Leaving them untouched. If the gantry misbehaves and these turned"
+    warn "out to be the PyPI 'rospy' shim rather than your real ROS install,"
+    warn "remove them yourself with:"
+    warn "  $VENV_DIR/bin/pip uninstall -y$SHIM_FOUND"
 fi
 
-# rospy's pure-Python deps (rospkg & friends) are apt-installed for the
-# SYSTEM Python 3.8 only, so the 3.10-3.12 venv can't see them and
-# 'import rospy' dies with "No module named 'rospkg'". These particular
-# packages are official PyPI releases (unlike 'rospy' itself), so pip
-# them into the venv. netifaces is optional (C extension, may need to
-# build) -- rosgraph has a socket-based fallback if it's absent.
+# ROS's Python packages are NEVER installed by this script. They belong
+# to the ROS distro (apt) and your catkin workspace; pip-installing
+# anything named after them shadows the real thing.
+#
+# The app no longer needs them in the venv either: it runs its ROS work
+# through capture/ros_agent.py under whichever interpreter on the machine
+# can already import them (see capture/ros_runtime.py). So this step only
+# reports what it finds.
 if [ "$WITH_ROS" = true ]; then
-    log "Installing rospy's Python deps into the venv (rospkg, catkin_pkg, ...)..."
-    python -m pip install rospkg catkin_pkg PyYAML defusedxml \
-        || warn "Failed to install rospy Python deps; gantry backend may not import."
-    python -m pip install netifaces \
-        || warn "netifaces failed to build; continuing (rosgraph falls back to socket lookup)."
+    log "Checking which interpreters can import ROS (nothing is installed)..."
+    for candidate in "$VENV_DIR/bin/python" /usr/bin/python3; do
+        [ -x "$candidate" ] || continue
+        if out="$("$candidate" -c 'import rospy, rosgraph; print(rospy.__file__)' 2>&1)"; then
+            log "  OK    $candidate can import rospy ($out)"
+        else
+            log "  --    $candidate cannot: $(printf '%s' "$out" | tail -1)"
+        fi
+    done
+    log "  (the app picks a working one automatically; if none works here,"
+    log "   'source /opt/ros/noetic/setup.bash' and your workspace's"
+    log "   devel/setup.bash, then relaunch)"
 fi
 
 if [ "$WITH_REALSENSE" = true ]; then
-    if [ "$L515" = true ]; then
+    # Never move a working camera SDK. Rigs are pinned to a specific
+    # pyrealsense2 (2.54 on the lab machine) and an upgrade there breaks
+    # capture; the app only uses long-standing SDK calls, so any 2.54+
+    # is fine.
+    if existing="$(python -c 'import pyrealsense2 as rs; print(rs.__version__)' 2>/dev/null)"; then
+        log "pyrealsense2 $existing already installed -- leaving it alone."
+    elif [ "$L515" = true ]; then
         log "Installing L515-compatible pyrealsense2 (<2.55)..."
         python -m pip install "pyrealsense2>=2.54.0,<2.55"
     else

@@ -35,13 +35,26 @@ from typing import Callable, Optional, Tuple
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
+from capture.ros_client import RosAgentClient
 
 log = logging.getLogger("phenofusion.capture")
 
 
 def ros_available() -> bool:
-    """True iff rospy can be imported on this machine."""
-    return importlib.util.find_spec("rospy") is not None
+    """True when this MACHINE has ROS -- not necessarily this interpreter.
+
+    The GUI process no longer talks to ROS itself; capture/ros_agent.py
+    does, under whichever interpreter can import it. So gating the ROS
+    features on `import rospy` working *here* wrongly disabled them on
+    exactly the rigs they were needed on: the app's venv frequently
+    cannot import rospy while the system Python can.
+
+    Kept cheap (filesystem checks only) -- it runs while building the UI.
+    """
+    if importlib.util.find_spec("rospy") is not None:
+        return True
+    from capture.ros_runtime import ros_is_installed
+    return ros_is_installed()
 
 
 def _available_ram_bytes() -> int:
@@ -182,150 +195,17 @@ class RealCamera:
             pass
 
 
-class RealGantry:
-    """The lab gantry over ROS: /cmd_vel out, /joint_states in."""
+class RealGantry(RosAgentClient):
+    """The lab gantry over ROS: /cmd_vel out, /joint_states in.
+
+    Thin adapter over `RosAgentClient`, so the self-test and this capture
+    loop drive the gantry through the same out-of-process runtime as the
+    panel and the stakeholder script -- rather than an in-process rospy
+    that the app's venv often cannot import at all.
+    """
 
     simulated = False
     label = "ROS gantry"
-
-    # rospy.init_node has internal waits with no timeout.
-    INIT_TIMEOUT_S = 15.0
-
-    def __init__(self):
-        self._rospy = None
-        self._cmd_vel_pub = None
-        self._goto_pub = None
-        self._light_pub = None
-        self._joint_sub = None
-        self._Twist = None
-        self._GotoActionGoal = self._Header = self._GoalID = None
-        self._position = 0.0
-        self._seen = threading.Event()
-
-    def start(self) -> None:
-        if not ros_available():
-            raise RuntimeError(
-                "rospy is not importable on this machine. The ROS backend "
-                "is only available on the lab Linux machine with ROS sourced. "
-                "Use the 'RealSense Only' backend on Windows."
-            )
-
-        # Fail fast on the known rospy forever-hangs (roscore down,
-        # unresolvable node hostname) BEFORE opening anything else.
-        from capture.gantry import ros_preflight
-        problem = ros_preflight()
-        if problem is not None:
-            raise RuntimeError(problem)
-
-        import rospy
-        from geometry_msgs.msg import Twist
-        from sensor_msgs.msg import JointState
-        self._rospy, self._Twist = rospy, Twist
-
-        # init_node under a watchdog: even after preflight, rospy has
-        # internal waits with no timeout, and a hang here must surface as
-        # an error, not a silently never-capturing worker.
-        init_err: list = []
-
-        def _do_init():
-            try:
-                rospy.init_node("phenofusion_capture",
-                                anonymous=True, disable_signals=True)
-            except rospy.exceptions.ROSException:
-                log.info("rospy node already initialised in this process")
-            except Exception as e:
-                init_err.append(e)
-            finally:
-                # init_node swaps out the root logger's handlers.
-                from capture.gantry import _reinstall_log_handlers
-                _reinstall_log_handlers()
-
-        t = threading.Thread(target=_do_init, daemon=True,
-                             name="ros-capture-init")
-        t.start()
-        t.join(self.INIT_TIMEOUT_S)
-        if t.is_alive():
-            raise RuntimeError(
-                f"rospy.init_node did not complete within "
-                f"{self.INIT_TIMEOUT_S:.0f}s -- see phenofusion3d.log; check "
-                "roscore health and hostname resolution "
-                "(ROS_HOSTNAME=localhost often fixes this)."
-            )
-        if init_err:
-            raise RuntimeError(f"rospy.init_node failed: {init_err[0]}")
-        log.info("capture ROS node ready")
-
-        self._cmd_vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-
-        # Light publisher -- stakeholder parity (/write_pin). The
-        # stakeholder loop has the switch_light calls commented out, so we
-        # create it but do not publish. Keep the reference so rospy does
-        # not unregister it (the stakeholder keeps a global).
-        try:
-            from std_msgs.msg import UInt16
-            self._light_pub = rospy.Publisher("/write_pin", UInt16,
-                                              queue_size=10)
-        except Exception:
-            pass
-
-        # Go-home publisher. Optional: without position_controller_ros
-        # msgs capture still works, it just skips the go-home.
-        try:
-            from position_controller_ros.msg import GotoActionGoal
-            from std_msgs.msg import Header
-            from actionlib_msgs.msg import GoalID
-            self._GotoActionGoal, self._Header, self._GoalID = (
-                GotoActionGoal, Header, GoalID)
-            self._goto_pub = rospy.Publisher(
-                "/go_to_position_server/goal", GotoActionGoal, queue_size=10)
-        except Exception as e:
-            log.warning("position_controller_ros msgs unavailable (%s); "
-                        "gantry will not auto-home after capture.", e)
-
-        def joint_states_cb(msg):
-            if msg.position:
-                self._position = msg.position[0]
-                self._seen.set()
-
-        self._joint_sub = rospy.Subscriber("/joint_states", JointState,
-                                           joint_states_cb)
-
-    def wait_alive(self, timeout_s: float) -> bool:
-        """True once the gantry driver proves it is publishing."""
-        return self._seen.wait(timeout_s)
-
-    def start_moving(self, velocity_mps: float) -> None:
-        m = self._Twist()
-        m.linear.x = velocity_mps
-        self._cmd_vel_pub.publish(m)
-
-    def stop_moving(self) -> None:
-        self._cmd_vel_pub.publish(self._Twist())
-
-    def position(self) -> float:
-        return self._position
-
-    def go_home(self) -> None:
-        if self._goto_pub is None:
-            return
-        msg = self._GotoActionGoal()
-        msg.header = self._Header()
-        msg.goal_id = self._GoalID()
-        msg.goal.position = 0.005      # matches stakeholder go_home()
-        msg.goal.velocity = 0.2
-        self._goto_pub.publish(msg)
-        log.info("go_home goal published")
-
-    def is_shutdown(self) -> bool:
-        return bool(self._rospy and self._rospy.is_shutdown())
-
-    def shutdown(self) -> None:
-        if self._joint_sub is not None:
-            try:
-                self._joint_sub.unregister()
-            except Exception:
-                pass
-            self._joint_sub = None
 
 
 # ================================================================ backend ===

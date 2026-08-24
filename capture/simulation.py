@@ -18,9 +18,11 @@ mistake them for plant data.
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import os
+import subprocess
 import threading
 import time
 from typing import Optional, Tuple
@@ -223,25 +225,26 @@ def detect_camera() -> Tuple[bool, str]:
 def detect_gantry(timeout_s: float = 3.0) -> Tuple[bool, str]:
     """(present, detail). Requires a reachable ROS master AND somebody
     actually publishing /joint_states -- a master with no gantry driver
-    is not a usable gantry."""
-    from capture.gantry import (ros_preflight, ros_master_uri,
-                                _ros_importable)
+    is not a usable gantry.
 
-    if not _ros_importable():
-        return False, "rospy is not importable"
+    Answered by whichever interpreter can really talk to ROS. This
+    process often cannot: the app's venv gets rospy from /opt/ros via
+    PYTHONPATH while rospy's own dependencies were apt-installed for the
+    system Python, so `import rospy` here dies on rospkg even with the
+    gantry running perfectly. Falling back to the resolved runtime is
+    what makes the answer match what the capture will actually do.
+    """
+    from capture.gantry import ros_preflight, ros_master_uri
+
     problem = ros_preflight()
     if problem is not None:
         return False, problem
 
     try:
-        import rospy
-        from sensor_msgs.msg import JointState
+        import rosgraph                                  # noqa: F401
     except Exception as e:
-        return False, f"ROS msgs unavailable: {e}"
+        return _detect_gantry_via_runtime(timeout_s, f"{e}")
 
-    # rospy.wait_for_message needs an initialised node; if the app hasn't
-    # initialised one yet, report based on the publisher count instead.
-    #
     # getSystemState is XML-RPC over a socket with NO timeout of its own.
     # This probe runs on the hardware-poll thread AND inside
     # get_backend("auto") on the capture thread, so an unbounded call
@@ -275,6 +278,37 @@ def detect_gantry(timeout_s: float = 3.0) -> Tuple[bool, str]:
         return False, ("no node is publishing /joint_states -- roscore is "
                        "up but the gantry driver is not running")
     return True, "publishers: " + ", ".join(publishers["/joint_states"])
+
+
+def _detect_gantry_via_runtime(timeout_s: float, why: str) -> Tuple[bool, str]:
+    """Ask the ROS-capable interpreter, because this one is not."""
+    log.debug("this interpreter cannot query ROS (%s); using the resolved "
+              "runtime instead", why)
+    try:
+        from capture.ros_runtime import resolve
+        runtime = resolve()
+    except RuntimeError as e:
+        return False, str(e)
+
+    agent = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "ros_agent.py")
+    try:
+        done = subprocess.run([runtime.interpreter, "-u", agent, "--probe"],
+                              capture_output=True, text=True,
+                              timeout=max(timeout_s, 10.0), env=runtime.env)
+    except subprocess.TimeoutExpired:
+        return False, (f"the ROS probe ({runtime.description}) did not "
+                       f"answer within {max(timeout_s, 10.0):.0f}s")
+    except OSError as e:
+        return False, f"could not run the ROS probe: {e}"
+
+    try:
+        report = json.loads((done.stdout or "").strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        detail = (done.stderr or done.stdout or "no output").strip()
+        return False, f"the ROS probe failed: {detail.splitlines()[-1][:200]}"
+
+    return bool(report.get("driver")), str(report.get("detail", ""))
 
 
 # ------------------------------------------------------------------ camera
