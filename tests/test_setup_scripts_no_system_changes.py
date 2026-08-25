@@ -157,6 +157,28 @@ def test_venv_is_the_only_thing_created():
 
 
 @pytest.mark.parametrize("script", SETUP_SCRIPTS, ids=lambda p: p.name)
+def test_no_grep_q_in_a_pipeline(script):
+    """`set -o pipefail` plus `grep -q` silently inverts a check.
+
+    grep -q exits on the first match, the upstream writer dies of
+    SIGPIPE (141), and pipefail reports the whole pipeline as failed --
+    so a successful match reads as a failure. It is a race, so it shows
+    up on some inputs and not others: here it reported three installed
+    Qt libraries as missing. Let grep drain its input instead
+    (`| grep ... >/dev/null`).
+    """
+    text = script.read_text()
+    if "pipefail" not in text:
+        pytest.skip(f"{script.name} does not set pipefail")
+    offenders = [
+        f"{script.name}:{lineno}: {line.strip()}"
+        for lineno, line in enumerate(text.splitlines(), start=1)
+        if re.search(r"\|\s*grep\s+(-[A-Za-z]*q|-q)", line)
+    ]
+    assert not offenders, "grep -q inside a pipeline under pipefail:\n" + "\n".join(offenders)
+
+
+@pytest.mark.parametrize("script", SETUP_SCRIPTS, ids=lambda p: p.name)
 def test_scripts_are_executable(script):
     assert script.exists(), f"{script} is missing"
     assert script.stat().st_mode & stat.S_IXUSR, f"{script} is not executable"

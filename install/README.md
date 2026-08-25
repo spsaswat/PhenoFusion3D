@@ -107,8 +107,37 @@ The script:
   `libgl1`),
 - imports each dependency to confirm the install is working.
 
-Useful flags: `--dry-run` (print every pip command, run none),
-`--verify-only`, `--no-ros`, `--no-realsense`.
+### Before a trip to the rig: `./setup.sh --check`
+
+```bash
+./setup.sh --check      # read-only: reports EVERY gate, changes nothing
+```
+
+It creates nothing (not even the venv) and prints one table of every
+gate between a bare machine and "camera + gantry both work", so a single
+run tells you the whole list instead of one problem per attempt:
+
+```
+================== PREFLIGHT: camera + gantry ==================
+OK   Python 3.10-3.12             /usr/bin/python3.11 (3.11.16)
+OK   project venv                 .venv-linux (3.11.16)
+OK   Qt/GL native libraries       all present
+OK   ROS distro                   /opt/ros/noetic/setup.bash
+FAIL capture script runtime       position_controller_ros not importable
+WARN ROS master (roscore)         not running at http://localhost:11311
+FAIL RealSense stack pinned       off-pin; see docs/L515_SETUP.md
+WARN camera visible               none enumerated
+=======================================================
+```
+
+`capture script runtime` is the decisive one for the gantry: it asks the
+app's own resolver whether *any* interpreter on the machine can satisfy
+every import `rospy_thread_fin_1.py` makes (rospy, the message packages,
+`position_controller_ros`, `pyrealsense2`, `cv2`) — the same check the
+app runs when you press Capture. Exit code is `2` if any gate FAILs.
+
+Useful flags: `--check` (read-only preflight), `--dry-run` (print every
+pip command, run none), `--verify-only`, `--no-ros`, `--no-realsense`.
 
 ### Windows
 
