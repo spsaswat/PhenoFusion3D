@@ -15,7 +15,12 @@ license = { text = "MIT" }
 
 dependencies = [
     "open3d>=0.17.0",
-    "opencv-python>=4.8.0",
+    # Headless build on purpose: opencv-python bundles its own Qt
+    # platform plugins, which hijack PyQt5's xcb plugin and stop the
+    # GUI from opening. The app never calls cv2's GUI functions, so
+    # headless loses nothing -- and depending on it directly means no
+    # install ever has to be undone afterwards.
+    "opencv-python-headless>=4.8.0",
     "numpy>=1.26.0",
     "natsort>=8.4.0",
     "tqdm>=4.66.0",
@@ -31,7 +36,10 @@ dependencies = [
 # because apt installs them only for the system Python 3.8 while the venv
 # runs 3.10-3.12.
 ros = [
-    "pyrealsense2>=2.54.0",
+    # Exact pin, deliberately not a range: >=2.55 dropped L515 support
+    # entirely, and the wheel must match the machine-wide SDK (2.54.2).
+    # See docs/L515_SETUP.md.
+    "pyrealsense2==2.54.2.5684",
     "rospkg>=1.5",
     "catkin_pkg>=1.0",
     "PyYAML>=5.1",
@@ -39,7 +47,7 @@ ros = [
 ]
 # Windows / dev: camera-only capture, no gantry control
 windows = [
-    "pyrealsense2>=2.54.0",
+    "pyrealsense2==2.54.2.5684",   # see the note on [ros] above
 ]
 # Developer tooling
 dev = [

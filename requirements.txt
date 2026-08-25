@@ -8,7 +8,9 @@
 
 # --- Core: GUI, reconstruction, quality pipeline ---
 open3d>=0.17.0
-opencv-python>=4.8.0
+# Headless build on purpose (opencv-python's bundled Qt plugins break
+# the PyQt5 GUI; the app never uses cv2's GUI functions).
+opencv-python-headless>=4.8.0
 numpy>=1.26.0
 natsort>=8.4.0
 tqdm>=4.66.0
@@ -20,7 +22,12 @@ matplotlib>=3.8.0
 # Omit this line only if you will never use in-app capture and only load
 # RGB-D folders from disk. Not available as a prebuilt wheel on all ARM
 # platforms -- use system librealsense + docs in that case.
-pyrealsense2>=2.54.0
+#
+# Pinned exactly, not floored: pyrealsense2 >= 2.55 cannot see an L515 at
+# all, and the wheel must match the machine-wide librealsense SDK, which
+# this project pins to 2.54.2. Wheels for 2.54.2.5684 exist for Python
+# 3.10 and 3.11 only. See docs/L515_SETUP.md.
+pyrealsense2==2.54.2.5684
 
 # --- Developer tooling (optional) ---
 # pip install -e ".[dev]"   or uncomment:
