@@ -99,6 +99,12 @@ class RealCamera:
         # time, which freezes the Qt GUI, not just the capture thread.
         serial = self._resolve_serial(rs)
 
+        # Drop the probe context first -- under the RSUSB backend it
+        # holds a libusb claim on the device, and pipeline.start() below
+        # would fail with "Device or resource busy".
+        from capture.simulation import release_camera
+        release_camera()
+
         pipeline = rs.pipeline()
         config = rs.config()
         if serial:

@@ -68,6 +68,12 @@ class RealSenseCapture(CaptureBackend):
             ) from e
 
         device = self._select_device(rs)
+
+        # See capture/simulation.release_camera(): the hardware probe's
+        # context claims the device under the RSUSB backend.
+        from capture.simulation import release_camera
+        release_camera()
+
         pipeline = rs.pipeline()
         profile, color_format = self._start_pipeline(pipeline, device, rs, params)
 
