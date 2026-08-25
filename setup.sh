@@ -22,6 +22,7 @@
 # Usage:
 #   chmod +x setup.sh
 #   ./setup.sh                 # create/reuse .venv-linux, install what's missing, verify
+#   ./setup.sh --check         # read-only: report EVERY gate, fix nothing
 #   ./setup.sh --dry-run       # print the pip commands, run none of them
 #   ./setup.sh --no-ros        # skip the ROS-side Python deps (rospkg, catkin_pkg, ...)
 #   ./setup.sh --no-realsense  # skip the camera SDK entirely (dev box, no camera)
@@ -59,6 +60,7 @@ WITH_REALSENSE=true
 WITH_ROS=true
 VERIFY_ONLY=false
 DRY_RUN=false
+CHECK_ONLY=false
 for arg in "$@"; do
     case "$arg" in
         --no-realsense)   WITH_REALSENSE=false ;;
@@ -67,6 +69,11 @@ for arg in "$@"; do
         # for every camera; accepted as a no-op for old notes.
         --l515)           WITH_REALSENSE=true ;;
         --dry-run)        DRY_RUN=true ;;
+        # Read-only preflight: check every gate between here and a
+        # working camera + gantry, report them ALL, change nothing.
+        # Never exits at the first failure -- one run at the rig should
+        # tell you everything that needs fixing.
+        --check|--preflight) CHECK_ONLY=true; DRY_RUN=true ;;
         --verify-only)    VERIFY_ONLY=true ;;
         # Older invocations that used to switch on system-level work.
         # The system work is gone; accepted as no-ops so old notes and
@@ -85,6 +92,42 @@ err()  { printf '\033[1;31m[setup] ERROR:\033[0m %s\n' "$*" >&2; }
 # in this list is ever executed by the script.
 MANUAL_STEPS=()
 manual() { MANUAL_STEPS+=("$1"); }
+
+# Gates between a bare machine and "camera + gantry both work". Every
+# check records its verdict here instead of exiting, so a single run
+# reports all of them -- a trip to the rig is expensive.
+GATE_NAMES=()
+GATE_STATES=()
+GATE_NOTES=()
+gate() {   # gate <name> <OK|FAIL|WARN|SKIP> <note>
+    GATE_NAMES+=("$1"); GATE_STATES+=("$2"); GATE_NOTES+=("$3")
+}
+
+print_gates() {
+    local i colour state
+    printf '\n\033[1m================== PREFLIGHT: %s ==================\033[0m\n' \
+        "camera + gantry" >&2
+    for i in "${!GATE_NAMES[@]}"; do
+        state="${GATE_STATES[$i]}"
+        case "$state" in
+            OK)   colour='\033[1;32m' ;;
+            WARN) colour='\033[1;33m' ;;
+            SKIP) colour='\033[1;34m' ;;
+            *)    colour='\033[1;31m' ;;
+        esac
+        printf "${colour}%-4s\033[0m %-28s %s\n" \
+            "$state" "${GATE_NAMES[$i]}" "${GATE_NOTES[$i]}" >&2
+    done
+    printf '\033[1m%s\033[0m\n' "=======================================================" >&2
+}
+
+gates_failed() {
+    local state
+    for state in "${GATE_STATES[@]:-}"; do
+        [ "$state" = "FAIL" ] && return 0
+    done
+    return 1
+}
 
 print_manual_steps() {
     [ "${#MANUAL_STEPS[@]}" -eq 0 ] && return 0
@@ -284,25 +327,34 @@ pick_python() {
     return 1
 }
 
-if [ -n "${PHENOFUSION_PYTHON:-}" ]; then
+PYTHON_BIN=""
+if [ -n "${PHENOFUSION_PYTHON:-}" ] && python_ok "$PHENOFUSION_PYTHON"; then
     PYTHON_BIN="$PHENOFUSION_PYTHON"
-    if ! python_ok "$PYTHON_BIN"; then
-        err "PHENOFUSION_PYTHON=$PYTHON_BIN is not a venv-capable Python 3.10-3.12."
-        exit 1
-    fi
-elif PYTHON_BIN="$(pick_python)"; then
-    :
+elif [ -n "${PHENOFUSION_PYTHON:-}" ]; then
+    err "PHENOFUSION_PYTHON=$PHENOFUSION_PYTHON is not a venv-capable Python 3.10-3.12."
 else
+    PYTHON_BIN="$(pick_python || true)"
+fi
+
+if [ -n "$PYTHON_BIN" ]; then
+    log "Using interpreter: $PYTHON_BIN ($("$PYTHON_BIN" -V 2>&1))"
+    gate "Python 3.10-3.12" OK "$PYTHON_BIN ($("$PYTHON_BIN" -V 2>&1 | awk '{print $2}'))"
+else
+    gate "Python 3.10-3.12" FAIL "none on this machine; nothing can be built without one"
     err "No venv-capable Python 3.10-3.12 found on this machine."
     err "This script does not install one -- that would change your system."
-    err "Install one yourself, then re-run (or point at it with"
-    err "PHENOFUSION_PYTHON=/path/to/python3.11 ./setup.sh). For example:"
-    err "    sudo apt install python3.11 python3.11-venv python3.11-dev"
-    err "  or, without root:"
-    err "    curl -LsSf https://astral.sh/uv/install.sh | sh && uv python install 3.11"
-    exit 1
+    manual "# No Python 3.10-3.12 with venv support on this machine. Install one
+# yourself (then re-run), or point the script at an existing one with
+# PHENOFUSION_PYTHON=/path/to/python3.11 ./setup.sh :
+    sudo apt install python3.11 python3.11-venv python3.11-dev
+# ...or without root:
+    curl -LsSf https://astral.sh/uv/install.sh | sh && uv python install 3.11"
+    if [ "$CHECK_ONLY" != true ]; then
+        print_gates
+        print_manual_steps
+        exit 1
+    fi
 fi
-log "Using interpreter: $PYTHON_BIN ($("$PYTHON_BIN" -V 2>&1))"
 
 ###############################################################################
 # 2. Virtual environment -- the only thing this script creates
@@ -313,32 +365,43 @@ venv_ok() {
     "$VENV_DIR/bin/python" -c "import sys; sys.exit(0 if (3,10) <= sys.version_info[:2] <= (3,12) else 1)" 2>/dev/null
 }
 
+VPY=""
 if venv_ok; then
     log "Reusing existing venv at $VENV_DIR ($("$VENV_DIR/bin/python" -V 2>&1))."
+    VPY="$VENV_DIR/bin/python"
+    gate "project venv" OK "$VENV_DIR ($("$VPY" -V 2>&1 | awk '{print $2}'))"
 elif [ -d "$VENV_DIR" ]; then
     # An existing directory is the user's data. Never delete it silently.
+    gate "project venv" FAIL "$VENV_DIR exists but its Python is missing or outside 3.10-3.12"
     err "$VENV_DIR exists but its Python is missing or outside 3.10-3.12."
     err "Not touching it. Remove or rename it yourself and re-run:"
     err "    rm -rf $VENV_DIR && ./setup.sh"
-    exit 1
+    [ "$CHECK_ONLY" != true ] && { print_gates; print_manual_steps; exit 1; }
 elif [ "$DRY_RUN" = true ]; then
-    log "[dry-run] would create venv: $PYTHON_BIN -m venv --system-site-packages $VENV_DIR"
-    err "Nothing else can be checked without a venv. Re-run without --dry-run."
-    exit 0
+    log "[dry-run] would create venv: ${PYTHON_BIN:-<no interpreter>} -m venv --system-site-packages $VENV_DIR"
+    gate "project venv" WARN "not created yet; a normal ./setup.sh run creates it"
+elif [ -z "$PYTHON_BIN" ]; then
+    gate "project venv" FAIL "cannot be created: no usable Python"
 else
     # --system-site-packages only lets the venv SEE system packages
     # (that is how the ROS distro's rospy becomes importable). It does
     # not let pip write to them: pip in a venv installs into the venv.
     log "Creating venv at $VENV_DIR ($("$PYTHON_BIN" -V 2>&1), --system-site-packages)..."
     "$PYTHON_BIN" -m venv --system-site-packages "$VENV_DIR"
+    VPY="$VENV_DIR/bin/python"
+    gate "project venv" OK "created at $VENV_DIR"
 fi
 
-VPY="$VENV_DIR/bin/python"
-log "pip: $("$VPY" -m pip --version 2>&1 | head -1) (left as-is -- this script never upgrades pip)"
+[ -n "$VPY" ] && log "pip: $("$VPY" -m pip --version 2>&1 | head -1) (left as-is -- this script never upgrades pip)"
 
 ###############################################################################
 # 3. Install MISSING Python deps into the venv (never upgrade or replace)
 ###############################################################################
+
+if [ -z "$VPY" ]; then
+    warn "No venv to install into -- skipping the Python dependency phase."
+    gate "project dependencies" SKIP "no venv yet"
+else
 
 # Pin every distribution the venv can already see to its installed
 # version. Passed to pip as constraints, this makes it impossible for
@@ -427,6 +490,7 @@ if [ "$WITH_REALSENSE" = true ]; then
     log "Camera SDK (pinned to $RS_WHEEL_VERSION):"
     install_if_missing pyrealsense2 "pyrealsense2==$RS_WHEEL_VERSION" "pyrealsense2"
 fi
+fi
 
 ###############################################################################
 # 4. System-level checks -- REPORT ONLY, nothing is installed or changed
@@ -460,7 +524,8 @@ declare -A SO_TO_PKG=(
     [libgio-2.0.so.0]="libglib2.0-0"
 )
 
-SITE="$("$VPY" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])' 2>/dev/null || echo "")"
+SITE=""
+[ -n "$VPY" ] && SITE="$("$VPY" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])' 2>/dev/null || echo "")"
 SCAN_SOFILES=()
 if [ -n "$SITE" ]; then
     for cand in \
@@ -488,10 +553,31 @@ for sofile in "${SCAN_SOFILES[@]:-}"; do
     done < <(ldd "$sofile" 2>/dev/null | awk '/=> not found/ {print $1}')
 done
 
+# With no venv there are no wheels to ldd, so fall back to asking the
+# dynamic linker directly about the libraries the GUI is known to need.
+if [ "${#SCAN_SOFILES[@]}" -eq 0 ]; then
+    for soname in libxcb-xinerama.so.0 libxcb-cursor.so.0 libxkbcommon-x11.so.0 \
+                  libEGL.so.1 libGL.so.1 libSM.so.6 libfontconfig.so.1 libusb-1.0.so.0; do
+        # No `grep -q` here: it exits on the first match, the upstream
+        # ldconfig then dies of SIGPIPE, and `pipefail` turns that into a
+        # failed pipeline -- reporting an installed library as missing.
+        # Letting grep drain its input keeps the verdict truthful.
+        if ! ldconfig -p 2>/dev/null | grep -F "	$soname " >/dev/null; then
+            pkg="${SO_TO_PKG[$soname]:-}"
+            [ -n "$pkg" ] && case " ${missing_pkgs[*]:-} " in
+                *" $pkg "*) ;; *) missing_pkgs+=("$pkg") ;;
+            esac
+        fi
+    done
+fi
+
 if [ "${#missing_pkgs[@]}" -gt 0 ]; then
     warn "Native libraries are missing; the GUI will not open until they are installed."
+    gate "Qt/GL native libraries" FAIL "missing: ${missing_pkgs[*]}"
     manual "# Missing shared libraries (Qt xcb / OpenGL / RealSense). Install them:
     sudo apt install ${missing_pkgs[*]}"
+else
+    gate "Qt/GL native libraries" OK "all present"
 fi
 if [ "${#missing_sos[@]}" -gt 0 ]; then
     warn "Missing shared libraries with no known apt package: ${missing_sos[*]}"
@@ -501,7 +587,8 @@ fi
 #     platform plugins, which hijack PyQt5's xcb plugin. The headless
 #     build fixes it -- but that means removing a package, so we only
 #     say so. (The app never calls cv2.imshow, so headless loses nothing.)
-cv_builds="$("$VPY" -m pip list --format=freeze 2>/dev/null \
+cv_builds=""
+[ -n "$VPY" ] && cv_builds="$("$VPY" -m pip list --format=freeze 2>/dev/null \
              | grep -E '^opencv-python(-headless)?==' | cut -d= -f1 | tr '\n' ' ' || true)"
 if [ "$(printf '%s' "$cv_builds" | wc -w)" -gt 1 ]; then
     warn "Both OpenCV builds are installed ($cv_builds); they ship the same cv2 package and overwrite each other."
@@ -527,6 +614,7 @@ if [ "$WITH_ROS" = true ]; then
     done
     if [ -n "$ROS_SETUP" ]; then
         log "Found ROS at $ROS_SETUP."
+        gate "ROS distro" OK "$ROS_SETUP"
         if ! grep -qF "$ROS_SETUP" "$HOME/.bashrc" 2>/dev/null; then
             manual "# The gantry backend needs rospy, which only appears on PYTHONPATH
 # once ROS is sourced. Do it per shell:
@@ -536,6 +624,7 @@ if [ "$WITH_ROS" = true ]; then
         fi
     else
         log "No ROS distro found under /opt/ros (gantry backend stays offline; fine on a dev box)."
+        gate "ROS distro" FAIL "nothing under /opt/ros -- the gantry cannot work"
         manual "# Optional, lab rig only: ROS Noetic is a system install (apt repo +
 # signing key + /opt/ros). Follow your lab SOP or:
 #   http://wiki.ros.org/noetic/Installation/Ubuntu
@@ -567,6 +656,74 @@ if [ "$WITH_ROS" = true ]; then
 # 'rospy' shim rather than a real ROS install (real rospy lives under
 # /opt/ros). Removing packages is your call, not this script's:
     $VENV_DIR/bin/pip uninstall -y$SHIM_FOUND"
+    fi
+fi
+
+# 4e. Gantry readiness: can anything on this machine actually RUN the
+#     stakeholder capture script? That script needs rospy, the message
+#     packages, position_controller_ros (from the lab's catkin
+#     workspace), pyrealsense2 and cv2 -- all importable by the SAME
+#     interpreter. The app resolves that at capture time; ask it here so
+#     a mismatch shows up now instead of mid-scan.
+if [ "$WITH_ROS" = true ] && [ -n "$VPY" ]; then
+    log "Checking whether any interpreter can run the capture script:"
+    rt_out="$(timeout 120 "$VPY" - <<'PY' 2>&1 || true
+import logging
+logging.disable(logging.CRITICAL)
+try:
+    from capture import stakeholder_capture as sc
+    runtime = sc.choose_runtime(sc.find_script())
+    print("RUNTIME_OK " + runtime.description)
+except Exception as exc:
+    first = str(exc).strip().splitlines()
+    print("RUNTIME_FAIL " + (first[0] if first else type(exc).__name__))
+    for line in str(exc).splitlines():
+        if "missing" in line or "fix:" in line:
+            print("   " + line.strip())
+PY
+)"
+    if printf '%s' "$rt_out" | grep '^RUNTIME_OK' >/dev/null; then
+        log "  OK    $(printf '%s' "$rt_out" | sed -n 's/^RUNTIME_OK //p')"
+        gate "capture script runtime" OK "$(printf '%s' "$rt_out" | sed -n 's/^RUNTIME_OK //p')"
+    else
+        printf '%s\n' "$rt_out" | sed 's/^/      /' >&2
+        # The usual cause on a lab machine: the catkin workspace that
+        # provides position_controller_ros has not been sourced, and it
+        # is not in one of the places the app looks (~/catkin_ws,
+        # ~/ros_ws, ~/ws, ~/workspace).
+        if printf '%s' "$rt_out" | grep 'position_controller_ros' >/dev/null; then
+            gate "capture script runtime" FAIL "position_controller_ros not importable (catkin workspace not found)"
+            manual "# The gantry's message package (position_controller_ros) is not
+# importable. It lives in the lab's catkin workspace. Either source it
+# before launching, or tell the app where it is -- no root needed:
+    source /path/to/your_ws/devel/setup.bash
+# ...or, so the app finds it on its own every time:
+    export PHENOFUSION_ROS_WS=/path/to/your_ws
+# (the app already looks in ~/catkin_ws, ~/ros_ws, ~/ws and ~/workspace)"
+        else
+            gate "capture script runtime" FAIL "no interpreter satisfies the script's imports"
+        fi
+    fi
+elif [ "$WITH_ROS" = true ]; then
+    gate "capture script runtime" SKIP "needs the venv"
+fi
+
+# 4f. Is a ROS master up? The gantry talks to it; without one the panel
+#     sits at "Connecting to ROS...". Informational -- roscore is
+#     something you start, not something setup installs.
+if [ "$WITH_ROS" = true ]; then
+    ros_uri="${ROS_MASTER_URI:-http://localhost:11311}"
+    if "${VPY:-python3}" - "$ros_uri" <<'PY' 2>/dev/null
+import socket, sys
+from urllib.parse import urlparse
+p = urlparse(sys.argv[1])
+with socket.create_connection((p.hostname or "localhost", p.port or 11311), timeout=1.0):
+    pass
+PY
+    then
+        gate "ROS master (roscore)" OK "$ros_uri"
+    else
+        gate "ROS master (roscore)" WARN "not running at $ros_uri -- start roscore before using the gantry"
     fi
 fi
 
@@ -645,6 +802,24 @@ check_realsense_state() {
 if [ "$WITH_REALSENSE" = true ]; then
     log "Checking the RealSense stack (report only -- nothing is changed):"
     check_realsense_state
+    if [ "$RS_STATE_OK" = true ]; then
+        gate "RealSense stack pinned" OK "SDK $RS_SDK_VERSION + wheel $RS_WHEEL_VERSION"
+    else
+        gate "RealSense stack pinned" FAIL "off-pin; see docs/L515_SETUP.md"
+    fi
+
+    # Is a camera actually plugged in and reachable as this user? This
+    # is the last thing between the pinned stack and a working capture.
+    if [ -n "$VPY" ]; then
+        cams="$("$VPY" -c 'import pyrealsense2 as rs; print(", ".join(d.get_info(rs.camera_info.name) for d in rs.context().devices))' 2>/dev/null || true)"
+        if [ -n "$cams" ]; then
+            log "  OK    camera(s) visible: $cams"
+            gate "camera visible" OK "$cams"
+        else
+            gate "camera visible" WARN "none enumerated (unplugged, wrong port, or udev rules missing)"
+        fi
+    fi
+
     if [ "$RS_STATE_OK" != true ]; then
         err "The RealSense stack is NOT in the state this project needs."
         err "Camera capture will misbehave (a 2.55+ SDK cannot see an L515 at all)."
@@ -677,6 +852,18 @@ fi
 # 5. Verify
 ###############################################################################
 
+if [ "$CHECK_ONLY" = true ]; then
+    print_gates
+    print_manual_steps
+    if gates_failed; then
+        err "Preflight found blocking problems (FAIL above). Nothing was changed."
+        exit 2
+    fi
+    log "Preflight clean. Run ./setup.sh (no flags) to build the venv, then:"
+    log "    source $VENV_DIR/bin/activate && python main.py"
+    exit 0
+fi
+
 if [ "$DRY_RUN" = true ]; then
     log "[dry-run] skipping verification (nothing was installed)."
     print_manual_steps
@@ -688,6 +875,7 @@ fi
 
 rc=0
 verify || rc=$?
+print_gates
 if [ "$WITH_REALSENSE" = true ] && [ "$RS_STATE_OK" != true ] && [ $rc -eq 0 ]; then
     # The venv is fine, but the camera stack is not in the pinned state.
     # Exit non-zero so this cannot be mistaken for a clean setup; pass
