@@ -3,9 +3,14 @@ install/install_windows.ps1
 ---------------------------
 Windows installer for PhenoFusion3D (RealSense-only capture, no ROS).
 
-Prereqs:
-  - Python 3.10+
-  - Intel RealSense SDK 2.0 runtime installed (for camera capture only)
+This script only ever creates and populates the project venv. It does
+not install anything machine-wide -- no winget, no MSI, no PATH edits.
+
+Prereqs (install these yourself first):
+  - Python 3.10 or 3.11 (the pinned pyrealsense2 2.54.2.5684 has no
+    wheel for 3.12+)
+  - Intel RealSense SDK 2.0 v2.54.2 runtime, for camera capture
+    (see docs/L515_SETUP.md)
 
 Usage (PowerShell):
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -29,8 +34,17 @@ if (-not (Test-Path "venv")) {
 
 . .\venv\Scripts\Activate.ps1
 
-python -m pip install --upgrade pip
-python -m pip install -e ".[windows]"
+# Pin every package the venv already has to its installed version and
+# pass that to pip as constraints. pip can then only ADD what is
+# missing -- it cannot upgrade, downgrade or replace anything that
+# already works (notably a pinned pyrealsense2). pip itself is left at
+# whatever version the venv was created with, on purpose.
+$constraints = Join-Path $root "venv\phenofusion-constraints.txt"
+python -m pip freeze --exclude-editable |
+    Where-Object { $_ -match '^[A-Za-z0-9._-]+==' } |
+    Set-Content -Encoding ascii $constraints
+
+python -m pip install --no-input -c $constraints -e ".[windows]"
 
 Write-Host ""
 Write-Host "[install] Verifying imports..."

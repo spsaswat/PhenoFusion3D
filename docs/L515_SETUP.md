@@ -178,6 +178,133 @@ doesn't live only in chat history or commit messages.
 
 ---
 
+## Pinning the machine-wide SDK to 2.54.2 on Linux
+
+`setup.sh` **checks** for this state and refuses to call the setup clean
+until it holds. It never performs any of the steps below: they purge apt
+packages, write to `/etc`, and install into `/usr/local`, which is your
+machine, not the project. Run them yourself.
+
+### The state setup.sh requires
+
+| Piece | Required | Checked by |
+|---|---|---|
+| apt `librealsense2*` packages | **none installed** | `dpkg-query -W 'librealsense2*'` |
+| machine-wide SDK | `2.54.2`, built from source, in `/usr/local` | `rs-enumerate-devices --version` |
+| udev rules | `/etc/udev/rules.d/99-realsense-libusb.rules` present | file check |
+| venv wheel | `pyrealsense2==2.54.2.5684` | `importlib.metadata.version` |
+
+Two version numbers, one release: **`2.54.2`** is what the machine-wide
+SDK reports, **`2.54.2.5684`** is how that release's Python wheel is
+versioned on PyPI. Do not expect `rs-enumerate-devices` to print the
+`.5684` suffix.
+
+Why 2.54.2 specifically: the **D405** has had official support since
+`2.51.1`, and `2.54.2` is the **last release that still contains L515
+support** (removed in `>= 2.55`; the L515 was last formally validated in
+`2.50.0`). It is the only version that drives both cameras.
+
+The build below uses `FORCE_RSUSB_BACKEND=ON`, RealSense's user-space
+USB backend. That deliberately avoids the patched kernel modules / DKMS
+that the 2.54.2-era packages ship, which may not build against a kernel
+this machine has since been upgraded to.
+
+### Procedure
+
+**1. Unplug every RealSense camera first.** Then see what is installed:
+
+```bash
+dpkg -l | grep librealsense
+sudo apt purge 'librealsense2*'
+sudo apt autoremove
+dpkg -l | grep librealsense      # should now print nothing
+```
+
+**2. Build dependencies:**
+
+```bash
+sudo apt update
+sudo apt install -y git cmake build-essential libssl-dev \
+    libusb-1.0-0-dev libudev-dev pkg-config libgtk-3-dev libglfw3-dev
+```
+
+**3. Fetch exactly v2.54.2:**
+
+```bash
+git clone --branch v2.54.2 --depth 1 \
+    https://github.com/IntelRealSense/librealsense.git ~/librealsense-2.54.2
+cd ~/librealsense-2.54.2
+git describe --tags        # must report v2.54.2
+```
+
+**4. udev rules** (non-root camera access):
+
+```bash
+cd ~/librealsense-2.54.2
+sudo ./scripts/setup_udev_rules.sh
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+**5. Configure the build:**
+
+```bash
+cd ~/librealsense-2.54.2
+mkdir -p build && cd build
+cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DFORCE_RSUSB_BACKEND=ON \
+    -DBUILD_EXAMPLES=ON \
+    -DBUILD_GRAPHICAL_EXAMPLES=ON \
+    -DBUILD_PYTHON_BINDINGS=OFF
+```
+
+`BUILD_PYTHON_BINDINGS=OFF` on purpose: the Python side comes from the
+pinned PyPI wheel inside the venv, not from this build.
+
+**6. Compile and install** (several minutes):
+
+```bash
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+```
+
+**7. Verify the machine-wide SDK:**
+
+```bash
+which rs-enumerate-devices        # expect /usr/local/bin/rs-enumerate-devices
+rs-enumerate-devices --version    # expect ~ 2.54.2  (no .5684 suffix here)
+```
+
+**8. Reconnect the camera** to a blue SuperSpeed USB 3 port, wait 5-10
+seconds, then:
+
+```bash
+rs-enumerate-devices              # expect Device Name / Serial / Firmware
+realsense-viewer                  # optional, visual confirmation
+```
+
+**9. The venv wheel** (venv-local, so this one is safe to run from the
+project directory):
+
+```bash
+.venv-linux/bin/pip install --force-reinstall pyrealsense2==2.54.2.5684
+```
+
+**10. Re-check** — this reports, and changes nothing:
+
+```bash
+./setup.sh --verify-only     # imports + camera enumeration
+./setup.sh --dry-run         # full state check, no installs
+```
+
+`setup.sh` exits `2` while the stack is off-pin, even when the venv
+itself is healthy. On a dev box with no camera, `./setup.sh
+--no-realsense` skips the check entirely.
+
+---
+
 ## System-level changes made on this machine
 
 These are not in the repo; they are changes made to the developer's

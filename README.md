@@ -11,8 +11,15 @@ Python tools for **RGB-D–based 3D reconstruction**: turn paired colour and dep
 
 For lab and dev installs (preferred), use the bundled installers — see [install/README.md](install/README.md):
 
-- **Lab Linux + ROS:** `./install/install_linux.sh`
+- **Lab Linux + ROS:** `./setup.sh` (or the equivalent `./install/install_linux.sh`)
 - **Windows (camera-only):** `.\install\install_windows.ps1`
+
+The installers **only create and populate the project venv** — no
+`sudo`, no `apt`, no changes to your machine. System prerequisites (ROS,
+the RealSense SDK, Qt/GL libraries) are checked and reported as manual
+steps with the exact command, never installed for you. Run
+`./setup.sh --dry-run` to see everything it would do without it doing
+anything.
 
 For a manual install (any OS), from the repository root:
 

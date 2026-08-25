@@ -1,5 +1,5 @@
 open3d>=0.17.0
-opencv-python>=4.8.0
+opencv-python-headless>=4.8.0
 numpy>=1.26.0
 natsort>=8.4.0
 tqdm>=4.66.0
@@ -12,11 +12,11 @@ pytest>=7.4.0
 ruff>=0.4.0
 
 [ros]
-pyrealsense2>=2.54.0
+pyrealsense2==2.54.2.5684
 rospkg>=1.5
 catkin_pkg>=1.0
 PyYAML>=5.1
 defusedxml>=0.7
 
 [windows]
-pyrealsense2>=2.54.0
+pyrealsense2==2.54.2.5684

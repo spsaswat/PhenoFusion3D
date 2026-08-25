@@ -22,9 +22,13 @@ capture/__init__.py
 capture/base.py
 capture/gantry.py
 capture/realsense_capture.py
+capture/ros_agent.py
 capture/ros_capture.py
+capture/ros_client.py
+capture/ros_runtime.py
 capture/selftest.py
 capture/simulation.py
+capture/stakeholder_capture.py
 file_io/__init__.py
 file_io/exporter.py
 file_io/loader.py
@@ -45,10 +49,13 @@ processing/utils.py
 tests/test_agent_integration.py
 tests/test_e2e.py
 tests/test_gantry_offline.py
+tests/test_hardware_detection.py
 tests/test_icp.py
 tests/test_loader.py
 tests/test_registration_agent.py
 tests/test_registration_agent_strategies.py
 tests/test_rgbd.py
+tests/test_setup_scripts_no_system_changes.py
+tests/test_stakeholder_backend.py
 visualiser/__init__.py
 visualiser/viewer.py

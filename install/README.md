@@ -64,25 +64,51 @@ chmod +x install/install_linux.sh
 ./install/install_linux.sh
 ```
 
+`install_linux.sh` is now a thin wrapper around `./setup.sh`; run
+either one.
+
+**The installer never changes your machine.** It has no `sudo`, no
+`apt`, no writes to `/etc` or `~/.bashrc`, and it does not download a
+Python interpreter. The only thing it creates is the project venv.
+Anything system-level is detected and printed as a **MANUAL STEPS**
+block for you to run yourself -- this is enforced by
+`tests/test_setup_scripts_no_system_changes.py`.
+
 The script:
-- picks a Python >= 3.10 interpreter (prefers `python3.12`, then `3.11`,
-  then `3.10`, then `python3`); if none is available it apt-installs
-  `python3.10` (using the `deadsnakes` PPA as a fallback on Ubuntu 20.04),
+- **finds** a venv-capable Python 3.10-3.12 (prefers `python3.11`, then
+  `3.12`, `3.10`, `python3`, then any interpreter `uv`/conda already
+  downloaded). If there is none it stops and tells you how to install
+  one; it will not install one for you. Override with
+  `PHENOFUSION_PYTHON=/path/to/python3.11`,
 - creates `.venv-linux/` with `--system-site-packages` so it can see the
-  ROS-installed `rospy`,
-- installs the package in editable mode with `pip install -e ".[ros]"`,
-- detects missing native runtime libs by `ldd`-ing the Qt xcb platform
-  plugin and apt-installs them in a single sudo call (the most common
-  fresh-Ubuntu offenders are `libxcb-icccm4`, `libxcb-keysyms1`,
-  `libxcb-cursor0`, `libxkbcommon-x11-0`, `libegl1`, `libgl1`),
+  ROS-installed `rospy` (that flag only lets the venv *read* system
+  packages; pip still writes into the venv),
+- writes `.venv-linux/phenofusion-constraints.txt`, pinning every
+  package the venv can already see to its installed version, and passes
+  it to every `pip install` as constraints. pip can therefore only
+  **add missing** packages -- it can never upgrade, downgrade or replace
+  one that already works. A rig pinned to `pyrealsense2 2.54.2.5684`
+  stays there; `pip` itself is not upgraded either,
+- installs the project editable, plus any missing ROS-side Python deps
+  (`rospkg`, `catkin_pkg`, `PyYAML`, `defusedxml`) and the pinned
+  `pyrealsense2`,
+- **checks** the RealSense stack against the version this project pins
+  (machine-wide SDK `2.54.2` built from source with
+  `FORCE_RSUSB_BACKEND=ON`, no apt `librealsense2*` packages, udev rules
+  present, wheel `2.54.2.5684`). Anything off-pin is an error with the
+  fix printed; nothing is purged, built or downgraded for you. Full
+  procedure: [`docs/L515_SETUP.md`](../docs/L515_SETUP.md). Exit code is
+  `2` while the stack is off-pin. `--no-realsense` skips the check,
+- detects missing native runtime libs by `ldd`-ing what is actually in
+  the venv (Qt xcb plugin, Open3D, pyrealsense2) and prints one
+  `sudo apt install ...` line naming only the packages this machine
+  really lacks (common fresh-Ubuntu offenders: `libxcb-icccm4`,
+  `libxcb-keysyms1`, `libxcb-cursor0`, `libxkbcommon-x11-0`, `libegl1`,
+  `libgl1`),
 - imports each dependency to confirm the install is working.
 
-The same Python-picking and native-lib install logic is duplicated in
-`launch.sh`, so on a fresh lab machine **just `bash launch.sh` is
-enough** -- it will create the venv, install Python deps, install
-missing system libs, and open the GUI in one shot. `install_linux.sh`
-exists primarily as the "ROS-first" path that sysadmins prefer to run
-once before any user touches the box.
+Useful flags: `--dry-run` (print every pip command, run none),
+`--verify-only`, `--no-ros`, `--no-realsense`.
 
 ### Windows
 

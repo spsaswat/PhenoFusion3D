@@ -8,7 +8,7 @@ Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: open3d>=0.17.0
-Requires-Dist: opencv-python>=4.8.0
+Requires-Dist: opencv-python-headless>=4.8.0
 Requires-Dist: numpy>=1.26.0
 Requires-Dist: natsort>=8.4.0
 Requires-Dist: tqdm>=4.66.0
@@ -16,13 +16,13 @@ Requires-Dist: PyQt5>=5.15.0
 Requires-Dist: pyqtgraph>=0.13.0
 Requires-Dist: matplotlib>=3.8.0
 Provides-Extra: ros
-Requires-Dist: pyrealsense2>=2.54.0; extra == "ros"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "ros"
 Requires-Dist: rospkg>=1.5; extra == "ros"
 Requires-Dist: catkin_pkg>=1.0; extra == "ros"
 Requires-Dist: PyYAML>=5.1; extra == "ros"
 Requires-Dist: defusedxml>=0.7; extra == "ros"
 Provides-Extra: windows
-Requires-Dist: pyrealsense2>=2.54.0; extra == "windows"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "windows"
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: ruff>=0.4.0; extra == "dev"
@@ -41,8 +41,15 @@ Python tools for **RGB-D–based 3D reconstruction**: turn paired colour and dep
 
 For lab and dev installs (preferred), use the bundled installers — see [install/README.md](install/README.md):
 
-- **Lab Linux + ROS:** `./install/install_linux.sh`
+- **Lab Linux + ROS:** `./setup.sh` (or the equivalent `./install/install_linux.sh`)
 - **Windows (camera-only):** `.\install\install_windows.ps1`
+
+The installers **only create and populate the project venv** — no
+`sudo`, no `apt`, no changes to your machine. System prerequisites (ROS,
+the RealSense SDK, Qt/GL libraries) are checked and reported as manual
+steps with the exact command, never installed for you. Run
+`./setup.sh --dry-run` to see everything it would do without it doing
+anything.
 
 For a manual install (any OS), from the repository root:
 
