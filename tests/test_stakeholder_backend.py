@@ -154,6 +154,71 @@ def test_pinned_realsense_is_never_version_bumped():
 
 # ------------------------------------------------------------- the run
 
+def test_camera_is_released_before_the_script_is_launched(tmp_path, stand_in,
+                                                          monkeypatch):
+    """The GUI must let go of the camera before the script opens it.
+
+    The app probes for the camera every few seconds to keep the
+    REAL/SIMULATED badge honest, and that probe keeps a librealsense
+    context alive for the whole session. librealsense built with
+    FORCE_RSUSB_BACKEND -- the build this project pins -- reaches the
+    camera through libusb, which claims the USB interface exclusively,
+    so the script then dies with "Device or resource busy" even though
+    both devices were detected moments earlier.
+    """
+    from capture import simulation
+
+    events = []
+    real_popen = sc.subprocess.Popen
+
+    def spy_release():
+        events.append("release")
+
+    def spy_popen(*args, **kwargs):
+        events.append("popen")
+        return real_popen(*args, **kwargs)
+
+    monkeypatch.setattr(simulation, "release_camera", spy_release)
+    monkeypatch.setattr(sc.subprocess, "Popen", spy_popen)
+
+    _run(tmp_path, sc.StakeholderScriptCapture())
+
+    assert "release" in events, (
+        "the camera was never released -- the script will hit "
+        "'Device or resource busy' on a real rig"
+    )
+    assert events.index("release") < events.index("popen"), (
+        f"released too late: {events}"
+    )
+
+
+def test_busy_camera_failure_explains_itself(tmp_path, monkeypatch):
+    """A "resource busy" exit must name the likely holder.
+
+    This app releases the camera before launching, so if the script
+    still cannot open it, something else on the machine is holding it --
+    and the panel should say so instead of printing an exit code.
+    """
+    script = tmp_path / "rospy_thread_fin_1.py"
+    script.write_text(textwrap.dedent('''
+        import sys
+        print("RuntimeError: xioctl(VIDIOC_S_FMT) failed "
+              "Last Error: Device or resource busy", flush=True)
+        sys.exit(1)
+    '''))
+    monkeypatch.setattr(sc, "find_script", lambda: str(script))
+    monkeypatch.setattr(
+        sc, "choose_runtime",
+        lambda path: RosRuntime(sys.executable, dict(os.environ), "stand-in"))
+
+    result = _run(tmp_path, sc.StakeholderScriptCapture())
+
+    error = result.get("error", "")
+    assert "resource busy" in error.lower()
+    assert "realsense-viewer" in error, (
+        f"no hint about what is holding the camera:\n{error}")
+
+
 def test_frames_land_in_the_layout_the_app_loads(tmp_path, stand_in):
     backend = sc.StakeholderScriptCapture()
     result = _run(tmp_path, backend)

@@ -18,6 +18,7 @@ mistake them for plant data.
 
 from __future__ import annotations
 
+import gc
 import json
 import logging
 import math
@@ -57,6 +58,39 @@ def _realsense_context(rs, rebuild: bool = False):
         if _rs_context is None or rebuild:
             _rs_context = rs.context()
         return _rs_context
+
+
+def release_camera() -> None:
+    """Drop the shared context so ANOTHER PROCESS can open the camera.
+
+    The context above lives for the whole session, which is what makes
+    probing every few seconds cheap. The cost is that this process keeps
+    a claim on the device -- and librealsense built with
+    FORCE_RSUSB_BACKEND (the build this project pins, see
+    docs/L515_SETUP.md) talks to the camera through libusb, which claims
+    the USB interface exclusively. A second process then cannot open it:
+
+        RuntimeError: ... Device or resource busy
+
+    That is exactly what the stakeholder script hits when it runs as a
+    subprocess while the GUI still holds a probe context. So every code
+    path that is about to hand the camera to someone else calls this
+    first. The next probe rebuilds the context lazily, and the ~106 ms
+    that costs does not matter next to a capture run.
+
+    Safe to call when there is no context, no camera, or no
+    pyrealsense2 at all.
+    """
+    global _rs_context
+    with _rs_context_lock:
+        if _rs_context is None:
+            return
+        _rs_context = None
+    # The context object is gone, but the device handles it produced may
+    # still be held by an unreferenced cycle; libusb only releases the
+    # interface when they are finalised.
+    gc.collect()
+    log.debug("released the shared RealSense context")
 
 
 def _query_devices(rs, rebuild: bool = False):

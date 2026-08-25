@@ -168,6 +168,15 @@ class StakeholderScriptCapture(CaptureBackend):
         except ValueError:
             target = 0.0
 
+        # Hand the camera over. This process has been probing for the
+        # camera every few seconds to keep the REAL/SIMULATED badge
+        # honest, and that probe context claims the USB interface under
+        # the RSUSB backend -- the script would open the device and get
+        # "Device or resource busy". Probing is already suspended for
+        # the duration of a capture, so nothing rebuilds it behind us.
+        from capture.simulation import release_camera
+        release_camera()
+
         log.info("launching: %s %s (cwd=%s)", interpreter, script, work_dir)
         # start_new_session so Stop can Ctrl-C the whole script, including
         # anything it spawns, without touching the GUI process.
@@ -187,10 +196,22 @@ class StakeholderScriptCapture(CaptureBackend):
 
         if returncode != 0 and not self._stop_flag:
             tail = "\n".join(self._recent_output[-12:])
+            hint = ""
+            if any(phrase in tail.lower() for phrase in
+                   ("resource busy", "device busy", "failed to set power state")):
+                # The camera is open somewhere else. This app releases it
+                # before launching, so the holder is another process.
+                hint = (
+                    "\n\nThe camera is held by another process. Close "
+                    "realsense-viewer or any other RealSense program, check "
+                    "for a capture left running ('pgrep -af "
+                    "rospy_thread_fin_1.py' and 'pgrep -af realsense'), then "
+                    "unplug and replug the camera and try again."
+                )
             raise RuntimeError(
                 f"The stakeholder script exited with code {returncode}. "
                 f"{collected} frame(s) were saved to {self.out_dir}.\n"
-                f"Its last output was:\n{tail}"
+                f"Its last output was:\n{tail}{hint}"
             )
         if self._stop_flag:
             self._notice(
