@@ -47,7 +47,7 @@ class CapturePanel(QWidget):
         if not ros_available():
             self.backend_combo.model().item(1).setEnabled(False)
             self.backend_combo.setToolTip(
-                'rospy not importable on this machine -- ROS backend disabled.'
+                'No ROS installation was detected -- ROS + Gantry is disabled.'
             )
             self.backend_combo.setCurrentIndex(2)  # RealSense
         backend_row.addWidget(self.backend_combo, stretch=1)

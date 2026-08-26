@@ -25,8 +25,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Lab Linux machine: ROS itself is system-installed (apt), only the camera
-# SDK comes from pip. rospy is provided by the ROS distro on PYTHONPATH.
+# Complete Linux lab UI environment. The RealSense Python binding is isolated
+# inside the project venv. ROS itself and the gantry's catkin workspace remain
+# machine-managed and are used through capture/ros_agent.py; never pip-install
+# rospy into the GUI venv.
+lab = [
+    "pyrealsense2>=2.54.0",
+]
+# Backward-compatible alias for older install instructions.
 ros = [
     "pyrealsense2>=2.54.0",
 ]

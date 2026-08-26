@@ -1,259 +1,238 @@
-"""
-capture/gantry.py
------------------
-Standalone gantry controller for the lab Linux rig.
+"""Qt-facing gantry controller for the Linux lab rig.
 
-Wraps the same ROS topics the capture loop drives
-(see capture/ros_capture.py and stakeholder_reference/rospy_thread_fin_1.py)
-but exposed as a long-lived `QObject` that the UI can drive directly --
-jog, stop, go-to-position, go-home, and live position read-back.
-
-`rospy` and `position_controller_ros.msg` are imported lazily so this
-module is importable on Windows / any host where ROS isn't present
-(`is_available()` simply returns False there).
+The working gantry protocol is unchanged from the ``gantry`` branch:
+``/cmd_vel`` drives motion, ``/joint_states`` reports position, and
+``/go_to_position_server/goal`` handles absolute moves. ROS itself runs in a
+small helper process under the lab's existing ROS interpreter, keeping the GUI
+virtualenv independent from ROS Noetic's Python version.
 """
 
 from __future__ import annotations
 
 import importlib.util
 import threading
-import time
 from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
+from capture.ros_runtime import ros_is_installed
+
 
 def _ros_importable() -> bool:
+    """Compatibility probe for diagnostics; control does not depend on it."""
+
     return importlib.util.find_spec("rospy") is not None
 
 
 class GantryController(QObject):
-    """
-    Singleton-style gantry controller. Safe to instantiate on any OS;
-    ROS-dependent calls only fire on hosts where rospy is importable
-    AND init succeeded. On other hosts every action no-ops and emits
-    `error` once so the UI can show a friendly badge.
-    """
+    """Non-blocking Qt wrapper around the out-of-process ROS helper."""
 
-    # Live position from /joint_states, in metres.
     position_changed = pyqtSignal(float)
-    # Human-readable error from the controller (no rospy, init failed,
-    # publish failed, etc.) -- the panel shows it as a status string.
-    error            = pyqtSignal(str)
+    error = pyqtSignal(str)
 
-    # Safety clamp on `go_to(...)`. Catches typo'd values without
-    # blocking legitimate captures (capture panel max is 5 m).
-    DEFAULT_POS_MIN_M: float = 0.0
-    DEFAULT_POS_MAX_M: float = 5.0
-    HOME_POSITION_M:   float = 0.005    # matches stakeholder go_home()
-    HOME_VELOCITY_MPS: float = 0.2
+    DEFAULT_POS_MIN_M = 0.0
+    DEFAULT_POS_MAX_M = 5.0
+    HOME_POSITION_M = 0.005
+    HOME_VELOCITY_MPS = 0.2
 
-    # rospy topic names -- centralised so swaps are one-liners.
-    TOPIC_CMD_VEL:      str = "/cmd_vel"
-    TOPIC_JOINT_STATES: str = "/joint_states"
-    TOPIC_GOTO_GOAL:    str = "/go_to_position_server/goal"
-
-    def __init__(self,
-                 pos_min_m: Optional[float] = None,
-                 pos_max_m: Optional[float] = None):
+    def __init__(
+        self,
+        pos_min_m: Optional[float] = None,
+        pos_max_m: Optional[float] = None,
+    ):
         super().__init__()
-        self.pos_min_m = pos_min_m if pos_min_m is not None else self.DEFAULT_POS_MIN_M
-        self.pos_max_m = pos_max_m if pos_max_m is not None else self.DEFAULT_POS_MAX_M
+        self.pos_min_m = (
+            pos_min_m if pos_min_m is not None else self.DEFAULT_POS_MIN_M
+        )
+        self.pos_max_m = (
+            pos_max_m if pos_max_m is not None else self.DEFAULT_POS_MAX_M
+        )
 
-        self._init_lock = threading.Lock()
-        self._initialised = False
-        self._init_attempted = False
-        self._init_error: Optional[str] = None
-
-        # Populated by _init_ros() on first use.
-        self._rospy = None
-        self._cmd_vel_pub = None
-        self._goto_pub = None
-        self._joint_sub = None
-        self._Twist = None
-        self._GotoActionGoal = None
-        self._Header = None
-        self._GoalID = None
-        self._goto_available = False
-
-        self._current_position_m: float = 0.0
+        self._lock = threading.Lock()
+        self._client = None
+        self._start_thread: Optional[threading.Thread] = None
+        self._start_attempted = False
+        self._start_error: Optional[str] = None
+        self._current_position_m = 0.0
+        self._pending_action = None
+        self._pending_stop = False
+        self._shutting_down = False
 
     # ---------------------------------------------------------- public API
 
     def is_available(self) -> bool:
-        """True iff rospy is importable AND `init_node` has succeeded
-        (or hasn't been attempted yet but is expected to). The UI uses
-        this to decide whether to enable the panel."""
-        if not _ros_importable():
-            return False
-        if not self._init_attempted:
-            return True            # optimistic: try on first call
-        return self._initialised
+        """Whether ROS is installed on the machine, not in the GUI venv."""
+
+        if self._connected() is not None:
+            return True
+        return ros_is_installed()
 
     def current_position_m(self) -> float:
         return self._current_position_m
 
-    # ---- motion ----
-
     def start_jog(self, velocity_mps: float) -> None:
-        """Publish a Twist with linear.x = velocity (signed). Caller is
-        responsible for calling stop() when done (or use hold-to-move)."""
-        if not self._ensure_initialised():
+        """Move at a signed velocity until :meth:`stop` is called."""
+
+        with self._lock:
+            client = self._connected()
+            if client is None:
+                self._pending_action = ("jog", float(velocity_mps))
+        if client is None:
+            self._begin_start()
             return
-        try:
-            msg = self._Twist()
-            msg.linear.x = float(velocity_mps)
-            self._cmd_vel_pub.publish(msg)
-        except Exception as e:
-            self.error.emit(f"jog failed: {e}")
+        if not client.jog(velocity_mps):
+            self._handle_disconnect()
 
     def stop(self) -> None:
-        """Publish a zero Twist. Always safe to call -- silently no-ops
-        if the controller never initialised."""
-        if not self._initialised or self._cmd_vel_pub is None:
-            return
-        try:
-            self._cmd_vel_pub.publish(self._Twist())
-        except Exception as e:
-            self.error.emit(f"stop failed: {e}")
+        """Stop safely; this never starts a new ROS connection."""
 
-    def go_to(self,
-              position_m: float,
-              velocity_mps: float = 0.2) -> None:
-        """Send an absolute-position goal via /go_to_position_server/goal."""
-        if not self._ensure_initialised():
+        with self._lock:
+            self._pending_action = None
+            client = self._connected()
+            if client is None and self._start_thread is not None:
+                self._pending_stop = True
+        if client is not None:
+            if not client.stop():
+                self._handle_disconnect()
             return
-        if not self._goto_available:
-            self.error.emit("Go-to / Go-home unavailable: "
-                            "position_controller_ros msgs not installed.")
-            return
+
+    def go_to(self, position_m: float, velocity_mps: float = 0.2) -> None:
         clamped = max(self.pos_min_m, min(self.pos_max_m, float(position_m)))
         if clamped != position_m:
             self.error.emit(
                 f"Position {position_m:.3f} m clamped to "
-                f"[{self.pos_min_m:.3f}, {self.pos_max_m:.3f}] m -> {clamped:.3f} m"
+                f"[{self.pos_min_m:.3f}, {self.pos_max_m:.3f}] m -> "
+                f"{clamped:.3f} m"
             )
-        try:
-            msg = self._GotoActionGoal()
-            msg.header = self._Header()
-            msg.goal_id = self._GoalID()
-            msg.goal.position = float(clamped)
-            msg.goal.velocity = float(velocity_mps)
-            self._goto_pub.publish(msg)
-        except Exception as e:
-            self.error.emit(f"go_to failed: {e}")
+
+        with self._lock:
+            client = self._connected()
+            if client is None:
+                self._pending_action = ("goto", clamped, float(velocity_mps))
+        if client is None:
+            self._begin_start()
+            return
+        if not client.goto_available:
+            self.error.emit(
+                "Go-to/go-home require position_controller_ros. Source the "
+                "gantry catkin workspace before launching. Jog and stop "
+                "remain available."
+            )
+            return
+        if not client.goto(clamped, velocity_mps):
+            self._handle_disconnect()
 
     def go_home(self) -> None:
         self.go_to(self.HOME_POSITION_M, self.HOME_VELOCITY_MPS)
 
-    # ---- shutdown ----
-
     def shutdown(self) -> None:
-        """Publish a final zero Twist and unregister the subscriber.
-        Idempotent. Call from the main window's close handler."""
-        try:
-            self.stop()
-        except Exception:
-            pass
-        if self._joint_sub is not None:
-            try:
-                self._joint_sub.unregister()
-            except Exception:
-                pass
-            self._joint_sub = None
+        """Stop the axis and close the ROS helper. Idempotent."""
+
+        with self._lock:
+            self._shutting_down = True
+            client, self._client = self._client, None
+        if client is not None:
+            client.shutdown()
 
     # ----------------------------------------------------------- internals
 
-    def _ensure_initialised(self) -> bool:
-        with self._init_lock:
-            if self._initialised:
-                return True
-            if self._init_attempted:
-                if self._init_error:
-                    self.error.emit(self._init_error)
-                return False
-            self._init_attempted = True
-            return self._init_ros()
+    def _connected(self):
+        client = self._client
+        if client is not None and client.is_running():
+            return client
+        return None
 
-    def _init_ros(self) -> bool:
-        """One-shot ROS init. Returns True on success, False on any
-        failure (which is also reported through `error`)."""
-        if not _ros_importable():
-            self._init_error = (
-                "rospy not importable on this machine. The gantry panel "
-                "is only functional on the lab Linux rig."
+    def _handle_disconnect(self) -> None:
+        with self._lock:
+            self._client = None
+            self._start_attempted = False
+        self.error.emit(
+            "The ROS gantry helper stopped unexpectedly; try the command again."
+        )
+
+    def _begin_start(self) -> None:
+        """Resolve and connect to ROS without blocking the Qt event loop."""
+
+        with self._lock:
+            if self._shutting_down:
+                return
+            if self._start_thread is not None and self._start_thread.is_alive():
+                self.error.emit("Connecting to the gantry; try again when ready.")
+                return
+            self._start_attempted = True
+            self._start_error = None
+            self._start_thread = threading.Thread(
+                target=self._start_worker,
+                name="gantry-ros-start",
+                daemon=True,
             )
-            self.error.emit(self._init_error)
-            return False
+            self._start_thread.start()
+        self.error.emit(
+            "Connecting to the gantry; the command is queued until ROS is ready."
+        )
 
+    def _start_worker(self) -> None:
+        from capture.ros_client import RosAgentClient
+
+        client = RosAgentClient(
+            on_position=self._handle_position,
+            on_error=self.error.emit,
+        )
+        error: Optional[str] = None
         try:
-            import rospy
-            from geometry_msgs.msg import Twist
-            from sensor_msgs.msg import JointState
-        except Exception as e:
-            self._init_error = f"ROS core msgs unavailable: {e}"
-            self.error.emit(self._init_error)
-            return False
+            client.start()
+        except Exception as exc:
+            error = str(exc)
 
-        self._rospy = rospy
-        self._Twist = Twist
+        queued_goto_unavailable = False
+        with self._lock:
+            shutting_down = self._shutting_down
+            pending_stop = self._pending_stop
+            pending_action = self._pending_action
+            self._pending_stop = False
+            self._pending_action = None
+            self._start_error = error
+            self._start_thread = None
+            if error is None and not shutting_down:
+                self._client = client
+            else:
+                self._client = None
+            # Connection failures are retryable after roscore/workspace fixes.
+            if error is not None:
+                self._start_attempted = False
 
-        # Optional position-controller msgs -- without them, jog/stop
-        # still work but go_to/go_home are disabled gracefully.
-        try:
-            from position_controller_ros.msg import GotoActionGoal
-            from std_msgs.msg import Header
-            from actionlib_msgs.msg import GoalID
-            self._GotoActionGoal = GotoActionGoal
-            self._Header = Header
-            self._GoalID = GoalID
-            self._goto_available = True
-        except Exception as e:
-            self._goto_available = False
+            # Command ordering is protected by the state lock. If Stop was
+            # pressed while connecting, the queued move was cleared and only
+            # a stop is sent. Otherwise the original user command runs once.
+            if error is None and not shutting_down:
+                if pending_stop:
+                    client.stop()
+                elif pending_action is not None:
+                    command, *values = pending_action
+                    if command == "jog":
+                        client.jog(values[0])
+                    elif command == "goto" and client.goto_available:
+                        client.goto(values[0], values[1])
+                    elif command == "goto":
+                        queued_goto_unavailable = True
+
+        if shutting_down:
+            if error is None:
+                client.shutdown()
+            return
+        if error is not None:
+            self.error.emit(error)
+            return
+        if queued_goto_unavailable:
             self.error.emit(
-                f"position_controller_ros msgs not found ({e}); "
-                f"jog and stop available, go-to / go-home disabled."
+                "Go-to/go-home require position_controller_ros. Source the "
+                "gantry catkin workspace before launching. Jog and stop "
+                "remain available."
             )
+        self.error.emit(
+            f"Gantry connected using {client.runtime_description}. Ready."
+        )
 
-        # init_node is process-global. RosCapture also calls init_node;
-        # the second caller will hit ROSException, which is fine.
-        try:
-            try:
-                rospy.init_node('phenofusion_gantry',
-                                anonymous=True, disable_signals=True)
-            except rospy.exceptions.ROSException:
-                pass
-
-            self._cmd_vel_pub = rospy.Publisher(
-                self.TOPIC_CMD_VEL, Twist, queue_size=10
-            )
-            if self._goto_available:
-                self._goto_pub = rospy.Publisher(
-                    self.TOPIC_GOTO_GOAL, self._GotoActionGoal, queue_size=10
-                )
-            self._joint_sub = rospy.Subscriber(
-                self.TOPIC_JOINT_STATES, JointState, self._on_joint_states
-            )
-
-            # Give subscribers a beat to discover our publishers --
-            # without this the very first cmd_vel can be silently dropped.
-            time.sleep(0.3)
-        except Exception as e:
-            self._init_error = f"ROS init failed: {e}"
-            self.error.emit(self._init_error)
-            return False
-
-        self._initialised = True
-        return True
-
-    def _on_joint_states(self, msg) -> None:
-        # rospy callback runs on its own thread. Qt queues the signal
-        # emission across threads automatically because GantryController
-        # is a QObject living on the main thread.
-        try:
-            if msg.position:
-                pos = float(msg.position[0])
-                self._current_position_m = pos
-                self.position_changed.emit(pos)
-        except Exception:
-            pass
+    def _handle_position(self, position_m: float) -> None:
+        self._current_position_m = position_m
+        self.position_changed.emit(position_m)

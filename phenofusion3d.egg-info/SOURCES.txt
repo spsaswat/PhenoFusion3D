@@ -20,7 +20,10 @@ capture/__init__.py
 capture/base.py
 capture/gantry.py
 capture/realsense_capture.py
+capture/ros_agent.py
 capture/ros_capture.py
+capture/ros_client.py
+capture/ros_runtime.py
 file_io/__init__.py
 file_io/exporter.py
 file_io/loader.py
@@ -46,5 +49,7 @@ tests/test_loader.py
 tests/test_registration_agent.py
 tests/test_registration_agent_strategies.py
 tests/test_rgbd.py
+tests/test_ros_runtime.py
+tests/test_setup_venv_only.py
 visualiser/__init__.py
 visualiser/viewer.py

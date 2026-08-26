@@ -2,9 +2,9 @@
 # (aligned with pyproject.toml [project] and optional capture extras).
 # Requires: Python >=3.10
 #
-# ROS (rospy, sensor_msgs, etc.) is NOT listed here -- install from your
-# ROS distro on lab Linux and use a venv with --system-site-packages
-# (see install/install_linux.sh).
+# ROS (rospy, sensor_msgs, etc.) is deliberately NOT listed here. The GUI
+# launches its gantry helper under the lab's existing system ROS interpreter;
+# never pip-install rospy into this venv.
 
 # --- Core: GUI, reconstruction, quality pipeline ---
 open3d>=0.17.0
@@ -16,10 +16,7 @@ PyQt5>=5.15.0
 pyqtgraph>=0.13.0
 matplotlib>=3.8.0
 
-# --- Camera capture (RealSense USB; Windows + pip-based Linux) ---
-# Omit this line only if you will never use in-app capture and only load
-# RGB-D folders from disk. Not available as a prebuilt wheel on all ARM
-# platforms -- use system librealsense + docs in that case.
+# --- Camera capture (RealSense USB on the Linux lab rig) ---
 pyrealsense2>=2.54.0
 
 # --- Developer tooling (optional) ---

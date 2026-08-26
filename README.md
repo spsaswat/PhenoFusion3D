@@ -4,30 +4,23 @@ Python tools for **RGB-D–based 3D reconstruction**: turn paired colour and dep
 
 ## Prerequisites
 
-- **Python 3.10+** (3.12 is used in development; match your team’s version).
-- A C++ runtime compatible with **Open3D** wheels on your OS (on Windows, the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) is usually required).
+- **Python 3.10–3.12** with the `venv` module already available.
+- The lab's existing ROS distribution and gantry catkin workspace.
+- The lab's existing RealSense system/USB configuration.
 
 ## Getting started
 
-For lab and dev installs (preferred), use the bundled installers — see [install/README.md](install/README.md):
-
-- **Lab Linux + ROS:** `./install/install_linux.sh`
-- **Windows (camera-only):** `.\install\install_windows.ps1`
-
-For a manual install (any OS), from the repository root:
+On the Linux lab rig, run:
 
 ```bash
-python -m venv venv
-# Windows: .\venv\Scripts\Activate.ps1
-# Linux:    source venv/bin/activate
-pip install -e ".[windows]"   # or ".[ros]" on the lab Linux machine
-```
-
-Launch the app:
-
-```bash
+./setup.sh
+source .venv-linux/bin/activate
 python main.py
 ```
+
+`setup.sh` creates and populates only the project venv. It never installs or
+changes system packages, ROS, RealSense drivers/SDKs, apt repositories, kernel
+modules, or shell startup files. See [install/README.md](install/README.md).
 
 Do not commit large datasets or generated point clouds; see `.gitignore` (`data/`, `*.ply`, `*.pcd`, etc.).
 
@@ -35,9 +28,10 @@ Do not commit large datasets or generated point clouds; see `.gitignore` (`data/
 
 The **Data Capture** panel drives an RGB-D capture without leaving the app.
 
-- **Backend = Auto** picks ROS+gantry on the lab machine and RealSense-only on Windows.
-- **ROS + Gantry** (lab Linux) wraps `stakeholder_reference/rospy_thread_fin_1.py` with the same `Twist`-based velocity command, the same `align(rs.stream.color)` pipeline and the same intrinsics save logic. UI-tunable parameters: velocity (m/s), end position (m), FPS.
-- **RealSense Only** (Windows / dev) captures from the camera directly for `Duration (s)` seconds. Useful for sanity tests.
+- **Backend = Auto** picks ROS+gantry when ROS is installed, otherwise camera-only.
+- **ROS + Gantry** uses the working `/cmd_vel` and `/joint_states` gantry protocol through the lab's existing ROS interpreter while capturing RGB-D frames.
+- **RealSense Only** captures from the camera without starting or requiring the gantry.
+- The separate **Gantry Control** panel moves the gantry without opening the camera.
 
 Output layout (consumed directly by the loader):
 

@@ -7,9 +7,8 @@ Hold-to-move jog (mouse press = move, release = stop), absolute
 go-to-position with safety clamp, go-home, big red stop button, and a
 live position read-back driven by /joint_states.
 
-When rospy isn't importable on the host (Windows / WSL without ROS),
-all controls disable themselves and a tooltip explains why -- no crash,
-no popup spam.
+When the Linux machine has no ROS installation, all controls disable
+themselves and a tooltip explains why -- no crash or popup spam.
 """
 
 from __future__ import annotations
@@ -36,8 +35,8 @@ class GantryPanel(QWidget):
     stop_requested    = pyqtSignal()
 
     _OFFLINE_TOOLTIP = (
-        "rospy not importable on this machine -- gantry controls are "
-        "only available on the lab Linux rig with ROS sourced."
+        "No ROS installation was detected for the gantry. Source the lab "
+        "ROS distribution and gantry workspace before launching."
     )
 
     def __init__(self, available: bool = True):

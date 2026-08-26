@@ -24,7 +24,6 @@ and unlocks exact known-pose reconstruction downstream.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 from typing import Callable
@@ -32,11 +31,12 @@ from typing import Callable
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
+from capture.ros_runtime import ros_is_installed
 
 
 def ros_available() -> bool:
-    """True iff rospy can be imported on this machine."""
-    return importlib.util.find_spec("rospy") is not None
+    """True when ROS is installed on the machine, independent of the UI venv."""
+    return ros_is_installed()
 
 
 class RosCapture(CaptureBackend):
@@ -56,15 +56,13 @@ class RosCapture(CaptureBackend):
     ) -> int:
         if not ros_available():
             raise RuntimeError(
-                "rospy is not importable on this machine. The ROS backend "
-                "is only available on the lab Linux machine with ROS sourced. "
-                "Use the 'RealSense Only' backend on Windows."
+                "ROS is not installed or sourced on this machine. Source the "
+                "lab ROS distribution and gantry workspace before launching."
             )
 
-        # Lazy imports
-        import rospy
-        from geometry_msgs.msg import Twist
-        from sensor_msgs.msg import JointState
+        # Camera packages stay in the GUI venv. ROS runs under the lab's
+        # existing compatible interpreter through RosAgentClient.
+        from capture.ros_client import RosAgentClient
         try:
             import pyrealsense2 as rs
         except ImportError as e:
@@ -109,44 +107,34 @@ class RosCapture(CaptureBackend):
                 pipeline.wait_for_frames()
                 pipeline.wait_for_frames()
 
-            # ------------------ ROS init -----------------------------------
-            try:
-                rospy.init_node("phenofusion_capture", anonymous=True, disable_signals=True)
-            except rospy.exceptions.ROSException:
-                # Already initialised in this process
-                pass
-
-            cmd_vel_publisher = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-
-            # joint_states callback updates current_position
+            # ------------------ ROS gantry helper --------------------------
             self._current_position = 0.0
 
-            def joint_states_cb(msg):
-                if msg.position:
-                    self._current_position = msg.position[0]
+            def update_position(position_m):
+                self._current_position = position_m
 
-            joint_sub = rospy.Subscriber("/joint_states", JointState, joint_states_cb)
-
-            def start_moving():
-                m = Twist()
-                m.linear.x = params.velocity_mps
-                cmd_vel_publisher.publish(m)
-
-            def stop_moving():
-                cmd_vel_publisher.publish(Twist())
+            gantry = RosAgentClient(on_position=update_position)
+            gantry.start()
+            if not gantry.wait_for_position(8.0):
+                gantry.shutdown()
+                raise RuntimeError(
+                    "ROS is connected, but the gantry driver did not publish "
+                    "/joint_states within 8 seconds. Start the gantry driver "
+                    "before capture."
+                )
 
             # ------------------ capture loop -------------------------------
             i = 0
             try:
-                while not rospy.is_shutdown() and not self._stop_flag:
-                    start_moving()
+                while gantry.is_running() and not self._stop_flag:
+                    gantry.start_moving(params.velocity_mps)
                     self._capture_one(pipeline, align, i)
                     self._record_position(i, self._current_position)
                     i += 1
                     on_progress(i, 0)  # unknown total -> 0
 
                     if self._current_position != 0.0 and self._current_position >= params.end_position_m:
-                        stop_moving()
+                        gantry.stop_moving()
                         break
 
                     # Stakeholder calls capture_images twice per loop -- replicate
@@ -154,9 +142,14 @@ class RosCapture(CaptureBackend):
                     self._record_position(i, self._current_position)
                     i += 1
                     on_progress(i, 0)
+
+                if not self._stop_flag and not gantry.is_running():
+                    raise RuntimeError(
+                        "The ROS gantry helper stopped during capture."
+                    )
             finally:
-                stop_moving()
-                joint_sub.unregister()
+                gantry.stop_moving()
+                gantry.shutdown()
 
             return i
         finally:
