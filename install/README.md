@@ -68,7 +68,15 @@ No shell profile is edited automatically.
 ```
 
 This verifies the existing venv imports and resolves a compatible ROS runtime.
-It creates and installs nothing.
+It also reports every currently connected RealSense model and serial. It
+creates and installs nothing.
+
+One RGB-D camera is selected automatically at capture time. When several are
+connected, choose one before launching:
+
+```bash
+export PHENOFUSION_CAMERA_SERIAL=<serial>
+```
 
 ## Launch
 

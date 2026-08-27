@@ -10,6 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SETUP = ROOT / "setup.sh"
 LINUX_WRAPPER = ROOT / "install" / "install_linux.sh"
+MAIN = ROOT / "main.py"
+PYPROJECT = ROOT / "pyproject.toml"
+REQUIREMENTS = ROOT / "requirements.txt"
+REALSENSE_REQUIREMENT = "pyrealsense2==2.54.2.5684"
 
 
 def _commands(text: str) -> str:
@@ -58,6 +62,36 @@ def test_setup_installs_camera_and_bundled_gantry_bridge_in_venv():
     assert "pip install rospy" not in text
     assert "pip install --upgrade" not in text
     assert "pip uninstall" not in text
+    assert "PHENOFUSION_CAMERA_SERIAL" in text
+    assert "camera_info.serial_number" in text
+
+
+def test_gui_initialises_qt_before_importing_opencv_consumers():
+    text = MAIN.read_text()
+    application = text.index("QApplication(")
+    main_window = text.index("from app.main_window import MainWindow")
+
+    assert application < main_window
+
+
+def test_setup_smoke_checks_the_real_qt_application_startup():
+    text = SETUP.read_text()
+
+    assert "QT_QPA_PLATFORM=offscreen" in text
+    assert "from main import create_application" in text
+    assert "Qt application startup (offscreen)" in text
+
+
+def test_realsense_dependency_is_exactly_pinned_everywhere():
+    pyproject_specs = re.findall(r'"(pyrealsense2[^" ]*)"', PYPROJECT.read_text())
+    assert pyproject_specs == [REALSENSE_REQUIREMENT] * 3
+
+    requirements_specs = [
+        line.strip()
+        for line in REQUIREMENTS.read_text().splitlines()
+        if line.strip().startswith("pyrealsense2")
+    ]
+    assert requirements_specs == [REALSENSE_REQUIREMENT]
 
 
 def test_legacy_linux_installer_only_delegates_to_setup():

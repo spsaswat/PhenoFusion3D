@@ -33,6 +33,27 @@ The **Data Capture** panel drives an RGB-D capture without leaving the app.
 - **RealSense Only** captures from the camera without starting or requiring the gantry.
 - The separate **Gantry Control** panel moves the gantry without opening the camera.
 
+Camera selection happens when capture starts. One connected RGB-D RealSense is
+selected automatically. If several are connected, select one by serial before
+launching the app:
+
+```bash
+export PHENOFUSION_CAMERA_SERIAL=<serial>
+python main.py
+```
+
+PowerShell equivalent:
+
+```powershell
+$env:PHENOFUSION_CAMERA_SERIAL = "<serial>"
+python main.py
+```
+
+The setup check prints every detected model and serial. Capture probes the
+selected device's supported colour/depth profiles, so L515, D435, D405, and
+replacement units are not tied to the historical serials in the stakeholder
+script.
+
 Output layout (consumed directly by the loader):
 
 ```

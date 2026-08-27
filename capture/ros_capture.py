@@ -24,13 +24,12 @@ and unlocks exact known-pose reconstruction downstream.
 
 from __future__ import annotations
 
-import json
-import os
 from typing import Callable
 
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
+from capture.realsense_runtime import import_realsense
 from capture.ros_runtime import ros_is_installed
 
 
@@ -42,12 +41,9 @@ def ros_available() -> bool:
 class RosCapture(CaptureBackend):
     name = "ros"
 
-    # D405 serial used in the stakeholder script
-    DEFAULT_SERIAL = "128422272123"
-
     def __init__(self, serial_number: str | None = None):
         super().__init__()
-        self.serial_number = serial_number or self.DEFAULT_SERIAL
+        self.serial_number = serial_number
 
     def _run(
         self,
@@ -63,13 +59,9 @@ class RosCapture(CaptureBackend):
         # Camera packages stay in the GUI venv. ROS runs under the lab's
         # existing compatible interpreter through RosAgentClient.
         from capture.ros_client import RosAgentClient
-        try:
-            import pyrealsense2 as rs
-        except ImportError as e:
-            raise RuntimeError(
-                "pyrealsense2 is not installed. Install with "
-                "'pip install pyrealsense2'."
-            ) from e
+        from capture.realsense_capture import RealSenseCapture
+
+        rs = import_realsense()
         try:
             import cv2
         except ImportError as e:
@@ -80,27 +72,23 @@ class RosCapture(CaptureBackend):
             ) from e
         self._cv2 = cv2
 
-        # ------------------ RealSense pipeline (mirrors stakeholder) -------
+        # Use the same dynamic device selection and profile fallback as the
+        # camera-only backend. Serial selection remains optional and may be
+        # supplied through PHENOFUSION_CAMERA_SERIAL.
+        camera = RealSenseCapture(serial_number=self.serial_number)
+        camera.session = self.session
+        camera.out_dir = self.out_dir
+        device = camera._select_device(rs)
         pipeline = rs.pipeline()
-        config = rs.config()
-        try:
-            config.enable_device(self.serial_number)
-        except Exception:
-            pass
-        config.enable_stream(rs.stream.color, params.width, params.height, rs.format.bgr8, params.fps)
-        config.enable_stream(rs.stream.depth, params.width, params.height, rs.format.z16,  params.fps)
-
-        profile = pipeline.start(config)
+        profile, color_format = camera._start_pipeline(
+            pipeline, device, rs, params
+        )
         align = rs.align(rs.stream.color)
 
         try:
-            depth_sensor = profile.get_device().first_depth_sensor()
-            try:
-                depth_sensor.set_option(rs.option.visual_preset, 4)  # high-accuracy on D405
-            except Exception:
-                pass
-
-            self._save_intrinsics(profile, rs)
+            camera._apply_visual_preset(profile, rs)
+            camera._update_session_from_profile(profile, rs)
+            camera._save_intrinsics(profile, rs)
 
             # Warm-up (matches stakeholder)
             for _ in range(2):
@@ -128,20 +116,20 @@ class RosCapture(CaptureBackend):
             try:
                 while gantry.is_running() and not self._stop_flag:
                     gantry.start_moving(params.velocity_mps)
-                    self._capture_one(pipeline, align, i)
-                    self._record_position(i, self._current_position)
-                    i += 1
-                    on_progress(i, 0)  # unknown total -> 0
+                    if self._capture_one(pipeline, align, i, color_format, rs):
+                        self._record_position(i, self._current_position)
+                        i += 1
+                        on_progress(i, 0)  # unknown total -> 0
 
                     if self._current_position != 0.0 and self._current_position >= params.end_position_m:
                         gantry.stop_moving()
                         break
 
                     # Stakeholder calls capture_images twice per loop -- replicate
-                    self._capture_one(pipeline, align, i)
-                    self._record_position(i, self._current_position)
-                    i += 1
-                    on_progress(i, 0)
+                    if self._capture_one(pipeline, align, i, color_format, rs):
+                        self._record_position(i, self._current_position)
+                        i += 1
+                        on_progress(i, 0)
 
                 if not self._stop_flag and not gantry.is_running():
                     raise RuntimeError(
@@ -159,40 +147,23 @@ class RosCapture(CaptureBackend):
                 pass
 
     # ------------------------------------------------------------------ I/O
-    def _capture_one(self, pipeline, align, idx: int) -> None:
+    def _capture_one(self, pipeline, align, idx: int, color_format, rs) -> bool:
         frames = pipeline.wait_for_frames()
         aligned = align.process(frames)
 
         depth_frame = aligned.get_depth_frame()
         color_frame = aligned.get_color_frame()
         if not depth_frame or not color_frame:
-            return
+            return False
 
         depth_img = np.asanyarray(depth_frame.get_data())
         color_img = np.asanyarray(color_frame.get_data())
+        if color_format == rs.format.rgb8:
+            color_img = self._cv2.cvtColor(color_img, self._cv2.COLOR_RGB2BGR)
 
-        self._cv2.imwrite(os.path.join(self.out_dir, "rgb",   f"{idx}.png"), color_img)
-        self._cv2.imwrite(os.path.join(self.out_dir, "depth", f"{idx}.png"), depth_img)
+        from capture.realsense_capture import write_frame_pair
 
-    def _save_intrinsics(self, profile, rs) -> None:
-        for stream_kind, fname in (
-            (rs.stream.depth, "kd_intrinsics.txt"),
-            (rs.stream.color, "kdc_intrinsics.txt"),
-        ):
-            try:
-                vsp = rs.video_stream_profile(profile.get_stream(stream_kind))
-                intr = vsp.get_intrinsics()
-                payload = {
-                    "K": [
-                        [intr.fx, 0,       intr.ppx],
-                        [0,       intr.fy, intr.ppy],
-                        [0,       0,       1],
-                    ],
-                    "dist": list(intr.coeffs),
-                    "height": intr.height,
-                    "width":  intr.width,
-                }
-                with open(os.path.join(self.out_dir, fname), "w") as f:
-                    json.dump(payload, f, indent=4)
-            except Exception as e:
-                print(f"[ros_capture] WARNING: failed to save {fname}: {e}")
+        write_frame_pair(
+            self.out_dir, idx, color_img, depth_img, cv2_module=self._cv2
+        )
+        return True

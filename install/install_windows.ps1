@@ -34,8 +34,12 @@ python -m pip install -e ".[windows]"
 
 Write-Host ""
 Write-Host "[install] Verifying imports..."
-python - <<'PY'
-import importlib, sys
+@'
+import importlib
+import os
+import sys
+from importlib.metadata import version
+
 ok = True
 for mod in ("PyQt5", "open3d", "cv2", "numpy", "natsort"):
     try:
@@ -43,15 +47,37 @@ for mod in ("PyQt5", "open3d", "cv2", "numpy", "natsort"):
     except Exception as e:
         ok = False; print(f"  FAIL {mod}: {e}")
 
-# pyrealsense2 is optional but expected on Windows
+# Every supported camera uses this exact RealSense wheel.
 try:
-    importlib.import_module("pyrealsense2")
-    print("  OK  pyrealsense2")
+    required = "2.54.2.5684"
+    actual = version("pyrealsense2")
+    if actual != required:
+        raise RuntimeError(f"found {actual}, required {required}")
+    rs = importlib.import_module("pyrealsense2")
+    devices = list(rs.context().query_devices())
+    print(f"  OK  pyrealsense2 {actual}; detected {len(devices)} camera(s)")
+    serials = []
+    for device in devices:
+        name = device.get_info(rs.camera_info.name)
+        serial = device.get_info(rs.camera_info.serial_number)
+        serials.append(serial)
+        print(f"      - {name} (serial {serial})")
+    selected = os.environ.get("PHENOFUSION_CAMERA_SERIAL", "").strip()
+    if selected:
+        state = "detected" if selected in serials else "not currently detected"
+        print(f"      PHENOFUSION_CAMERA_SERIAL={selected} ({state})")
+    elif len(devices) > 1:
+        print('      Choose one before launch:')
+        print('      $env:PHENOFUSION_CAMERA_SERIAL = "<serial>"')
 except Exception as e:
-    print(f"  WARN pyrealsense2: {e} (camera capture won't work without it)")
+    ok = False
+    print(f"  FAIL pyrealsense2: {e}")
 
 sys.exit(0 if ok else 1)
-PY
+'@ | python -
+if ($LASTEXITCODE -ne 0) {
+    throw "Dependency verification failed."
+}
 
 Write-Host ""
 Write-Host "[install] Done. Launch the app with:"

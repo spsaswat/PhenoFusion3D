@@ -16,11 +16,11 @@ Requires-Dist: PyQt5>=5.15.0
 Requires-Dist: pyqtgraph>=0.13.0
 Requires-Dist: matplotlib>=3.8.0
 Provides-Extra: lab
-Requires-Dist: pyrealsense2>=2.54.0; extra == "lab"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "lab"
 Provides-Extra: ros
-Requires-Dist: pyrealsense2>=2.54.0; extra == "ros"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "ros"
 Provides-Extra: windows
-Requires-Dist: pyrealsense2>=2.54.0; extra == "windows"
+Requires-Dist: pyrealsense2==2.54.2.5684; extra == "windows"
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: ruff>=0.4.0; extra == "dev"
@@ -60,6 +60,27 @@ The **Data Capture** panel drives an RGB-D capture without leaving the app.
 - **ROS + Gantry** uses the working `/cmd_vel` and `/joint_states` gantry protocol through the lab's existing ROS interpreter while capturing RGB-D frames.
 - **RealSense Only** captures from the camera without starting or requiring the gantry.
 - The separate **Gantry Control** panel moves the gantry without opening the camera.
+
+Camera selection happens when capture starts. One connected RGB-D RealSense is
+selected automatically. If several are connected, select one by serial before
+launching the app:
+
+```bash
+export PHENOFUSION_CAMERA_SERIAL=<serial>
+python main.py
+```
+
+PowerShell equivalent:
+
+```powershell
+$env:PHENOFUSION_CAMERA_SERIAL = "<serial>"
+python main.py
+```
+
+The setup check prints every detected model and serial. Capture probes the
+selected device's supported colour/depth profiles, so L515, D435, D405, and
+replacement units are not tied to the historical serials in the stakeholder
+script.
 
 Output layout (consumed directly by the loader):
 

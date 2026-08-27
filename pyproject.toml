@@ -30,15 +30,16 @@ dependencies = [
 # machine-managed and are used through capture/ros_agent.py; never pip-install
 # rospy into the GUI venv.
 lab = [
-    "pyrealsense2>=2.54.0",
+    # Exact pin: every supported camera uses this L515/D405-compatible wheel.
+    "pyrealsense2==2.54.2.5684",
 ]
 # Backward-compatible alias for older install instructions.
 ros = [
-    "pyrealsense2>=2.54.0",
+    "pyrealsense2==2.54.2.5684",
 ]
 # Windows / dev: camera-only capture, no gantry control
 windows = [
-    "pyrealsense2>=2.54.0",
+    "pyrealsense2==2.54.2.5684",
 ]
 # Developer tooling
 dev = [

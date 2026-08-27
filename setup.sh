@@ -83,6 +83,68 @@ verify_import() {
     return 1
 }
 
+verify_gui_startup() {
+    # Import checks alone do not exercise Qt platform-plugin selection.  Build
+    # the real window offscreen so OpenCV/PyQt plugin conflicts fail setup
+    # instead of aborting later when the operator launches the application.
+    if QT_QPA_PLATFORM=offscreen "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1
+from main import create_application
+
+application, window = create_application(["phenofusion3d-setup-check"])
+assert application.platformName() == "offscreen"
+window.close()
+application.processEvents()
+PY
+    then
+        printf '  OK    Qt application startup (offscreen)\n'
+        return 0
+    fi
+    printf '  FAIL  Qt application startup (offscreen)\n'
+    return 1
+}
+
+report_realsense_devices() {
+    "$VENV_PYTHON" - <<'PY'
+import os
+import sys
+
+# This validates pyrealsense2==2.54.2.5684 before touching USB discovery.
+from capture.realsense_runtime import import_realsense
+
+try:
+    rs = import_realsense()
+except RuntimeError as exc:
+    print(f"  FAIL  {exc}")
+    raise SystemExit(1)
+
+devices = list(rs.context().query_devices())
+selected = os.environ.get("PHENOFUSION_CAMERA_SERIAL", "").strip()
+if not devices:
+    print("  OK    RealSense SDK ready (no camera connected during setup)")
+    raise SystemExit(0)
+
+print(f"  OK    detected {len(devices)} RealSense camera(s):")
+serials = []
+for device in devices:
+    def info(kind, fallback):
+        try:
+            return device.get_info(kind) if device.supports(kind) else fallback
+        except Exception:
+            return fallback
+
+    name = info(rs.camera_info.name, "Unknown RealSense")
+    serial = info(rs.camera_info.serial_number, "no serial")
+    serials.append(serial)
+    print(f"        - {name} (serial {serial})")
+
+if selected:
+    state = "detected" if selected in serials else "not currently detected"
+    print(f"        PHENOFUSION_CAMERA_SERIAL={selected} ({state})")
+elif len(devices) > 1:
+    print("        Set PHENOFUSION_CAMERA_SERIAL before capture to choose one.")
+PY
+}
+
 verify() {
     local failed=0 module
     if [ ! -x "$VENV_PYTHON" ]; then
@@ -91,10 +153,12 @@ verify() {
     fi
 
     log "Verifying isolated GUI and camera packages..."
-    for module in PyQt5 open3d cv2 numpy natsort tqdm pyqtgraph matplotlib pyrealsense2; do
+    for module in PyQt5 open3d cv2 numpy natsort tqdm pyqtgraph matplotlib; do
         verify_import "$module" || failed=1
     done
+    report_realsense_devices || failed=1
     verify_import app.main_window || failed=1
+    verify_gui_startup || failed=1
 
     log "Verifying the existing gantry ROS runtime (read-only)..."
     if "$VENV_PYTHON" - <<'PY'
