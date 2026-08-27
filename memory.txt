@@ -1,0 +1,212 @@
+PhenoFusion3D conversation memory
+================================
+
+Recorded: 2026-08-28
+Branch: test-2
+Starting implementation commit: 699be9b
+Commit message: fix: stabilize RealSense setup and Qt startup
+
+
+1. User intent and environment boundary
+---------------------------------------
+
+- The application targets the known-working lab gantry environment.
+- The remote gantry branch and rospy_thread_fin_1.py have both worked in that
+  lab environment.
+- Treat ROS/gantry failures in the current VM as environment limitations, not
+  as evidence that the lab gantry protocol is wrong.
+- Do not install, remove, upgrade, or reconfigure system ROS, the gantry
+  catkin workspace, drivers, apt packages, kernel modules, or shell startup
+  files. Do not pip-install rospy.
+- setup.sh may only create/populate an isolated venv inside this repository.
+- Final physical gantry confirmation will be performed manually in the lab.
+
+
+2. Qt/OpenCV startup regression
+-------------------------------
+
+Observed failure when launching with:
+
+    .venv-linux/bin/python main.py
+
+Symptoms included:
+
+    QObject::moveToThread: Current thread ... is not the object's thread ...
+    qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in
+    .../site-packages/cv2/qt/plugins
+    Aborted (core dumped)
+
+Root cause:
+
+- main.py imported app.main_window before constructing QApplication.
+- app.main_window imports processing/capture modules that import cv2.
+- The full opencv-python Linux wheel sets QT_QPA_PLATFORM_PLUGIN_PATH to its
+  private cv2/qt/plugins directory.
+- QApplication was then created under PyQt5 while OpenCV's separate Qt plugin
+  bundle was selected, causing two incompatible Qt builds/copies to collide.
+- The defect was latent in the old import order. A refreshed environment with
+  opencv-python 5.0.0.93 made it fail consistently.
+- Earlier verification only tested imports independently and therefore did
+  not exercise real QApplication/platform-plugin initialization.
+
+Implemented fix:
+
+- main.py now creates QApplication before importing MainWindow or any module
+  that imports cv2.
+- setup.sh now creates the complete application and MainWindow using the
+  offscreen Qt platform, so future plugin-order regressions fail verification.
+
+Verification completed:
+
+- Complete MainWindow construction passed with QT_QPA_PLATFORM=offscreen.
+- Real desktop X11 startup passed with platformName() == "xcb".
+- The window title was successfully read as "PhenoFusion3D".
+- No moveToThread warning or xcb plugin abort occurred after the fix.
+- The eight setup guard test functions passed when invoked directly.
+- pytest was not installed in .venv-linux, so the full pytest suite was not
+  run during this session.
+
+
+3. RealSense decisions
+----------------------
+
+- Camera detected during the user's setup run:
+
+    Intel RealSense L515, serial f1230450
+
+- pyrealsense2 is pinned everywhere to:
+
+    pyrealsense2==2.54.2.5684
+
+- Camera selection is dynamic. A single connected RGB-D RealSense is selected
+  automatically. If several are connected, set PHENOFUSION_CAMERA_SERIAL.
+- The current capture implementation no longer assumes the historical D405
+  serial 128422272123.
+- Stream startup first tries requested parameters and then selects compatible
+  colour/depth profiles exposed by the detected device.
+- The visual preset is model-aware: preset 5 for L515 and preset 4 for the
+  D405/D435-style path.
+- RGB input is converted to BGR before OpenCV writes when the selected camera
+  profile exposes RGB8.
+- RGB and depth frames are written as an atomic pair; incomplete pairs are
+  cleaned up and are not counted as captured frames.
+- setup.sh reports detected RealSense models and serial numbers.
+
+Original-script compatibility note:
+
+- rospy_thread_fin_1.py is rigidly configured for D405 serial 128422272123,
+  preset 4, and D405 stream profiles. Its commented L515 serial is f1230450.
+- The remote gantry branch also defaults to that historical D405 serial.
+- Their gantry-side ROS contract is known to work in the lab, while the
+  current branch adds dynamic camera/model handling for the connected L515.
+
+
+4. Gantry and ROS contract
+--------------------------
+
+The current ROS helper preserves the proven lab topic/message contract:
+
+- Jog/move:
+    Topic: /cmd_vel
+    Type: geometry_msgs/Twist
+    Value: message.linear.x = signed velocity in m/s
+
+- Stop:
+    Topic: /cmd_vel
+    Type: geometry_msgs/Twist
+    Value: a zero-valued Twist
+
+- Position feedback:
+    Topic: /joint_states
+    Type: sensor_msgs/JointState
+    Value used: message.position[0]
+
+- Absolute go-to/home:
+    Topic: /go_to_position_server/goal
+    Type: position_controller_ros/GotoActionGoal
+    Fields: goal.position and goal.velocity
+
+- Home constants matching the stakeholder script:
+    Position: 0.005 m
+    Velocity: 0.2 m/s
+
+Architecture:
+
+    PyQt GUI -> JSON over stdin/stdout -> ROS helper -> ROS topics
+
+The JSON helper boundary isolates the GUI venv from the system ROS Python
+runtime. It does not alter the ROS messages observed by the gantry driver.
+
+Expected lab prerequisites:
+
+- ROS Noetic and its message packages are installed/sourced.
+- The gantry catkin workspace is sourced.
+- roscore is running or ROS_MASTER_URI points to a reachable master.
+- The gantry driver is running, publishing /joint_states, and listening on
+  /cmd_vel.
+- position_controller_ros is available for go-to and go-home.
+
+Current-VM observation:
+
+- No compatible ROS runtime or conventional catkin workspace was discoverable
+  during this session.
+- Plugging in hardware alone does not install/start ROS or the driver.
+- Per the user's instruction, leave this environment issue unchanged.
+- The combined ROS capture path waits up to eight seconds for /joint_states
+  before commanding motion.
+- Offline tests validate runtime selection, helper protocol, command queuing,
+  retry behaviour, and shutdown using mocks; they are not physical rig tests.
+
+
+5. setup.sh behaviour
+---------------------
+
+- Reuses or creates .venv-linux (or PHENOFUSION_VENV) inside the repository.
+- Installs the editable project with the lab extra while constraining packages
+  already present in the venv.
+- Verifies GUI imports, RealSense initialization/device discovery, the real
+  offscreen Qt application startup, and the existing external ROS runtime.
+- Missing ROS currently makes the complete setup verification exit non-zero.
+  This is separate from the Qt crash and should not trigger automatic ROS or
+  system changes.
+- Camera-only application operation does not require the gantry runtime.
+
+
+6. Git state and handoff
+------------------------
+
+- test-2 was created from camera at commit 549a271.
+- Commit 699be9b contains the RealSense/setup work and Qt startup correction.
+- It changed 16 files, including new files:
+
+    capture/realsense_runtime.py
+    tests/test_realsense_runtime.py
+
+- Commit 699be9b was created locally before this memory file.
+- The user requested that memory.txt also be committed to test-2 and that the
+  branch then be pushed to origin.
+
+
+7. Useful commands
+------------------
+
+Launch the application:
+
+    .venv-linux/bin/python main.py
+
+Read-only setup verification:
+
+    ./setup.sh --check
+
+Select a camera when multiple RGB-D devices are connected:
+
+    export PHENOFUSION_CAMERA_SERIAL=<serial>
+
+Lab-side ROS observations before a controlled physical test:
+
+    rostopic hz /joint_states
+    rostopic info /cmd_vel
+
+Do not treat those observations as permission to move hardware. Physical
+testing should be performed manually with a clear travel area and the real
+emergency stop accessible.
