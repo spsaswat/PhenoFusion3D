@@ -7,6 +7,7 @@ UI panel for triggering RGB-D capture.
 from __future__ import annotations
 
 import os
+import subprocess
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
@@ -119,6 +120,11 @@ class CapturePanel(QWidget):
         btn_row.addWidget(self.stop_btn)
         layout.addLayout(btn_row)
 
+        self.ros_script_btn = QPushButton('Run rospy_thread_fin_1.py')
+        self.ros_script_btn.setToolTip('Run: python3 rospy_thread_fin_1.py')
+        self.ros_script_btn.clicked.connect(self._run_ros_script)
+        layout.addWidget(self.ros_script_btn)
+
         # Progress + status
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
@@ -158,6 +164,18 @@ class CapturePanel(QWidget):
             self.fps_spin.value(),
             self.dur_spin.value(),
         )
+
+    def _run_ros_script(self):
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', '..')
+        )
+        try:
+            subprocess.Popen(
+                ['python3', 'rospy_thread_fin_1.py'], cwd=project_root
+            )
+            self.status_lbl.setText('Started: python3 rospy_thread_fin_1.py')
+        except OSError as exc:
+            self.status_lbl.setText(f'ERROR: {exc}')
 
     def set_running(self, running: bool):
         self.capture_btn.setEnabled(not running)
