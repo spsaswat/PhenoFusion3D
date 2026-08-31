@@ -12,7 +12,8 @@ to the working stakeholder script -- we only:
   - import rospy / pyrealsense2 / cv2 lazily so this module is importable on
     Windows (where ROS is unavailable) without OpenCV until the ROS backend runs
   - parameterise velocity / end position / FPS / serial number
-  - write to our standard output layout
+  - buffer copied frames while the gantry moves, then write to our standard
+    output layout only after camera acquisition and gantry motion have stopped
         <out>/rgb/<idx>.png, <out>/depth/<idx>.png
         <out>/kdc_intrinsics.txt, <out>/kd_intrinsics.txt
         <out>/session.json   (records frame_idx -> gantry position)
@@ -24,11 +25,16 @@ and unlocks exact known-pose reconstruction downstream.
 
 from __future__ import annotations
 
+import math
+import time
 from typing import Callable
 
-import numpy as np
-
-from capture.base import CaptureBackend, CaptureParams
+from capture.base import (
+    CaptureBackend,
+    CaptureParams,
+    capture_buffer_limit_bytes,
+    ensure_capture_capacity,
+)
 from capture.realsense_runtime import import_realsense
 from capture.ros_runtime import ros_is_installed
 
@@ -40,10 +46,25 @@ def ros_available() -> bool:
 
 class RosCapture(CaptureBackend):
     name = "ros"
+    STALL_TIMEOUT_S = 5.0
+    POSITION_PROGRESS_EPSILON_M = 0.0001
+    HOME_TIMEOUT_S = 15.0
+    HOME_TOLERANCE_M = 0.01
 
     def __init__(self, serial_number: str | None = None):
         super().__init__()
         self.serial_number = serial_number
+        self._gantry = None
+
+    def stop(self) -> None:
+        """Request capture shutdown and stop ROS motion immediately."""
+        super().stop()
+        gantry = self._gantry
+        if gantry is not None:
+            try:
+                gantry.stop_moving()
+            except Exception:
+                pass
 
     def _run(
         self,
@@ -58,8 +79,8 @@ class RosCapture(CaptureBackend):
 
         # Camera packages stay in the GUI venv. ROS runs under the lab's
         # existing compatible interpreter through RosAgentClient.
-        from capture.ros_client import RosAgentClient
-        from capture.realsense_capture import RealSenseCapture
+        from capture.ros_client import HOME_POSITION_M, RosAgentClient
+        from capture.realsense_capture import CaptureFrameBuffer, RealSenseCapture
 
         rs = import_realsense()
         try:
@@ -84,86 +105,184 @@ class RosCapture(CaptureBackend):
             pipeline, device, rs, params
         )
         align = rs.align(rs.stream.color)
+        gantry = None
+        frame_buffer = None
+        endpoint_reached = False
+        buffer_limit_reached = False
 
         try:
-            camera._apply_visual_preset(profile, rs)
-            camera._update_session_from_profile(profile, rs)
-            camera._save_intrinsics(profile, rs)
+            try:
+                camera._apply_visual_preset(profile, rs)
+                camera._update_session_from_profile(profile, rs)
+                intrinsics = camera._read_intrinsics(profile, rs)
 
-            # Warm-up (matches stakeholder)
-            for _ in range(2):
-                pipeline.wait_for_frames()
-                pipeline.wait_for_frames()
+                actual_width = (
+                    self.session.width if self.session is not None else params.width
+                )
+                actual_height = (
+                    self.session.height if self.session is not None else params.height
+                )
+                actual_fps = (
+                    self.session.fps if self.session is not None else params.fps
+                )
+                buffer_limit = capture_buffer_limit_bytes(
+                    self.out_dir, params.max_buffer_gib
+                )
+                frame_buffer = CaptureFrameBuffer(buffer_limit)
 
-            # ------------------ ROS gantry helper --------------------------
-            self._current_position = 0.0
+                # Warm-up (matches stakeholder)
+                for _ in range(camera.WARMUP_FRAMES):
+                    pipeline.wait_for_frames()
 
-            def update_position(position_m):
-                self._current_position = position_m
+                # ------------------ ROS gantry helper ----------------------
+                self._current_position = 0.0
 
-            gantry = RosAgentClient(on_position=update_position)
-            gantry.start()
-            if not gantry.wait_for_position(8.0):
-                gantry.shutdown()
-                raise RuntimeError(
-                    "ROS is connected, but the gantry driver did not publish "
-                    "/joint_states within 8 seconds. Start the gantry driver "
-                    "before capture."
+                def update_position(position_m):
+                    self._current_position = position_m
+
+                gantry = RosAgentClient(on_position=update_position)
+                self._gantry = gantry
+                gantry.start()
+                if not gantry.wait_for_position(8.0):
+                    raise RuntimeError(
+                        "ROS is connected, but the gantry driver did not publish "
+                        "/joint_states within 8 seconds. Start the gantry driver "
+                        "before capture."
+                    )
+                if params.velocity_mps <= 0:
+                    raise RuntimeError("Gantry capture velocity must be positive.")
+                if self._current_position >= params.end_position_m:
+                    raise RuntimeError(
+                        f"Gantry is already at {self._current_position:.3f} m, "
+                        f"at or beyond the {params.end_position_m:.3f} m capture "
+                        "endpoint. Return it home before starting another pass."
+                    )
+
+                travel_s = (
+                    params.end_position_m - self._current_position
+                ) / params.velocity_mps
+                estimated_frames = math.ceil(travel_s * actual_fps)
+                buffer_limit = ensure_capture_capacity(
+                    self.out_dir,
+                    params,
+                    estimated_frames,
+                    actual_width,
+                    actual_height,
+                )
+                frame_buffer.limit_bytes = min(
+                    frame_buffer.limit_bytes, buffer_limit
                 )
 
-            # ------------------ capture loop -------------------------------
-            i = 0
-            try:
+                # ------------------ capture loop ---------------------------
+                i = 0
+                last_progress_position = self._current_position
+                last_progress_at = time.monotonic()
                 while gantry.is_running() and not self._stop_flag:
-                    gantry.start_moving(params.velocity_mps)
-                    if self._capture_one(pipeline, align, i, color_format, rs):
-                        self._record_position(i, self._current_position)
-                        i += 1
-                        on_progress(i, 0)  # unknown total -> 0
-
-                    if self._current_position != 0.0 and self._current_position >= params.end_position_m:
-                        gantry.stop_moving()
+                    position = self._current_position
+                    if position >= params.end_position_m:
+                        endpoint_reached = True
                         break
+                    if (
+                        position
+                        >= last_progress_position
+                        + self.POSITION_PROGRESS_EPSILON_M
+                    ):
+                        last_progress_position = position
+                        last_progress_at = time.monotonic()
+                    elif time.monotonic() - last_progress_at >= self.STALL_TIMEOUT_S:
+                        raise RuntimeError(
+                            "Gantry position did not advance for "
+                            f"{self.STALL_TIMEOUT_S:.0f} seconds; capture was "
+                            "stopped before the frame buffer could grow without bound."
+                        )
 
-                    # Stakeholder calls capture_images twice per loop -- replicate
-                    if self._capture_one(pipeline, align, i, color_format, rs):
-                        self._record_position(i, self._current_position)
-                        i += 1
-                        on_progress(i, 0)
+                    gantry.start_moving(params.velocity_mps)
+                    for _ in range(2):
+                        frame_pair = self._capture_one(
+                            pipeline, align, color_format, rs
+                        )
+                        if frame_pair is not None:
+                            if not frame_buffer.append(frame_pair):
+                                buffer_limit_reached = True
+                                if self.session is not None:
+                                    self.session.termination_reason = "buffer_limit"
+                                break
+                            self._record_position(i, self._current_position)
+                            i += 1
+                            on_progress(i, 0)  # unknown total -> 0
+                        if self._current_position >= params.end_position_m:
+                            endpoint_reached = True
+                            break
+                    if endpoint_reached or buffer_limit_reached:
+                        break
 
                 if not self._stop_flag and not gantry.is_running():
                     raise RuntimeError(
                         "The ROS gantry helper stopped during capture."
                     )
+                if self.session is not None:
+                    if endpoint_reached:
+                        self.session.termination_reason = "endpoint_reached"
+                    elif self._stop_flag:
+                        self.session.termination_reason = "user_stop"
             finally:
-                gantry.stop_moving()
-                gantry.shutdown()
+                if gantry is not None:
+                    gantry.stop_moving()
+                try:
+                    pipeline.stop()
+                except Exception:
+                    pass
 
-            return i
-        finally:
+            from capture.realsense_capture import (
+                remove_frame_batch,
+                write_frame_batch,
+            )
+
+            frame_pairs = frame_buffer.frames
+            frame_count = len(frame_pairs)
+            on_progress(frame_count, -1)  # acquisition done; saving batch
+            write_frame_batch(
+                self.out_dir, frame_pairs, cv2_module=self._cv2
+            )
             try:
-                pipeline.stop()
+                camera._save_intrinsics(intrinsics)
             except Exception:
-                pass
+                remove_frame_batch(self.out_dir, range(frame_count))
+                raise
+
+            if endpoint_reached and not self._stop_flag:
+                home_returned = self._return_home(gantry, HOME_POSITION_M)
+                if self.session is not None:
+                    self.session.home_returned = home_returned
+                    if not home_returned:
+                        self.session.termination_reason = "endpoint_reached_home_failed"
+            return frame_count
+        finally:
+            if gantry is not None:
+                gantry.shutdown()
+            self._gantry = None
 
     # ------------------------------------------------------------------ I/O
-    def _capture_one(self, pipeline, align, idx: int, color_format, rs) -> bool:
-        frames = pipeline.wait_for_frames()
-        aligned = align.process(frames)
+    def _capture_one(self, pipeline, align, color_format, rs):
+        from capture.realsense_capture import capture_frame_pair
 
-        depth_frame = aligned.get_depth_frame()
-        color_frame = aligned.get_color_frame()
-        if not depth_frame or not color_frame:
-            return False
-
-        depth_img = np.asanyarray(depth_frame.get_data())
-        color_img = np.asanyarray(color_frame.get_data())
-        if color_format == rs.format.rgb8:
-            color_img = self._cv2.cvtColor(color_img, self._cv2.COLOR_RGB2BGR)
-
-        from capture.realsense_capture import write_frame_pair
-
-        write_frame_pair(
-            self.out_dir, idx, color_img, depth_img, cv2_module=self._cv2
+        return capture_frame_pair(
+            pipeline,
+            align,
+            color_format,
+            rs,
+            cv2_module=self._cv2,
         )
-        return True
+
+    def _return_home(self, gantry, home_position_m: float) -> bool:
+        """Send the stakeholder go-home command and bound the wait for arrival."""
+        gantry.go_home()
+        deadline = time.monotonic() + self.HOME_TIMEOUT_S
+        while gantry.is_running() and not self._stop_flag:
+            if abs(self._current_position - home_position_m) <= self.HOME_TOLERANCE_M:
+                return True
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.05)
+        gantry.stop_moving()
+        return False

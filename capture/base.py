@@ -14,11 +14,20 @@ reconstruction pipeline don't care which backend produced the data.
 from __future__ import annotations
 
 import abc
+import ctypes
 import json
 import os
+import shutil
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import Callable, Optional
+
+
+GIB = 1024 ** 3
+DEFAULT_MAX_BUFFER_GIB = 4.0
+MEMORY_HEADROOM_FRACTION = 0.5
+DISK_RESERVE_BYTES = 512 * 1024 ** 2
+PNG_WORST_CASE_FACTOR = 1.1
 
 
 @dataclass
@@ -40,6 +49,10 @@ class CaptureParams:
     # RealSense-only mode: capture for N seconds (-1 = manual stop)
     duration_s: float = 10.0
 
+    # In-memory RGB/depth buffering ceiling. The effective limit can be lower
+    # when the machine has less free RAM or output disk space.
+    max_buffer_gib: float = DEFAULT_MAX_BUFFER_GIB
+
     # Naming -- always 0.png, 1.png, ... (matches load_image_pairs default)
     naming: str = "numeric"
 
@@ -58,6 +71,8 @@ class CaptureSession:
     n_frames: int = 0
     # frame_index (int) -> gantry position (metres) when available
     frame_positions: dict = field(default_factory=dict)
+    termination_reason: str = "completed"
+    home_returned: Optional[bool] = None
 
 
 class CaptureBackend(abc.ABC):
@@ -101,7 +116,12 @@ class CaptureBackend(abc.ABC):
         running this off the UI thread). Returns the output directory or None
         on failure.
         """
-        self._stop_flag = False
+        if self._stop_flag:
+            message = "Capture was cancelled before camera startup completed."
+            if on_error:
+                on_error(message)
+                return None
+            raise RuntimeError(message)
         try:
             self.out_dir = self._make_out_dir(params.out_root)
             self.session = CaptureSession(
@@ -137,18 +157,114 @@ class CaptureBackend(abc.ABC):
     @staticmethod
     def _make_out_dir(root: str) -> str:
         ts = datetime.now().strftime("%Y%m%d%H%M%S")
-        out = os.path.join(root, ts)
-        os.makedirs(os.path.join(out, "rgb"), exist_ok=True)
-        os.makedirs(os.path.join(out, "depth"), exist_ok=True)
+        os.makedirs(root, exist_ok=True)
+        suffix = 0
+        while True:
+            name = ts if suffix == 0 else f"{ts}-{suffix}"
+            out = os.path.join(root, name)
+            try:
+                os.mkdir(out)
+                break
+            except FileExistsError:
+                suffix += 1
+        os.mkdir(os.path.join(out, "rgb"))
+        os.mkdir(os.path.join(out, "depth"))
         return out
 
     def _write_session(self) -> None:
         if self.out_dir is None or self.session is None:
             return
         path = os.path.join(self.out_dir, "session.json")
-        with open(path, "w") as f:
-            json.dump(asdict(self.session), f, indent=2)
+        temp_path = os.path.join(self.out_dir, ".session.json.part")
+        try:
+            with open(temp_path, "w") as f:
+                json.dump(asdict(self.session), f, indent=2)
+            os.replace(temp_path, path)
+        except Exception:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+            raise
 
     def _record_position(self, frame_idx: int, position_m: float) -> None:
         if self.session is not None:
             self.session.frame_positions[str(frame_idx)] = float(position_m)
+
+
+def _available_memory_bytes() -> Optional[int]:
+    """Best-effort free-memory query using only the standard library."""
+    if os.name == "nt":
+        class MemoryStatus(ctypes.Structure):
+            _fields_ = [
+                ("length", ctypes.c_ulong),
+                ("memory_load", ctypes.c_ulong),
+                ("total_physical", ctypes.c_ulonglong),
+                ("available_physical", ctypes.c_ulonglong),
+                ("total_page_file", ctypes.c_ulonglong),
+                ("available_page_file", ctypes.c_ulonglong),
+                ("total_virtual", ctypes.c_ulonglong),
+                ("available_virtual", ctypes.c_ulonglong),
+                ("available_extended_virtual", ctypes.c_ulonglong),
+            ]
+
+        status = MemoryStatus()
+        status.length = ctypes.sizeof(MemoryStatus)
+        try:
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return int(status.available_physical)
+        except Exception:
+            return None
+
+    try:
+        pages = os.sysconf("SC_AVPHYS_PAGES")
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        return int(pages * page_size)
+    except (AttributeError, OSError, TypeError, ValueError):
+        return None
+
+
+def frame_pair_bytes(width: int, height: int) -> int:
+    """Raw BGR8 plus z16 bytes for one aligned RGB/depth pair."""
+    return int(width) * int(height) * 5
+
+
+def capture_buffer_limit_bytes(out_dir: str, max_buffer_gib: float) -> int:
+    """Return a conservative RAM/disk-backed raw-frame buffer ceiling."""
+    if max_buffer_gib <= 0:
+        raise RuntimeError("Capture buffer limit must be greater than zero.")
+    configured = max(1, int(float(max_buffer_gib) * GIB))
+    limits = [configured]
+
+    available_memory = _available_memory_bytes()
+    if available_memory is not None:
+        limits.append(max(1, int(available_memory * MEMORY_HEADROOM_FRACTION)))
+
+    disk_free = shutil.disk_usage(out_dir).free
+    usable_disk = max(0, disk_free - DISK_RESERVE_BYTES)
+    if usable_disk == 0:
+        raise RuntimeError(
+            "The output disk has less than the required 512 MiB safety reserve."
+        )
+    limits.append(max(1, int(usable_disk / PNG_WORST_CASE_FACTOR)))
+    return min(limits)
+
+
+def ensure_capture_capacity(
+    out_dir: str,
+    params: CaptureParams,
+    frame_count: int,
+    width: int,
+    height: int,
+) -> int:
+    """Reject a requested capture that cannot safely fit in RAM and on disk."""
+    limit = capture_buffer_limit_bytes(out_dir, params.max_buffer_gib)
+    required = frame_pair_bytes(width, height) * max(0, int(frame_count))
+    if required > limit:
+        raise RuntimeError(
+            "Capture settings require approximately "
+            f"{required / GIB:.2f} GiB of raw RGB/depth buffering, but the "
+            f"current safe RAM/disk limit is {limit / GIB:.2f} GiB. Reduce "
+            "duration, FPS, resolution, end position, or gantry travel time."
+        )
+    return limit

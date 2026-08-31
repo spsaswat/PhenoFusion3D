@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QStatusBar, QMenuBar, QAction,
     QFileDialog, QMessageBox, QLabel
 )
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import QTimer, Qt, pyqtSlot
 from PyQt5.QtGui import QFont
 
 from app.panels.data_panel    import DataPanel
@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('PhenoFusion3D')
         self.setMinimumSize(1280, 800)
         self.resize(1400, 900)
+        self._close_pending = False
 
         self.controller = Controller(self)
 
@@ -150,6 +151,7 @@ class MainWindow(QMainWindow):
         self.controller.capture_progress.connect(self.capture_panel.on_progress)
         self.controller.capture_complete.connect(self._on_capture_complete)
         self.controller.capture_error.connect(self.capture_panel.on_error)
+        self.controller.capture_stopped.connect(self._continue_pending_close)
 
         # Gantry panel -> controller -> gantry panel
         self.gantry_panel.jog_requested.connect(self.controller.on_gantry_jog)
@@ -272,9 +274,24 @@ class MainWindow(QMainWindow):
             self.controller.export_csv(path)
 
     def closeEvent(self, event):
+        capture_worker = self.controller.capture_worker
+        if capture_worker is not None and capture_worker.isRunning():
+            self._close_pending = True
+            self.controller.on_capture_stop()
+            self.capture_panel.status_lbl.setText(
+                'Stopping capture and finishing the save before closing...'
+            )
+            event.ignore()
+            return
         # Final safety stop on the gantry before the process exits.
         try:
             self.controller.shutdown()
         except Exception:
             pass
         super().closeEvent(event)
+
+    @pyqtSlot()
+    def _continue_pending_close(self):
+        if self._close_pending:
+            self._close_pending = False
+            QTimer.singleShot(0, self.close)

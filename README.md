@@ -122,8 +122,12 @@ Two on-disk layouts are accepted by `load_image_pairs`
 | `width` × `height` | `1280 × 720` | Requested capture resolution |
 | `fps` | `30` | Requested frame rate |
 | `duration_s` | `10.0` | RealSense-only capture length (`-1` = manual stop) |
+| `max_buffer_gib` | `4.0` | Absolute ceiling before RAM/disk safety limits are applied |
 | `velocity_mps` | `0.038` | Gantry linear velocity (m/s) |
 | `end_position_m` | `0.78` | Gantry position at which the pass stops |
+| Camera warm-up | `4` frames | Frames discarded before acquisition |
+| Home position | `0.005 m` | Gantry go-home target |
+| Home velocity | `0.2 m/s` | Gantry go-home velocity |
 | `gantry_axis` | `0` | `0` = X, `1` = Y in the camera frame |
 | `depth_scale` | `1000.0` | Depth units per metre (use `1.0` for ICL-NUIM) |
 | `depth_trunc` | `3.0` (recon) / `4.0` (quality) | Maximum retained depth (m) |
@@ -180,6 +184,17 @@ The **Data Capture** panel drives an RGB-D capture without leaving the app.
 - **RealSense Only** captures from the camera without starting or requiring the gantry.
 - The separate **Gantry Control** panel moves the gantry without opening the camera.
 
+Both camera backends copy the aligned RGB/depth frames into memory during
+acquisition. After the camera (and gantry, when used) has stopped, the complete
+batch is saved as PNG files, followed by the intrinsics and `session.json`.
+This keeps image compression and disk I/O out of the time-critical capture loop.
+At the default 1280x720, 30 FPS settings, a 10-second raw buffer uses roughly
+1.3 GiB of RAM before Python/driver overhead; longer captures scale linearly.
+Before acquisition, the app checks the estimated raw buffer against available
+RAM and output-disk space. Manual captures are stopped and saved at the runtime
+safety ceiling rather than allowing the process to exhaust memory. ROS passes
+also stop if gantry position does not advance for five seconds.
+
 Camera selection happens when capture starts. One connected RGB-D RealSense is
 selected automatically. If several are connected, select one by serial before
 launching the app:
@@ -213,6 +228,10 @@ data/captures/<YYYYMMDDhhmmss>/
 ```
 
 After a successful capture the **Data Loading** fields are auto-populated so you can immediately run the quality check or reconstruction.
+After a full ROS pass is saved, the stakeholder go-home command returns the
+gantry to `0.005 m` at `0.2 m/s`; the session records whether that return was
+confirmed. Closing the app during capture requests a stop and waits for the
+buffered batch to finish saving before the window exits.
 
 ## Quality Check (in-app)
 

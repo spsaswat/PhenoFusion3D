@@ -29,6 +29,7 @@ class Controller(QObject):
     capture_progress = pyqtSignal(int, int)
     capture_complete = pyqtSignal(str, int)
     capture_error    = pyqtSignal(str)
+    capture_stopped  = pyqtSignal()
 
     # Quality pipeline signals
     quality_progress = pyqtSignal(int, int)
@@ -159,6 +160,9 @@ class Controller(QObject):
     @pyqtSlot(str, str, float, float, int, float)
     def on_capture_clicked(self, backend_pref, out_root, velocity_mps,
                            end_position_m, fps, duration_s):
+        if self.capture_worker is not None and self.capture_worker.isRunning():
+            self.status_changed.emit("A capture is already running.")
+            return
         params = CaptureParams(
             out_root=out_root or 'data/captures',
             fps=fps,
@@ -170,8 +174,12 @@ class Controller(QObject):
         self.capture_started.emit()
         self.capture_worker = CaptureWorker(backend_pref, params)
         self.capture_worker.frame_captured.connect(self.capture_progress)
-        self.capture_worker.finished.connect(self._on_capture_finished)
+        self.capture_worker.capture_finished.connect(self._on_capture_finished)
         self.capture_worker.error.connect(self._on_capture_error)
+        worker = self.capture_worker
+        worker.finished.connect(
+            lambda: self._on_capture_thread_stopped(worker)
+        )
         self.capture_worker.start()
 
     @pyqtSlot()
@@ -197,6 +205,11 @@ class Controller(QObject):
     def _on_capture_error(self, msg):
         self.status_changed.emit(f'Capture error: {msg}')
         self.capture_error.emit(msg)
+
+    def _on_capture_thread_stopped(self, worker):
+        if self.capture_worker is worker:
+            self.capture_worker = None
+            self.capture_stopped.emit()
 
     # ---------------------------------------------------------------- quality
     def _build_quality_params(self, rgb_dir: str) -> QualityParams:
@@ -347,6 +360,10 @@ class Controller(QObject):
     def shutdown(self):
         """Called from MainWindow.closeEvent. Final safety stop +
         unregister subscribers."""
+        capture_worker = self.capture_worker
+        if capture_worker is not None and capture_worker.isRunning():
+            capture_worker.stop()
+            capture_worker.wait(5000)
         try:
             self.gantry.shutdown()
         except Exception:

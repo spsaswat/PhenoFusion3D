@@ -14,6 +14,11 @@ except Exception:  # pragma: no cover - dependency gate
     pytest.skip("PyQt5 unavailable", allow_module_level=True)
 
 from capture.gantry import GantryController, _ros_importable
+from capture.base import CaptureParams
+from capture.realsense_capture import RealSenseCapture
+from app.capture_worker import CaptureWorker
+from app.panels.capture_panel import CapturePanel
+from app.panels.gantry_panel import GantryPanel
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +50,70 @@ def test_availability_checks_the_machine_not_the_gui_import(qapp, monkeypatch):
 
     monkeypatch.setattr(gantry_module, "ros_is_installed", lambda: False)
     assert GantryController().is_available() is False
+
+
+def test_jog_buttons_use_lab_verified_reversed_directions(qapp):
+    panel = GantryPanel(available=True)
+    velocities = []
+    panel.jog_requested.connect(velocities.append)
+    panel.vel_spin.setValue(0.038)
+
+    panel._on_jog_back_pressed()
+    panel._on_jog_fwd_pressed()
+
+    assert velocities == [0.038, -0.038]
+    assert panel.jog_back_btn.toolTip().endswith('+X')
+    assert panel.jog_fwd_btn.toolTip().endswith('-X')
+
+
+def test_initial_capture_values_match_the_stakeholder_script(qapp):
+    defaults = CaptureParams()
+    panel = CapturePanel()
+    gantry_panel = GantryPanel(available=True)
+
+    assert (defaults.width, defaults.height, defaults.fps) == (1280, 720, 30)
+    assert defaults.velocity_mps == 0.038
+    assert defaults.end_position_m == 0.78
+    assert GantryController.HOME_POSITION_M == 0.005
+    assert GantryController.HOME_VELOCITY_MPS == 0.2
+    assert RealSenseCapture.WARMUP_FRAMES == 4
+
+    assert panel.out_edit.text() == defaults.out_root
+    assert panel.vel_spin.value() == defaults.velocity_mps
+    assert panel.end_spin.value() == defaults.end_position_m
+    assert panel.fps_spin.value() == defaults.fps
+    assert panel.dur_spin.value() == defaults.duration_s
+    assert gantry_panel.vel_spin.value() == defaults.velocity_mps
+
+
+def test_capture_stop_is_not_lost_during_worker_startup(qapp, monkeypatch):
+    class Backend:
+        def __init__(self):
+            self.stopped = False
+            self.started = False
+
+        def stop(self):
+            self.stopped = True
+
+        def start(self, _params, **callbacks):
+            self.started = True
+            if self.stopped:
+                callbacks["on_error"]("cancelled before startup")
+                return None
+            raise AssertionError("cancel request was lost")
+
+    backend = Backend()
+    monkeypatch.setattr("app.capture_worker.get_backend", lambda _pref: backend)
+    worker = CaptureWorker("realsense", CaptureParams())
+    errors = []
+    worker.error.connect(errors.append)
+
+    worker.stop()
+    worker.run()
+
+    assert backend.stopped is True
+    assert backend.started is True
+    assert errors == ["cancelled before startup"]
 
 
 def test_connection_failure_is_nonblocking_and_retryable(qapp, monkeypatch):

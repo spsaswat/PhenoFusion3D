@@ -6,6 +6,7 @@ UI panel for triggering RGB-D capture.
 
 from __future__ import annotations
 
+import json
 import os
 
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -14,7 +15,7 @@ from PyQt5.QtWidgets import (
     QLineEdit, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget,
 )
 
-from capture import ros_available
+from capture import CaptureParams, ros_available
 
 
 class CapturePanel(QWidget):
@@ -25,6 +26,7 @@ class CapturePanel(QWidget):
 
     def __init__(self):
         super().__init__()
+        self._defaults = CaptureParams()
         self._build_ui()
 
     def _build_ui(self):
@@ -56,7 +58,7 @@ class CapturePanel(QWidget):
         # Output root
         layout.addWidget(QLabel('Output folder:'))
         out_row = QHBoxLayout()
-        self.out_edit = QLineEdit('data/captures')
+        self.out_edit = QLineEdit(self._defaults.out_root)
         browse = QPushButton('Browse')
         browse.setFixedWidth(60)
         browse.clicked.connect(self._browse_out)
@@ -71,14 +73,14 @@ class CapturePanel(QWidget):
         self.vel_spin.setRange(0.001, 1.0)
         self.vel_spin.setSingleStep(0.005)
         self.vel_spin.setDecimals(3)
-        self.vel_spin.setValue(0.038)
+        self.vel_spin.setValue(self._defaults.velocity_mps)
         vel_row.addWidget(self.vel_spin)
         vel_row.addWidget(QLabel('End (m):'))
         self.end_spin = QDoubleSpinBox()
         self.end_spin.setRange(0.05, 5.0)
         self.end_spin.setSingleStep(0.05)
         self.end_spin.setDecimals(2)
-        self.end_spin.setValue(0.78)
+        self.end_spin.setValue(self._defaults.end_position_m)
         vel_row.addWidget(self.end_spin)
         layout.addLayout(vel_row)
 
@@ -87,14 +89,14 @@ class CapturePanel(QWidget):
         fps_row.addWidget(QLabel('FPS:'))
         self.fps_spin = QSpinBox()
         self.fps_spin.setRange(1, 60)
-        self.fps_spin.setValue(30)
+        self.fps_spin.setValue(self._defaults.fps)
         fps_row.addWidget(self.fps_spin)
         fps_row.addWidget(QLabel('Duration (s, RealSense):'))
         self.dur_spin = QDoubleSpinBox()
         self.dur_spin.setRange(0.0, 600.0)
         self.dur_spin.setSingleStep(1.0)
         self.dur_spin.setDecimals(1)
-        self.dur_spin.setValue(10.0)
+        self.dur_spin.setValue(self._defaults.duration_s)
         self.dur_spin.setToolTip('Used by RealSense-only backend. Set 0 to capture until Stop.')
         fps_row.addWidget(self.dur_spin)
         layout.addLayout(fps_row)
@@ -165,6 +167,13 @@ class CapturePanel(QWidget):
         self.backend_combo.setEnabled(not running)
 
     def on_progress(self, idx: int, total: int):
+        if total < 0:
+            self.progress.setRange(0, 0)
+            self.stop_btn.setEnabled(False)
+            self.status_lbl.setText(
+                f'Capture finished. Saving {idx} RGB/depth frames...'
+            )
+            return
         if total > 0:
             pct = min(100, int(100 * idx / max(1, total)))
             self.progress.setValue(pct)
@@ -178,7 +187,20 @@ class CapturePanel(QWidget):
         self.set_running(False)
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
-        self.status_lbl.setText(f'Done. {n_frames} frames -> {out_dir}')
+        message = f'Done. {n_frames} frames -> {out_dir}'
+        try:
+            with open(os.path.join(out_dir, 'session.json')) as session_file:
+                session = json.load(session_file)
+            if session.get('termination_reason') == 'buffer_limit':
+                message = (
+                    f'Stopped at the safe RAM/disk limit. Saved {n_frames} '
+                    f'frames -> {out_dir}'
+                )
+            if session.get('home_returned') is False:
+                message += ' WARNING: the gantry did not confirm its return home.'
+        except (OSError, ValueError, TypeError):
+            pass
+        self.status_lbl.setText(message)
         self._last_out = out_dir
         self.open_btn.setVisible(True)
 

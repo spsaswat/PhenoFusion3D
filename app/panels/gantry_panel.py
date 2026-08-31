@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import (
     QWidget, QFrame,
 )
 
+from capture.base import CaptureParams
+
 
 class GantryPanel(QWidget):
     """
@@ -42,6 +44,7 @@ class GantryPanel(QWidget):
     def __init__(self, available: bool = True):
         super().__init__()
         self._available = available
+        self._default_velocity_mps = CaptureParams().velocity_mps
         self._build_ui()
         self._apply_availability(available)
 
@@ -78,13 +81,13 @@ class GantryPanel(QWidget):
         # ---- jog row: hold-to-move buttons + velocity ----
         jog_row = QHBoxLayout()
         self.jog_back_btn = QPushButton('<<  Jog')
-        self.jog_back_btn.setToolTip('Hold to move the gantry in -X')
+        self.jog_back_btn.setToolTip('Hold to move the gantry in +X')
         self.jog_back_btn.pressed.connect(self._on_jog_back_pressed)
         self.jog_back_btn.released.connect(self._on_jog_released)
         jog_row.addWidget(self.jog_back_btn)
 
         self.jog_fwd_btn = QPushButton('Jog  >>')
-        self.jog_fwd_btn.setToolTip('Hold to move the gantry in +X')
+        self.jog_fwd_btn.setToolTip('Hold to move the gantry in -X')
         self.jog_fwd_btn.pressed.connect(self._on_jog_fwd_pressed)
         self.jog_fwd_btn.released.connect(self._on_jog_released)
         jog_row.addWidget(self.jog_fwd_btn)
@@ -96,7 +99,7 @@ class GantryPanel(QWidget):
         self.vel_spin.setRange(0.001, 0.2)
         self.vel_spin.setSingleStep(0.005)
         self.vel_spin.setDecimals(3)
-        self.vel_spin.setValue(0.038)
+        self.vel_spin.setValue(self._default_velocity_mps)
         vel_row.addWidget(self.vel_spin)
         vel_row.addStretch()
         layout.addLayout(vel_row)
@@ -148,10 +151,10 @@ class GantryPanel(QWidget):
     # ----------------------------------------------------------- behaviour
 
     def _on_jog_fwd_pressed(self):
-        self.jog_requested.emit(+self.vel_spin.value())
+        self.jog_requested.emit(-self.vel_spin.value())
 
     def _on_jog_back_pressed(self):
-        self.jog_requested.emit(-self.vel_spin.value())
+        self.jog_requested.emit(+self.vel_spin.value())
 
     def _on_jog_released(self):
         # Always emit a stop on release -- this is the only safety
