@@ -19,7 +19,7 @@ If you have an Intel RealSense L515 and a Windows host:
 ```powershell
 py -3.11 -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install -e ".[windows,l515]"
+pip install -e ".[windows]"
 .\launch.bat
 ```
 
@@ -32,12 +32,12 @@ itself tells you which trap you hit. The most common ones are below.
 ## The underlying problem
 
 Intel discontinued the L515 in **August 2021**. The L515 enumeration
-code path was dropped from `librealsense` in releases **>= 2.55**. The
-default `pyrealsense2` wheel pulled by `pip install pyrealsense2` (and
-by `requirements.txt`'s `pyrealsense2>=2.54.0` with no upper bound) is
-now `2.57.7` or newer, which **physically cannot see an L515** even
-when Windows itself has the camera fully enumerated and healthy on the
-USB bus. The error surfaced by the app is:
+code path was dropped from `librealsense` in releases **>= 2.55**. An
+unpinned `pip install pyrealsense2` can therefore install a release that
+**physically cannot see an L515** even when Windows itself has the camera
+fully enumerated and healthy on the USB bus. This project pins every
+capture environment to `pyrealsense2==2.54.2.5684`. The error previously
+surfaced by the app was:
 
 ```
 ERROR: No Intel RealSense camera was found by pyrealsense2/librealsense.
@@ -61,17 +61,19 @@ directly from this and shape everything below:
 
 ### `pyproject.toml`
 
-Added a new optional-dependencies group `l515` that pins the SDK to
-`>=2.54.0,<2.55` so an L515 owner explicitly opts into the L515-stable
-line:
+Every capture-capable dependency group uses the same exact wheel. There is
+no alternate camera version or separate L515 opt-in:
 
 ```toml
 [project.optional-dependencies]
 windows = [
-    "pyrealsense2>=2.54.0",
+    "pyrealsense2==2.54.2.5684",
 ]
-l515 = [
-    "pyrealsense2>=2.54.0,<2.55",
+lab = [
+    "pyrealsense2==2.54.2.5684",
+]
+ros = [
+    "pyrealsense2==2.54.2.5684",
 ]
 ```
 
@@ -82,9 +84,8 @@ that live in the repo root and raise `SystemExit` at import time.
 
 ### `requirements.txt`
 
-Added an inline comment block above `pyrealsense2>=2.54.0` documenting
-the L515 caveat, so an L515 owner sees the warning at the same place
-where they would otherwise pin the dependency.
+Pinned `pyrealsense2==2.54.2.5684` exactly and documented why the pin
+must not be loosened.
 
 ### `install/README.md`
 
@@ -112,13 +113,13 @@ order:
 1. **Running under WSL** -- WSL-specific message ("WSL2 doesn't pass
    USB through to Linux by default; launch from PowerShell instead",
    with the exact PowerShell commands).
-2. **`pyrealsense2` not installed** -- camera capture is disabled;
-   shows the right `pip install` command for D-series vs L515.
+2. **`pyrealsense2` not installed** -- camera capture is disabled and the
+   exact `pyrealsense2==2.54.2.5684` install requirement is shown.
 3. **`pyrealsense2` installed but `query_devices()` returns 0** --
    generic camera-not-found troubleshooting (USB 3, no hubs, no other
    app holding the camera). If the detected SDK version is `>= 2.55`
    the dialog **automatically appends an L515-specific hint** pointing
-   at the `[l515]` extras and Python 3.10 / 3.11.
+   at the exact pin and Python 3.10 / 3.11.
 
 WSL detection uses three signals (the env vars `WSL_DISTRO_NAME` /
 `WSL_INTEROP`, plus `/proc/version` containing "microsoft"); any one
@@ -238,10 +239,9 @@ count: 1
 
 ## Decision log: things considered and not done
 
-- **Pinning `pyrealsense2>=2.54.0,<2.55` in the default `[windows]` /
-  `[ros]` extras**: rejected. D400 / D500 owners benefit from the
-  newer SDK and are the project's primary target. The `[l515]`
-  opt-in is correct here.
+- **Allowing different RealSense wheel versions by camera model**: rejected.
+  Every supported capture path uses `pyrealsense2==2.54.2.5684` so an
+  installation cannot silently lose L515 compatibility.
 - **Bundling the Intel RealSense SDK 2.0 installer**: rejected.
   Distributing Intel's installer is a licensing question and the wheel
   alone is sufficient for capture; the installer only helps with the

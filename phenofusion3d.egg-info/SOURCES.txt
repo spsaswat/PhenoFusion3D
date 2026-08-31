@@ -20,6 +20,7 @@ capture/__init__.py
 capture/base.py
 capture/gantry.py
 capture/realsense_capture.py
+capture/realsense_runtime.py
 capture/ros_agent.py
 capture/ros_capture.py
 capture/ros_client.py
@@ -46,6 +47,7 @@ tests/test_e2e.py
 tests/test_gantry_offline.py
 tests/test_icp.py
 tests/test_loader.py
+tests/test_realsense_runtime.py
 tests/test_registration_agent.py
 tests/test_registration_agent_strategies.py
 tests/test_rgbd.py

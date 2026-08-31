@@ -17,7 +17,8 @@ pyqtgraph>=0.13.0
 matplotlib>=3.8.0
 
 # --- Camera capture (RealSense USB on the Linux lab rig) ---
-pyrealsense2>=2.54.0
+# Exact shared L515/D405-compatible wheel; do not loosen this pin.
+pyrealsense2==2.54.2.5684
 
 # --- Developer tooling (optional) ---
 # pip install -e ".[dev]"   or uncomment:

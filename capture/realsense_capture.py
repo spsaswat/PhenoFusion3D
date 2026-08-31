@@ -30,35 +30,97 @@ import cv2
 import numpy as np
 
 from capture.base import CaptureBackend, CaptureParams
+from capture.realsense_runtime import import_realsense
+
+
+def write_frame_pair(
+    out_dir: str,
+    idx: int,
+    color_img,
+    depth_img,
+    cv2_module=cv2,
+) -> None:
+    """Write one RGB/depth pair, or leave no files for this frame index."""
+    rgb_path = os.path.join(out_dir, "rgb", f"{idx}.png")
+    depth_path = os.path.join(out_dir, "depth", f"{idx}.png")
+    # Keep temporary images outside rgb/ and depth/ so an interrupted capture
+    # cannot make a loader mistake an unfinished write for a real frame.
+    rgb_temp = os.path.join(out_dir, f".{idx}.rgb.part.png")
+    depth_temp = os.path.join(out_dir, f".{idx}.depth.part.png")
+
+    def remove_files(paths) -> None:
+        for path in paths:
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                # Preserve the original write/rename error reported below.
+                pass
+
+    try:
+        rgb_ok = bool(cv2_module.imwrite(rgb_temp, color_img))
+        depth_ok = bool(cv2_module.imwrite(depth_temp, depth_img))
+    except Exception as exc:
+        remove_files((rgb_temp, depth_temp))
+        raise RuntimeError(
+            f"Failed to save RGB/depth frame {idx}. No frame was counted. "
+            f"Check write permissions and free disk space in {out_dir!r}."
+        ) from exc
+
+    if not rgb_ok or not depth_ok:
+        remove_files((rgb_temp, depth_temp))
+        failed = []
+        if not rgb_ok:
+            failed.append("RGB")
+        if not depth_ok:
+            failed.append("depth")
+        raise RuntimeError(
+            f"Failed to save {' and '.join(failed)} image for frame {idx}. "
+            f"No frame was counted and the incomplete pair was removed. "
+            f"Check write permissions and free disk space in {out_dir!r}."
+        )
+
+    promoted = []
+    try:
+        os.replace(rgb_temp, rgb_path)
+        promoted.append(rgb_path)
+        os.replace(depth_temp, depth_path)
+        promoted.append(depth_path)
+    except OSError as exc:
+        remove_files((rgb_temp, depth_temp, *promoted))
+        raise RuntimeError(
+            f"Failed to finalize RGB/depth frame {idx}. No frame was counted "
+            f"and the incomplete pair was removed. Check write permissions "
+            f"and free disk space in {out_dir!r}."
+        ) from exc
 
 
 class RealSenseCapture(CaptureBackend):
     name = "realsense"
+
+    def __init__(self, serial_number: str | None = None):
+        super().__init__()
+        configured = (
+            serial_number
+            if serial_number is not None
+            else os.environ.get("PHENOFUSION_CAMERA_SERIAL")
+        )
+        self.serial_number = str(configured).strip() if configured else None
 
     def _run(
         self,
         params: CaptureParams,
         on_progress: Callable[[int, int], None],
     ) -> int:
-        try:
-            import pyrealsense2 as rs
-        except ImportError as e:
-            raise RuntimeError(
-                "pyrealsense2 is not installed. Install with "
-                "'pip install pyrealsense2' (Windows / Linux x86_64)."
-            ) from e
+        rs = import_realsense()
 
         device = self._select_device(rs)
         pipeline = rs.pipeline()
         profile, color_format = self._start_pipeline(pipeline, device, rs, params)
 
         try:
-            # Match stakeholder rospy_thread_fin_1.py: high-accuracy preset on D405
-            depth_sensor = profile.get_device().first_depth_sensor()
-            try:
-                depth_sensor.set_option(rs.option.visual_preset, 4)
-            except Exception:
-                pass
+            self._apply_visual_preset(profile, rs)
 
             # Save actual stream metadata and intrinsics from the selected profile.
             self._update_session_from_profile(profile, rs)
@@ -94,8 +156,7 @@ class RealSenseCapture(CaptureBackend):
                 if color_format == rs.format.rgb8:
                     color_img = cv2.cvtColor(color_img, cv2.COLOR_RGB2BGR)
 
-                cv2.imwrite(os.path.join(self.out_dir, "rgb",   f"{i}.png"), color_img)
-                cv2.imwrite(os.path.join(self.out_dir, "depth", f"{i}.png"), depth_img)
+                write_frame_pair(self.out_dir, i, color_img, depth_img)
 
                 i += 1
                 on_progress(i, total_estimate or i)
@@ -109,7 +170,7 @@ class RealSenseCapture(CaptureBackend):
 
     # ---------------------------------------------------------------- helpers
     def _select_device(self, rs):
-        """Pick the first connected Intel RealSense device with color + depth."""
+        """Select one connected RGB-D camera without assuming its serial."""
         ctx = rs.context()
         devices = list(ctx.query_devices())
         if not devices:
@@ -136,7 +197,31 @@ class RealSenseCapture(CaptureBackend):
                 "only the RGB webcam interface."
             )
 
-        return rgbd_devices[0]
+        if self.serial_number:
+            for device in rgbd_devices:
+                if self._device_serial(device, rs) == self.serial_number:
+                    return device
+            available = ", ".join(
+                self._device_label(device, rs) for device in rgbd_devices
+            ) or "none"
+            raise RuntimeError(
+                "The requested RealSense camera serial "
+                f"{self.serial_number!r} was not found as an RGB-D device. "
+                f"Available RGB-D devices: {available}. Check "
+                "PHENOFUSION_CAMERA_SERIAL or reconnect the camera."
+            )
+
+        if len(rgbd_devices) == 1:
+            return rgbd_devices[0]
+
+        choices = "\n".join(
+            f"  - {self._device_label(device, rs)}" for device in rgbd_devices
+        )
+        raise RuntimeError(
+            "Multiple RGB-D RealSense cameras are connected. Set "
+            "PHENOFUSION_CAMERA_SERIAL to the serial of the camera to use:\n"
+            f"{choices}"
+        )
 
     def _start_pipeline(self, pipeline, device, rs, params: CaptureParams):
         serial = self._device_serial(device, rs)
@@ -270,6 +355,29 @@ class RealSenseCapture(CaptureBackend):
         name = info(rs.camera_info.name, "Unknown RealSense")
         serial = info(rs.camera_info.serial_number, "no serial")
         return f"{name} ({serial})"
+
+    def _apply_visual_preset(self, profile, rs) -> None:
+        """Apply the stakeholder preset appropriate for the detected model."""
+        device = profile.get_device()
+        name = self._device_name(device, rs).upper()
+        preset = 5 if "L515" in name else 4
+        try:
+            device.first_depth_sensor().set_option(
+                rs.option.visual_preset, preset
+            )
+        except Exception as exc:
+            print(
+                f"[realsense_capture] WARNING: could not apply preset "
+                f"{preset} to {self._device_label(device, rs)}: {exc}"
+            )
+
+    def _device_name(self, device, rs) -> str:
+        try:
+            if device.supports(rs.camera_info.name):
+                return device.get_info(rs.camera_info.name)
+        except Exception:
+            pass
+        return "Unknown RealSense"
 
     def _save_intrinsics(self, profile, rs) -> None:
         """Mirror the stakeholder format for kdc_intrinsics.txt + kd_intrinsics.txt."""
