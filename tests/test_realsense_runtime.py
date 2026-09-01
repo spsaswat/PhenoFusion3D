@@ -548,7 +548,7 @@ def test_ros_saves_buffered_frames_before_returning_home(
 
     def run_capture():
         return capture._run(
-            CaptureParams(width=2, height=2, fps=30, end_position_m=1.64),
+            CaptureParams(width=2, height=2, fps=30),
             lambda current, total: progress.append((current, total)),
         )
 

@@ -124,10 +124,10 @@ Two on-disk layouts are accepted by `load_image_pairs`
 | `duration_s` | `10.0` | RealSense-only capture length (`-1` = manual stop) |
 | `max_buffer_gib` | `6.0` | Absolute ceiling before RAM/disk safety limits are applied |
 | Capture velocity | `38 mm/s` | Gantry linear velocity (`velocity_mps=0.038` internally) |
-| Capture endpoint | `1640 mm` | Gantry position at which the pass stops (`end_position_m=1.64` internally) |
+| Capture endpoint | `1650 mm` | Gantry position at which the pass stops (`end_position_m=1.65` internally) |
 | Camera warm-up | `4` frames | Frames discarded before acquisition |
 | Home position | `5 mm` | Gantry go-home target |
-| Home velocity | `200 mm/s` | Gantry go-home velocity |
+| Home / Go To velocity | `150 mm/s` | Gantry absolute-motion velocity |
 | `gantry_axis` | `0` | `0` = X, `1` = Y in the camera frame |
 | `depth_scale` | `1000.0` | Depth units per metre (use `1.0` for ICL-NUIM) |
 | `depth_trunc` | `3.0` (recon) / `4.0` (quality) | Maximum retained depth (m) |
@@ -190,7 +190,7 @@ batch is saved as PNG files, followed by the intrinsics and `session.json`.
 This keeps image compression and disk I/O out of the time-critical capture loop.
 At the default 1280x720, 30 FPS settings, a 10-second raw buffer uses roughly
 1.3 GiB of RAM before Python/driver overhead; longer captures scale linearly.
-The required `0.005 m` to `1.64 m` ROS pass uses approximately 5.54 GiB of
+The required `0.005 m` to `1.65 m` ROS pass uses approximately 5.57 GiB of
 raw frame storage and is covered by the 6 GiB configured ceiling.
 Before acquisition, the app checks the estimated raw buffer against available
 RAM and output-disk space. Manual captures are stopped and saved at the runtime
@@ -230,13 +230,14 @@ data/captures/<YYYYMMDDhhmmss>/
 ```
 
 After a successful capture the **Data Loading** fields are auto-populated so you can immediately run the quality check or reconstruction.
-After ROS acquisition stops, the go-home command returns the gantry to `5 mm`
-at `200 mm/s` before buffered frames are saved; the session records whether that
-return was confirmed. Automatic failures after motion begins also attempt Home,
-while an operator-requested Stop does not initiate new motion. Closing the app
-during capture requests a stop and waits for the buffered batch to finish saving
-before the window exits. The gantry panel continues to show live position during
-combined capture and its automatic return Home.
+After ROS acquisition stops, buffered frames and intrinsics are saved at the
+endpoint. The go-home command then returns the gantry to `5 mm` at `150 mm/s`;
+the session records whether that return was confirmed. Automatic failures after
+motion begins also attempt Home, while an operator-requested Stop does not
+initiate new motion. Closing the app during capture requests a stop and waits
+for the buffered batch to finish saving before the window exits. The gantry
+panel continues to show live position during combined capture and its automatic
+return Home.
 
 ## Quality Check (in-app)
 

@@ -81,7 +81,7 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
 
     assert (defaults.width, defaults.height, defaults.fps) == (1280, 720, 30)
     assert defaults.velocity_mps == 0.038
-    assert defaults.end_position_m == 1.64
+    assert defaults.end_position_m == 1.65
     assert defaults.max_buffer_gib == 6.0
     assert GantryController.HOME_POSITION_M == 0.005
     assert GantryController.HOME_VELOCITY_MPS == 0.15
@@ -98,6 +98,7 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
         panel.end_spin.value()
         == defaults.end_position_m * MILLIMETRES_PER_METRE
     )
+    assert panel.end_spin.value() == 1650.0
     assert panel.fps_spin.value() == defaults.fps
     assert panel.dur_spin.value() == defaults.duration_s
     assert (
@@ -105,6 +106,7 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
         == GantryPanel.DEFAULT_JOG_VELOCITY_MPS * MILLIMETRES_PER_METRE
     )
     assert gantry_panel.vel_spin.value() == 5.0
+    assert GantryPanel.DEFAULT_GOTO_POSITION_M == defaults.end_position_m
     assert gantry_panel.goto_spin.value() == 1650.0
 
     capture_requests = []

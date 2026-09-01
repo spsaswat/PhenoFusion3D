@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QWidget, QFrame,
 )
 
-from capture.base import MILLIMETRES_PER_METRE
+from capture.base import DEFAULT_END_POSITION_M, MILLIMETRES_PER_METRE
 
 
 class GantryPanel(QWidget):
@@ -37,7 +37,7 @@ class GantryPanel(QWidget):
     stop_requested    = pyqtSignal()
 
     DEFAULT_JOG_VELOCITY_MPS = 0.005
-    DEFAULT_GOTO_POSITION_M = 1.65
+    DEFAULT_GOTO_POSITION_M = DEFAULT_END_POSITION_M
 
     _OFFLINE_TOOLTIP = (
         "No ROS installation was detected for the gantry. Source the lab "
