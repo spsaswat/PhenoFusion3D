@@ -170,7 +170,7 @@ def go_home():
     msg.header = Header()
     msg.goal_id = GoalID()
     msg.goal.position = 0.005
-    msg.goal.velocity = 0.2
+    msg.goal.velocity = 0.15
 
     # Make sure rospy is still running and then publish
     # if not rospy.is_shutdown():

@@ -421,8 +421,10 @@ def test_realsense_stops_camera_before_saving_buffered_frames(
     ]
 
 
-@pytest.mark.parametrize("failure_stage", [None, "capture", "stall", "save"])
-def test_ros_returns_home_after_capture_and_before_saving_buffered_frames(
+@pytest.mark.parametrize(
+    "failure_stage", [None, "capture", "stall", "save", "intrinsics"]
+)
+def test_ros_saves_buffered_frames_before_returning_home(
     tmp_path, monkeypatch, failure_stage
 ):
     events = []
@@ -511,11 +513,13 @@ def test_ros_returns_home_after_capture_and_before_saving_buffered_frames(
         "_read_intrinsics",
         lambda *_args: {"intrinsics": {}},
     )
-    monkeypatch.setattr(
-        RealSenseCapture,
-        "_save_intrinsics",
-        lambda _self, payloads: events.append(("saved intrinsics", payloads)),
-    )
+
+    def save_intrinsics(_self, payloads):
+        events.append(("saved intrinsics", payloads))
+        if failure_stage == "intrinsics":
+            raise RuntimeError("intrinsics save failed")
+
+    monkeypatch.setattr(RealSenseCapture, "_save_intrinsics", save_intrinsics)
 
     def write_frame_batch(_out, pairs, cv2_module):
         events.append(("batch write", len(pairs)))
@@ -551,11 +555,10 @@ def test_ros_returns_home_after_capture_and_before_saving_buffered_frames(
     if failure_stage is None:
         assert run_capture() == 1
     else:
-        expected_error = (
-            "position did not advance"
-            if failure_stage == "stall"
-            else failure_stage
-        )
+        expected_error = {
+            "stall": "position did not advance",
+            "intrinsics": "intrinsics save failed",
+        }.get(failure_stage, failure_stage)
         with pytest.raises(RuntimeError, match=expected_error):
             run_capture()
 
@@ -580,16 +583,22 @@ def test_ros_returns_home_after_capture_and_before_saving_buffered_frames(
     else:
         assert progress == [(1, 0), (1, -1)]
         save_index = events.index(("batch write", 1))
-        assert home_index < save_index
+        assert save_index < home_index
         if failure_stage is None:
-            assert events[save_index + 1] == (
+            intrinsics_event = (
                 "saved intrinsics", {"intrinsics": {}}
             )
-        else:
+            assert events.index(intrinsics_event) < home_index
+        elif failure_stage == "save":
             assert not any(
                 isinstance(event, tuple) and event[0] == "saved intrinsics"
                 for event in events
             )
+        else:
+            intrinsics_event = (
+                "saved intrinsics", {"intrinsics": {}}
+            )
+            assert events.index(intrinsics_event) < home_index
 
 
 def test_completed_frame_batch_is_written_with_numeric_names(tmp_path):

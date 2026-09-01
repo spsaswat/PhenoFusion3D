@@ -242,20 +242,6 @@ class RosCapture(CaptureBackend):
                     pipeline.stop()
                 except Exception:
                     pass
-                if (
-                    gantry is not None
-                    and motion_started
-                    and not self._stop_flag
-                ):
-                    home_returned = self._return_home_safely(
-                        gantry, HOME_POSITION_M
-                    )
-                    if self.session is not None:
-                        self.session.home_returned = home_returned
-                        if endpoint_reached and not home_returned:
-                            self.session.termination_reason = (
-                                "endpoint_reached_home_failed"
-                            )
 
             from capture.realsense_capture import (
                 remove_frame_batch,
@@ -276,6 +262,23 @@ class RosCapture(CaptureBackend):
 
             return frame_count
         finally:
+            # Returning Home belongs after the buffered image and intrinsics
+            # save attempt. Keeping it in this outer cleanup also guarantees
+            # that acquisition or persistence failures cannot skip Home.
+            if (
+                gantry is not None
+                and motion_started
+                and not self._stop_flag
+            ):
+                home_returned = self._return_home_safely(
+                    gantry, HOME_POSITION_M
+                )
+                if self.session is not None:
+                    self.session.home_returned = home_returned
+                    if endpoint_reached and not home_returned:
+                        self.session.termination_reason = (
+                            "endpoint_reached_home_failed"
+                        )
             if gantry is not None:
                 gantry.shutdown()
             self._gantry = None

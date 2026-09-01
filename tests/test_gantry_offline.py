@@ -15,6 +15,8 @@ except Exception:  # pragma: no cover - dependency gate
     pytest.skip("PyQt5 unavailable", allow_module_level=True)
 
 from capture.gantry import GantryController, _ros_importable
+from capture.ros_agent import HOME_VELOCITY_MPS as AGENT_HOME_VELOCITY_MPS
+from capture.ros_client import HOME_VELOCITY_MPS as CLIENT_HOME_VELOCITY_MPS
 from capture.base import (
     GIB,
     CaptureParams,
@@ -82,7 +84,9 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
     assert defaults.end_position_m == 1.64
     assert defaults.max_buffer_gib == 6.0
     assert GantryController.HOME_POSITION_M == 0.005
-    assert GantryController.HOME_VELOCITY_MPS == 0.2
+    assert GantryController.HOME_VELOCITY_MPS == 0.15
+    assert CLIENT_HOME_VELOCITY_MPS == 0.15
+    assert AGENT_HOME_VELOCITY_MPS == 0.15
     assert RealSenseCapture.WARMUP_FRAMES == 4
 
     assert panel.out_edit.text() == defaults.out_root
@@ -98,8 +102,10 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
     assert panel.dur_spin.value() == defaults.duration_s
     assert (
         gantry_panel.vel_spin.value()
-        == defaults.velocity_mps * MILLIMETRES_PER_METRE
+        == GantryPanel.DEFAULT_JOG_VELOCITY_MPS * MILLIMETRES_PER_METRE
     )
+    assert gantry_panel.vel_spin.value() == 5.0
+    assert gantry_panel.goto_spin.value() == 1650.0
 
     capture_requests = []
     panel.capture_requested.connect(lambda *args: capture_requests.append(args))
@@ -110,9 +116,8 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
 
     goto_positions = []
     gantry_panel.goto_requested.connect(goto_positions.append)
-    gantry_panel.goto_spin.setValue(1640.0)
     gantry_panel.goto_btn.click()
-    assert goto_positions == [1.64]
+    assert goto_positions == [1.65]
 
     gantry_panel.update_position(GantryController.HOME_POSITION_M)
     assert gantry_panel.pos_lbl.text() == '+5.0 mm'
@@ -266,7 +271,7 @@ def test_connected_controller_keeps_working_gantry_commands(qapp):
     assert client.commands == [
         ("jog", 0.038),
         ("stop",),
-        ("goto", 0.5, 0.2),
+        ("goto", 0.5, 0.15),
         ("goto", controller.HOME_POSITION_M, controller.HOME_VELOCITY_MPS),
         ("shutdown",),
     ]
@@ -281,7 +286,7 @@ def test_goto_clamps_before_publishing(qapp):
 
     controller.go_to(9.0)
 
-    assert client.commands == [("goto", 2.0, 0.2)]
+    assert client.commands == [("goto", 2.0, 0.15)]
     assert any("clamped" in error.lower() for error in errors)
     controller.shutdown()
 

@@ -34,7 +34,7 @@ class GantryController(QObject):
     DEFAULT_POS_MIN_M = 0.0
     DEFAULT_POS_MAX_M = 5.0
     HOME_POSITION_M = 0.005
-    HOME_VELOCITY_MPS = 0.2
+    HOME_VELOCITY_MPS = 0.15
 
     def __init__(
         self,
@@ -102,7 +102,11 @@ class GantryController(QObject):
                 self._handle_disconnect()
             return
 
-    def go_to(self, position_m: float, velocity_mps: float = 0.2) -> None:
+    def go_to(
+        self,
+        position_m: float,
+        velocity_mps: float = HOME_VELOCITY_MPS,
+    ) -> None:
         clamped = max(self.pos_min_m, min(self.pos_max_m, float(position_m)))
         if clamped != position_m:
             self.error.emit(

@@ -14,7 +14,7 @@ import time
 
 
 HOME_POSITION_M = 0.005
-HOME_VELOCITY_MPS = 0.2
+HOME_VELOCITY_MPS = 0.15
 
 TOPIC_CMD_VEL = "/cmd_vel"
 TOPIC_JOINT_STATES = "/joint_states"

@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QWidget, QFrame,
 )
 
-from capture.base import CaptureParams, MILLIMETRES_PER_METRE
+from capture.base import MILLIMETRES_PER_METRE
 
 
 class GantryPanel(QWidget):
@@ -36,6 +36,9 @@ class GantryPanel(QWidget):
     go_home_requested = pyqtSignal()
     stop_requested    = pyqtSignal()
 
+    DEFAULT_JOG_VELOCITY_MPS = 0.005
+    DEFAULT_GOTO_POSITION_M = 1.65
+
     _OFFLINE_TOOLTIP = (
         "No ROS installation was detected for the gantry. Source the lab "
         "ROS distribution and gantry workspace before launching."
@@ -44,7 +47,7 @@ class GantryPanel(QWidget):
     def __init__(self, available: bool = True):
         super().__init__()
         self._available = available
-        self._default_velocity_mps = CaptureParams().velocity_mps
+        self._default_velocity_mps = self.DEFAULT_JOG_VELOCITY_MPS
         self._build_ui()
         self._apply_availability(available)
 
@@ -118,7 +121,9 @@ class GantryPanel(QWidget):
         self.goto_spin.setRange(0.0, 5000.0)
         self.goto_spin.setSingleStep(50.0)
         self.goto_spin.setDecimals(1)
-        self.goto_spin.setValue(0.0)
+        self.goto_spin.setValue(
+            self.DEFAULT_GOTO_POSITION_M * MILLIMETRES_PER_METRE
+        )
         goto_row.addWidget(self.goto_spin)
         self.goto_btn = QPushButton('Go')
         self.goto_btn.setFixedWidth(50)

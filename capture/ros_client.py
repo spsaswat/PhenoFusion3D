@@ -17,7 +17,7 @@ from capture.ros_runtime import resolve
 
 AGENT_PATH = str(Path(__file__).with_name("ros_agent.py"))
 HOME_POSITION_M = 0.005
-HOME_VELOCITY_MPS = 0.2
+HOME_VELOCITY_MPS = 0.15
 
 
 class RosAgentClient:
