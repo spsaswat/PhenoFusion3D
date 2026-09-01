@@ -9,6 +9,7 @@ from processing.icp import color_icp, point_to_plane_icp
 from processing.utils import clean_pcd, clean_pcd_for_registration
 from processing.registration_agent import (
     RegistrationAgent, AgentConfig, apply_strategy,
+    gantry_initial_transform,
 )
 
 
@@ -45,6 +46,7 @@ class Reconstructor:
         max_iter=50,
         gantry_step_m=0.0,
         gantry_axis=0,
+        frame_positions_m=None,
         depth_min_mm=0,
         erode=False,
         inpaint=False,
@@ -73,6 +75,7 @@ class Reconstructor:
                               kinematic pose step (known-pose mode).
             gantry_axis     : camera-space axis the gantry moves along: 0=X, 1=Y
                               (determined by calibrate_gantry.py)
+            frame_positions_m: optional exact gantry positions aligned to pairs
             depth_min_mm    : near clip for raw depth (mm); 0 disables
             erode           : shrink valid depth mask (flying pixels) -- ICP mode
             inpaint         : fill interior holes in depth -- ICP mode
@@ -93,6 +96,14 @@ class Reconstructor:
         self.max_iter        = max_iter
         self.gantry_step_m   = gantry_step_m
         self.gantry_axis     = gantry_axis
+        if frame_positions_m is not None and len(frame_positions_m) != len(pairs):
+            raise ValueError(
+                "frame_positions_m must have one entry per RGB-D pair: "
+                f"got {len(frame_positions_m)} positions for {len(pairs)} pairs"
+            )
+        self.frame_positions_m = (
+            list(frame_positions_m) if frame_positions_m is not None else None
+        )
         self.depth_min_mm    = depth_min_mm
         self.erode           = erode
         self.inpaint         = inpaint
@@ -109,7 +120,7 @@ class Reconstructor:
         # max_rmse as absolute floors when no explicit config is supplied.
         if agent_config is None:
             agent_config = AgentConfig(
-                floor_min_fitness=min_fitness,
+                floor_min_fitness=max(float(min_fitness), 1e-9),
                 floor_max_rmse=max_rmse,
             )
         self.agent_config = agent_config
@@ -130,20 +141,17 @@ class Reconstructor:
 
     def run(self):
         """
-        Main entry point.
-
-        Stakeholder-compatible mode is currently the only active
-        reconstruction path. TSDF/agent-based reconstruction is intentionally
-        bypassed until it can match the validated stakeholder output.
+        Main entry point. Uses exact/known gantry motion to seed ICP.
         Call this from QThread.run() or directly from a test script.
         """
         self._stop_flag   = False
         self.succeed_list = []
         self.fail_list    = []
         self.reference_pcd = o3d.geometry.PointCloud()
+        self.agent = RegistrationAgent(self.agent_config)
 
         if self.use_known_poses:
-            print('[reconstructor] TSDF requested but deprecated; using stakeholder ICP.')
+            print('[reconstructor] TSDF requested but deprecated; using ICP.')
         return self._run_icp()
 
     # ------------------------------------------------------------------
@@ -255,9 +263,15 @@ class Reconstructor:
                 convert_rgb_to_intensity=False,
             )
 
-            # Kinematic camera pose: camera-to-world for frame i
-            T_c2w = np.eye(4)
-            T_c2w[self.gantry_axis, 3] = i * self.gantry_step_m
+            # Kinematic camera pose: camera-to-world for frame i. Exact
+            # captured positions take priority over a constant frame step.
+            T_c2w, _delta_m, _motion_source = gantry_initial_transform(
+                i,
+                0,
+                self.gantry_step_m,
+                self.gantry_axis,
+                self.frame_positions_m,
+            )
 
             # TSDF integrate() expects world-to-camera (inverse of camera pose)
             extrinsic = np.linalg.inv(T_c2w)
@@ -298,14 +312,18 @@ class Reconstructor:
 
     def _run_icp(self):
         """
-        Sequential frame-to-frame colour ICP matching the stakeholder pipeline:
-        - identity initialization
-        - no agent veto/retry/fallback
-        - accept fitness > 0 (plus first few frames)
+        Sequential colour ICP with motion-aware initialization and recovery.
+
+        The target is always the last accepted source cloud. If one or more
+        frames are rejected, the next seed spans the entire target-to-current
+        gap using exact session positions, the configured constant step, or
+        motion extrapolated from the last accepted legacy-data registration.
         """
         total          = len(self.pairs)
         last_transform = np.eye(4)
         target         = None
+        target_frame   = None
+        last_motion_per_frame = None
 
         print(f'[reconstructor] ICP mode: {total} frames')
 
@@ -356,10 +374,13 @@ class Reconstructor:
                 self.fail_list.append({'frame': i, 'reason': 'empty cloud'})
                 continue
 
-            # First frame: set as reference and target
-            if i == 0:
+            # First valid frame: set as reference and target. This also works
+            # when frame zero was unreadable or produced an empty cloud.
+            if target is None:
                 target = source
+                target_frame = i
                 self.reference_pcd = copy.deepcopy(source)
+                self.agent.record_accept(1.0, 0.0, np.eye(4))
                 self.succeed_list.append({'frame': i, 'fitness': 1.0, 'rmse': 0.0,
                                           'recovered_via': None,
                                           'recovery_attempts': 0})
@@ -367,32 +388,171 @@ class Reconstructor:
                 self._save_intermediate()
                 continue
 
+            init_tf, motion_delta_m, motion_source = gantry_initial_transform(
+                i,
+                target_frame,
+                self.gantry_step_m,
+                self.gantry_axis,
+                self.frame_positions_m,
+            )
+            frame_gap = i - target_frame
+            seed_axis = self.gantry_axis
+            if motion_source == 'identity' and last_motion_per_frame is not None:
+                init_tf[:3, 3] = last_motion_per_frame * frame_gap
+                seed_axis = int(np.argmax(np.abs(init_tf[:3, 3])))
+                motion_delta_m = float(init_tf[seed_axis, 3])
+                motion_source = 'accepted-motion'
+            expected_motion_m = abs(motion_delta_m)
+            if motion_source == 'accepted-motion':
+                expected_motion_m = float(np.linalg.norm(init_tf[:3, 3]))
+            if frame_gap > 1:
+                print(
+                    f'[reconstructor] Frame {i}: target is frame '
+                    f'{target_frame} (gap={frame_gap}); seeding '
+                    f'{motion_delta_m * 1000:+.2f} mm from {motion_source}.'
+                )
+
             try:
                 _, transformation, fitness, rmse = color_icp(
-                    source, target,
+                    source,
+                    target,
                     max_iter=self.max_iter,
                     voxel_size=self.voxel_size,
+                    init=init_tf,
                 )
-            except Exception as e:
-                print(f'[reconstructor] Frame {i} ICP failed: {e}')
-                self.fail_list.append({'frame': i, 'reason': f'ICP error: {e}',
-                                       'recovery_attempts': 0,
-                                       'last_strategy': None})
-                self._fire_on_frame(i, total, self.reference_pcd, 0.0, 0.0, 'FAILED')
-                continue
+            except Exception as exc:
+                print(f'[reconstructor] Frame {i} initial ICP failed: {exc}')
+                transformation = init_tf.copy()
+                fitness = 0.0
+                rmse = float('inf')
 
-            if fitness > 0.0 or i < 3:
+            attempt = 0
+            recovery_attempts = 0
+            last_strategy = None
+            decision = self.agent.judge(
+                fitness,
+                rmse,
+                transformation,
+                expected_step_m=expected_motion_m,
+                gantry_axis=seed_axis,
+                attempt=attempt,
+            )
+
+            # Gantry direction in camera coordinates can differ between rigs.
+            # Only pay for a reverse-seed attempt after the measured direction
+            # fails, then retain whichever result has better correspondence.
+            if decision.action == 'retry' and motion_delta_m != 0.0:
+                reverse_init = init_tf.copy()
+                reverse_init[:3, 3] *= -1.0
+                try:
+                    _, reverse_tf, reverse_fitness, reverse_rmse = color_icp(
+                        source,
+                        target,
+                        max_iter=self.max_iter,
+                        voxel_size=self.voxel_size,
+                        init=reverse_init,
+                    )
+                    reverse_better = (
+                        reverse_fitness > fitness
+                        or (
+                            reverse_fitness == fitness
+                            and reverse_rmse < rmse
+                        )
+                    )
+                    if reverse_better:
+                        transformation = reverse_tf
+                        fitness = reverse_fitness
+                        rmse = reverse_rmse
+                        init_tf = reverse_init
+                        last_strategy = 'reverse_motion_seed'
+                except Exception as exc:
+                    print(
+                        f'[reconstructor] Frame {i} reverse motion seed '
+                        f'failed: {exc}'
+                    )
+                recovery_attempts += 1
+                decision = self.agent.judge(
+                    fitness,
+                    rmse,
+                    transformation,
+                    expected_step_m=expected_motion_m,
+                    gantry_axis=seed_axis,
+                    attempt=attempt,
+                )
+
+            while decision.action == 'retry':
+                strategy = decision.next_strategy
+                if strategy is None:
+                    break
+                recovered_tf = init_tf.copy()
+                recovered_fitness = 0.0
+                recovered_rmse = float('inf')
+                try:
+                    src2, tgt2, init2, kwargs, use_p2p = apply_strategy(
+                        strategy,
+                        source,
+                        target,
+                        init_tf,
+                        voxel_size=self.voxel_size,
+                        expected_step_m=init_tf[seed_axis, 3],
+                        gantry_axis=seed_axis,
+                        max_iter=self.max_iter,
+                    )
+                    recovered_tf = init2
+                    if use_p2p:
+                        (
+                            _,
+                            recovered_tf,
+                            recovered_fitness,
+                            recovered_rmse,
+                        ) = point_to_plane_icp(src2, tgt2, init=init2, **kwargs)
+                    else:
+                        (
+                            _,
+                            recovered_tf,
+                            recovered_fitness,
+                            recovered_rmse,
+                        ) = color_icp(src2, tgt2, init=init2, **kwargs)
+                except Exception as exc:
+                    print(
+                        f'[reconstructor] Frame {i} recovery {strategy!r} '
+                        f'failed: {exc}'
+                    )
+
+                transformation = recovered_tf
+                fitness = recovered_fitness
+                rmse = recovered_rmse
+                last_strategy = strategy
+                attempt += 1
+                recovery_attempts += 1
+                decision = self.agent.judge(
+                    fitness,
+                    rmse,
+                    transformation,
+                    expected_step_m=expected_motion_m,
+                    gantry_axis=seed_axis,
+                    attempt=attempt,
+                )
+
+            if decision.action == 'accept':
                 last_transform = np.dot(last_transform, transformation)
+                last_motion_per_frame = (
+                    np.asarray(transformation[:3, 3], dtype=float) / frame_gap
+                )
                 frame_pcd = copy.deepcopy(source)
                 frame_pcd.transform(last_transform)
                 self.reference_pcd += frame_pcd
                 target = source
+                target_frame = i
 
-                status = 'OK'
+                self.agent.record_accept(fitness, rmse, transformation)
+                status = 'RECOVERED' if recovery_attempts else 'OK'
                 self.succeed_list.append({
                     'frame': i, 'fitness': fitness, 'rmse': rmse,
-                    'recovered_via': None,
-                    'recovery_attempts': 0,
+                    'recovered_via': last_strategy,
+                    'recovery_attempts': recovery_attempts,
+                    'motion_seed_m': motion_delta_m,
+                    'motion_source': motion_source,
                 })
                 self._fire_on_frame(i, total, self.reference_pcd,
                                     fitness, rmse, status)
@@ -400,18 +560,26 @@ class Reconstructor:
 
                 print(f'[reconstructor] Frame {i:4d}/{total} | '
                       f'fitness={fitness:.4f} | rmse={rmse:.4f} | '
-                      f'{status}')
+                      f'{status}' + (
+                          f' via {last_strategy!r}'
+                          if last_strategy is not None else ''
+                      ))
             else:
+                self.agent.record_reject()
                 self.fail_list.append({
-                    'frame': i, 'reason': 'fitness=0',
+                    'frame': i, 'reason': decision.reason,
                     'fitness': fitness, 'rmse': rmse,
-                    'recovery_attempts': 0,
-                    'last_strategy': None,
+                    'recovery_attempts': recovery_attempts,
+                    'last_strategy': last_strategy,
+                    'target_frame': target_frame,
+                    'motion_seed_m': motion_delta_m,
+                    'motion_source': motion_source,
                 })
                 self._fire_on_frame(i, total, self.reference_pcd,
                                     fitness, rmse, 'REJECTED')
                 print(f'[reconstructor] Frame {i:4d}/{total} | '
-                      f'REJECTED (fitness=0)')
+                      f'REJECTED ({decision.reason}) after '
+                      f'{recovery_attempts} recovery attempt(s)')
 
         print(f'[reconstructor] ICP complete. '
               f'Success={len(self.succeed_list)} Fail={len(self.fail_list)}')

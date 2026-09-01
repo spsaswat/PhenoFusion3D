@@ -11,12 +11,14 @@ are covered by integration runs against real captures.
 import os
 import sys
 import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from processing.registration_agent import (
     AgentConfig, RegistrationAgent, FrameDecision,
-    rotation_magnitude_deg, translation_magnitude_m,
+    gantry_initial_transform, rotation_magnitude_deg,
+    translation_magnitude_m,
 )
 
 
@@ -81,6 +83,17 @@ def test_low_fitness_triggers_retry():
     d = agent.judge(0.05, 0.003, _T(tx=0.001), expected_step_m=0.001, attempt=0)
     assert d.action == 'retry'
     assert d.next_strategy is not None
+
+
+def test_zero_fitness_never_accepts_even_with_zero_floor():
+    agent = RegistrationAgent(
+        AgentConfig(floor_min_fitness=0.0, floor_max_rmse=999.0)
+    )
+
+    decision = agent.judge(0.0, 0.0, np.eye(4))
+
+    assert decision.action == 'retry'
+    assert 'no valid correspondences' in decision.reason
 
 
 def test_persistent_low_fitness_eventually_rejects():
@@ -206,6 +219,34 @@ def test_next_recovery_runs_out():
 
 def test_translation_magnitude():
     assert abs(translation_magnitude_m(_T(tx=0.003, ty=0.004)) - 0.005) < 1e-9
+
+
+def test_gantry_seed_uses_exact_positions_across_rejected_frame_gap():
+    transform, delta_m, source = gantry_initial_transform(
+        current_frame=3,
+        target_frame=1,
+        gantry_step_m=0.001,
+        gantry_axis=1,
+        frame_positions_m=[0.100, 0.104, None, 0.115],
+    )
+
+    assert delta_m == pytest.approx(0.011)
+    assert source == "session"
+    assert transform[1, 3] == pytest.approx(0.011)
+    assert transform[0, 3] == 0.0
+
+
+def test_gantry_seed_multiplies_legacy_step_by_skipped_frame_gap():
+    transform, delta_m, source = gantry_initial_transform(
+        current_frame=5,
+        target_frame=2,
+        gantry_step_m=0.0025,
+        gantry_axis=0,
+    )
+
+    assert delta_m == pytest.approx(0.0075)
+    assert source == "constant-step"
+    assert transform[0, 3] == pytest.approx(0.0075)
 
 
 def test_rotation_magnitude_zero_for_identity():

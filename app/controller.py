@@ -1,7 +1,12 @@
 import os
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from file_io.loader   import load_image_pairs, load_intrinsics, get_default_intrinsics
+from file_io.loader import (
+    get_default_intrinsics,
+    load_image_pairs,
+    load_intrinsics,
+    load_session_positions,
+)
 from file_io.exporter import save_ply, save_metrics_csv
 from app.worker       import ProcessingWorker
 from app.capture_worker import CaptureWorker
@@ -100,10 +105,19 @@ class Controller(QObject):
         inpaint      = False
         depth_min_mm = 0
 
-        # Stakeholder pipeline only: RGBD -> clean_pcd -> frame-to-frame ICP.
+        # Exact gantry feedback prevents an ICP rejection from turning into a
+        # permanent target-gap cascade. Legacy datasets learn accepted motion.
         use_known_poses = False
-        gantry_axis     = 0
-        gantry_step_m   = 0.0
+        dataset_dir = (
+            os.path.dirname(rgb_dir)
+            if os.path.basename(os.path.normpath(rgb_dir)).casefold() == 'rgb'
+            else rgb_dir
+        )
+        frame_positions_m, session_axis, session_step_m = load_session_positions(
+            os.path.join(dataset_dir, 'session.json'), pairs
+        )
+        gantry_axis = session_axis if session_axis is not None else 0
+        gantry_step_m = session_step_m if session_step_m is not None else 0.0
         tsdf_voxel_m    = 0.005   # matches D405 noise floor (~5 mm RMSE) at 2.8 m
 
         self.worker = ProcessingWorker(
@@ -115,6 +129,7 @@ class Controller(QObject):
             bbox=bbox,
             gantry_step_m=gantry_step_m,
             gantry_axis=gantry_axis,
+            frame_positions_m=frame_positions_m,
             depth_min_mm=depth_min_mm,
             erode=erode,
             inpaint=inpaint,

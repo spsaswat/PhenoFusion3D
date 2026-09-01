@@ -20,6 +20,7 @@ class ProcessingWorker(QThread):
         bbox=None,
         gantry_step_m=0.0,
         gantry_axis=0,
+        frame_positions_m=None,
         depth_min_mm=0,
         erode=False,
         inpaint=False,
@@ -41,6 +42,7 @@ class ProcessingWorker(QThread):
         self.bbox            = bbox
         self.gantry_step_m   = gantry_step_m
         self.gantry_axis     = gantry_axis
+        self.frame_positions_m = frame_positions_m
         self.depth_min_mm    = depth_min_mm
         self.erode           = erode
         self.inpaint         = inpaint
@@ -65,6 +67,7 @@ class ProcessingWorker(QThread):
                 bbox=self.bbox,
                 gantry_step_m=self.gantry_step_m,
                 gantry_axis=self.gantry_axis,
+                frame_positions_m=self.frame_positions_m,
                 depth_min_mm=self.depth_min_mm,
                 erode=self.erode,
                 inpaint=self.inpaint,

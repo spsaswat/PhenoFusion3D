@@ -1,9 +1,25 @@
 import os
 import json
 import math
+import statistics
 import numpy as np
 from natsort import natsorted
 import glob
+
+
+_FRAME_PREFIXES = ("rgb_", "color_", "colour_", "depth_")
+
+
+def frame_identifier(path):
+    """Return a comparable frame identifier for an RGB or depth filename."""
+    stem = os.path.splitext(os.path.basename(path))[0].casefold()
+    for prefix in _FRAME_PREFIXES:
+        if stem.startswith(prefix):
+            stem = stem[len(prefix):]
+            break
+    if stem.isdigit():
+        return str(int(stem))
+    return stem
 
 
 def load_image_pairs(rgb_dir, depth_dir, step=1):
@@ -34,10 +50,85 @@ def load_image_pairs(rgb_dir, depth_dir, step=1):
             f'{len(rgb_files)} RGB vs {len(depth_files)} depth'
         )
 
+    rgb_ids = [frame_identifier(path) for path in rgb_files]
+    depth_ids = [frame_identifier(path) for path in depth_files]
+    if rgb_ids != depth_ids:
+        mismatch = next(
+            (
+                (index, rgb_id, depth_id)
+                for index, (rgb_id, depth_id) in enumerate(
+                    zip(rgb_ids, depth_ids)
+                )
+                if rgb_id != depth_id
+            ),
+            None,
+        )
+        index, rgb_id, depth_id = mismatch
+        raise ValueError(
+            "RGB and depth frame identifiers do not match at sorted index "
+            f"{index}: RGB frame {rgb_id!r} vs depth frame {depth_id!r}. "
+            "A missing or misnamed image would corrupt every later pair."
+        )
+
     pairs = list(zip(rgb_files, depth_files))
     sampled = pairs[::step]
     print(f'[loader] Found {len(pairs)} pairs, using {len(sampled)} at step={step}')
     return sampled
+
+
+def load_session_positions(session_path, pairs):
+    """Load capture positions aligned to ``pairs`` from session metadata.
+
+    Returns ``(positions_m, gantry_axis, median_step_m)``. Positions may
+    contain ``None`` for individual legacy frames missing from the metadata.
+    ``positions_m`` itself is ``None`` when the session is unavailable or has
+    no positions matching this sequence.
+    """
+    if not session_path or not os.path.isfile(session_path):
+        return None, None, None
+    try:
+        with open(session_path, "r") as session_file:
+            session = json.load(session_file)
+        raw_positions = session.get("frame_positions", {})
+        if not isinstance(raw_positions, dict):
+            raise ValueError("frame_positions is not an object")
+
+        positions_m = []
+        for rgb_path, _depth_path in pairs:
+            value = raw_positions.get(frame_identifier(rgb_path))
+            if value is None:
+                positions_m.append(None)
+                continue
+            position_m = float(value)
+            if not math.isfinite(position_m):
+                raise ValueError(
+                    f"non-finite position for frame {frame_identifier(rgb_path)}"
+                )
+            positions_m.append(position_m)
+
+        if not any(position is not None for position in positions_m):
+            return None, None, None
+
+        nonzero_steps = [
+            current - previous
+            for previous, current in zip(positions_m, positions_m[1:])
+            if previous is not None
+            and current is not None
+            and abs(current - previous) > 1e-9
+        ]
+        median_step_m = (
+            float(statistics.median(nonzero_steps))
+            if nonzero_steps
+            else None
+        )
+        axis_value = session.get("gantry_axis")
+        gantry_axis = int(axis_value) if axis_value is not None else None
+        if gantry_axis not in (None, 0, 1, 2):
+            gantry_axis = None
+        return positions_m, gantry_axis, median_step_m
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"[loader] WARNING: Could not load session positions: {exc}")
+        return None, None, None
 
 
 def load_intrinsics(json_path):

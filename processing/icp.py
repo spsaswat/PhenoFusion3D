@@ -19,7 +19,7 @@ def color_icp(source, target, max_iter=50, voxel_size=0.005, init=None):
     Falls back to point_to_plane_icp if colour ICP fails.
 
     Args:
-        init: 4x4 initial transform from target to source (Open3D convention). Default identity.
+        init: 4x4 initial transform from source to target. Default identity.
 
     Returns: (result, transformation, fitness, inlier_rmse)
     """
@@ -53,7 +53,15 @@ def color_icp(source, target, max_iter=50, voxel_size=0.005, init=None):
         return result, result.transformation, fitness, inlier_rmse
 
     except Exception as e:
-        print(f'[icp] colour_icp failed ({e}), falling back to point-to-plane ICP')
+        detail = str(e)
+        if 'No correspondences found' in detail:
+            detail = 'no correspondences at the current motion seed/radius'
+        else:
+            detail = ' '.join(detail.split())[:300]
+        print(
+            f'[icp] colour_icp failed ({detail}); '
+            'trying point-to-plane ICP'
+        )
         return point_to_plane_icp(source, target, max_iter, voxel_size, init_tf)
 
 

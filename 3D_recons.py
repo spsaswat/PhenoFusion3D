@@ -17,7 +17,12 @@ from pathlib import Path
 import cv2
 import open3d as o3d
 
-from file_io.loader import get_default_intrinsics, load_image_pairs, load_intrinsics
+from file_io.loader import (
+    get_default_intrinsics,
+    load_image_pairs,
+    load_intrinsics,
+    load_session_positions,
+)
 from processing.reconstructor import Reconstructor
 from processing.registration_agent import AgentConfig
 from processing.utils import clean_pcd
@@ -57,6 +62,20 @@ def _load_intrinsics_for_dataset(record_path: Path, first_rgb_path: str):
     return get_default_intrinsics(width=width, height=height)
 
 
+def _load_capture_motion(record_path: Path, pairs):
+    """Find session metadata beside this dataset and align it to ``pairs``."""
+    candidates = [record_path / "session.json"]
+    if record_path.parent != record_path:
+        candidates.append(record_path.parent / "session.json")
+    for session_path in candidates:
+        positions_m, gantry_axis, median_step_m = load_session_positions(
+            session_path, pairs
+        )
+        if positions_m is not None:
+            return positions_m, gantry_axis, median_step_m, session_path
+    return None, None, None, None
+
+
 def merge_one_cam(
     record_path: str | Path,
     cam_id: str | int | None = "",
@@ -71,7 +90,7 @@ def merge_one_cam(
     min_fitness: float = 0.0,
     max_rmse: float = 0.05,
     gantry_step_m: float = 0.0,
-    gantry_axis: int = 0,
+    gantry_axis: int | None = None,
     use_tsdf: bool = False,
     tsdf_voxel_m: float = 0.005,
 ) -> Path:
@@ -89,6 +108,20 @@ def merge_one_cam(
         raise RuntimeError(f"No RGB-D pairs found in {record_path}")
 
     K, dist = _load_intrinsics_for_dataset(record_path, pairs[0][0])
+    (
+        frame_positions_m,
+        session_axis,
+        session_step_m,
+        session_path,
+    ) = _load_capture_motion(record_path, pairs)
+    resolved_axis = (
+        int(gantry_axis)
+        if gantry_axis is not None
+        else int(session_axis or 0)
+    )
+    resolved_step_m = float(gantry_step_m)
+    if resolved_step_m == 0.0 and session_step_m is not None:
+        resolved_step_m = float(session_step_m)
 
     save_path = Path(output_dir).resolve() if output_dir else record_path / "merge"
     save_path.mkdir(parents=True, exist_ok=True)
@@ -100,6 +133,22 @@ def merge_one_cam(
     print(f"[3D_recons] Depth dir:{depth_dir}")
     print(f"[3D_recons] Frames:   {len(pairs)} (step={step_size})")
     print(f"[3D_recons] Output:   {ply_path}")
+    if session_path is not None:
+        print(
+            f"[3D_recons] Motion:   exact positions from {session_path} "
+            f"(axis={resolved_axis}, median step="
+            f"{resolved_step_m * 1000:.3f} mm)"
+        )
+    elif resolved_step_m != 0.0:
+        print(
+            f"[3D_recons] Motion:   constant {resolved_step_m * 1000:.3f} "
+            f"mm per sampled frame (axis={resolved_axis})"
+        )
+    else:
+        print(
+            "[3D_recons] Motion:   no session positions or gantry step; "
+            "learning motion from accepted ICP frames"
+        )
 
     def on_frame(idx, total, _pcd, fitness, rmse, status):
         print(
@@ -108,11 +157,11 @@ def merge_one_cam(
         )
 
     if use_tsdf:
-        print("[3D_recons] --tsdf is deprecated for now; using stakeholder ICP.")
+        print("[3D_recons] --tsdf remains deprecated; using motion-seeded ICP.")
 
     agent_config = AgentConfig(
-        floor_min_fitness=0.0,
-        floor_max_rmse=999.0,
+        floor_min_fitness=max(float(min_fitness), 1e-9),
+        floor_max_rmse=float(max_rmse),
         enable_feature_init=False,
     )
 
@@ -125,8 +174,9 @@ def merge_one_cam(
         depth_trunc=float(depth_trunc),
         voxel_size=float(voxel_size),
         max_iter=int(max_iter),
-        gantry_step_m=0.0,
-        gantry_axis=0,
+        gantry_step_m=resolved_step_m,
+        gantry_axis=resolved_axis,
+        frame_positions_m=frame_positions_m,
         depth_min_mm=int(depth_min_mm),
         erode=False,
         inpaint=False,
@@ -158,8 +208,13 @@ def merge_one_cam(
         "depth_min_mm": depth_min_mm,
         "depth_trunc_m": depth_trunc,
         "voxel_size_m": voxel_size,
+        "gantry_axis": resolved_axis,
+        "gantry_step_m": resolved_step_m,
+        "motion_source": "session" if session_path is not None else (
+            "constant-step" if resolved_step_m != 0.0 else "learned-from-icp"
+        ),
         "use_tsdf": False,
-        "pipeline": "stakeholder_icp",
+        "pipeline": "motion_seeded_icp",
     }
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
@@ -183,9 +238,24 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-iter", type=int, default=80, help="ICP iterations per frame.")
     parser.add_argument("--min-fitness", type=float, default=0.0, help="ICP acceptance floor.")
     parser.add_argument("--max-rmse", type=float, default=0.05, help="ICP acceptance ceiling in metres.")
-    parser.add_argument("--gantry-step-m", type=float, default=0.0, help="Known motion per sampled frame, if available.")
-    parser.add_argument("--gantry-axis", type=int, default=0, choices=(0, 1, 2), help="Axis for gantry-step-m.")
-    parser.add_argument("--tsdf", action="store_true", help="Use known-pose TSDF instead of ICP.")
+    parser.add_argument(
+        "--gantry-step-m",
+        type=float,
+        default=0.0,
+        help="Known motion per sampled frame, if available.",
+    )
+    parser.add_argument(
+        "--gantry-axis",
+        type=int,
+        default=None,
+        choices=(0, 1, 2),
+        help="Axis for gantry-step-m. Default: session metadata, then X.",
+    )
+    parser.add_argument(
+        "--tsdf",
+        action="store_true",
+        help="Deprecated; motion-seeded ICP remains active.",
+    )
     parser.add_argument("--tsdf-voxel-m", type=float, default=0.005, help="TSDF voxel size in metres.")
     return parser.parse_args()
 

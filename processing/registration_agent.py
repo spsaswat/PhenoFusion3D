@@ -112,6 +112,48 @@ def translation_magnitude_m(T: np.ndarray) -> float:
     return float(np.linalg.norm(t))
 
 
+def gantry_initial_transform(
+    current_frame: int,
+    target_frame: int,
+    gantry_step_m: float = 0.0,
+    gantry_axis: int = 0,
+    frame_positions_m=None,
+):
+    """Build a source-to-target ICP seed for the full frame gap.
+
+    Exact capture positions take priority. Legacy datasets fall back to a
+    constant per-pair step multiplied by the number of frames skipped since
+    the last accepted target.
+    """
+    if gantry_axis not in (0, 1, 2):
+        raise ValueError(f"gantry_axis must be 0, 1, or 2; got {gantry_axis!r}")
+    if current_frame < target_frame:
+        raise ValueError("current_frame cannot precede target_frame")
+
+    delta_m = None
+    source = "identity"
+    if frame_positions_m is not None:
+        try:
+            current_position = frame_positions_m[current_frame]
+            target_position = frame_positions_m[target_frame]
+        except (IndexError, TypeError):
+            current_position = target_position = None
+        if current_position is not None and target_position is not None:
+            exact_delta = float(current_position) - float(target_position)
+            if math.isfinite(exact_delta):
+                delta_m = exact_delta
+                source = "session"
+
+    if delta_m is None:
+        delta_m = float(gantry_step_m) * (current_frame - target_frame)
+        if delta_m != 0.0:
+            source = "constant-step"
+
+    transform = np.eye(4)
+    transform[gantry_axis, 3] = delta_m
+    return transform, delta_m, source
+
+
 def _median_mad(values) -> Tuple[float, float]:
     """Return (median, MAD) of a sequence; (0, 0) on empty input."""
     arr = np.asarray(list(values), dtype=float)
@@ -199,8 +241,19 @@ class RegistrationAgent:
         else:
             trans_cap = cfg.abs_trans_cap_m
 
-        motion_bad = (t_mag > trans_cap) or (rot_deg > cfg.rot_max_deg)
-        metrics_bad = (fitness < min_fit) or (rmse > max_rmse)
+        motion_bad = (
+            not math.isfinite(t_mag)
+            or not math.isfinite(rot_deg)
+            or t_mag > trans_cap
+            or rot_deg > cfg.rot_max_deg
+        )
+        metrics_bad = (
+            not math.isfinite(fitness)
+            or not math.isfinite(rmse)
+            or fitness <= 0.0
+            or fitness < min_fit
+            or rmse > max_rmse
+        )
 
         if not motion_bad and not metrics_bad:
             return FrameDecision(
@@ -213,9 +266,13 @@ class RegistrationAgent:
 
         # Build a diagnostic reason string.
         reasons = []
-        if fitness < min_fit:
+        if not math.isfinite(fitness) or fitness <= 0.0:
+            reasons.append('no valid correspondences')
+        elif fitness < min_fit:
             reasons.append(f'low fitness {fitness:.3f} < {min_fit:.3f}')
-        if rmse > max_rmse:
+        if not math.isfinite(rmse):
+            reasons.append('non-finite rmse')
+        elif rmse > max_rmse:
             reasons.append(f'high rmse {rmse:.4f} > {max_rmse:.4f}')
         if t_mag > trans_cap:
             reasons.append(f'translation {t_mag*1000:.1f}mm > '
@@ -357,6 +414,9 @@ def apply_strategy(
         ds = max(2 * voxel_size, 1e-4)
         src = source.voxel_down_sample(ds)
         tgt = target.voxel_down_sample(ds)
+        # Coarser clouds need a correspondingly wider search radius. This is
+        # also the bounded escape hatch for legacy datasets without poses.
+        kwargs['voxel_size'] = voxel_size * 2
 
     elif strategy == 'denoise':
         src_c = copy.deepcopy(source)
