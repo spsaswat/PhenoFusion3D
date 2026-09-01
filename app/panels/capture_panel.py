@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
 )
 
 from capture import CaptureParams, ros_available
+from capture.base import MILLIMETRES_PER_METRE
 
 
 class CapturePanel(QWidget):
@@ -68,19 +69,23 @@ class CapturePanel(QWidget):
 
         # Velocity / end position (ROS only)
         vel_row = QHBoxLayout()
-        vel_row.addWidget(QLabel('Velocity (m/s):'))
+        vel_row.addWidget(QLabel('Velocity (mm/s):'))
         self.vel_spin = QDoubleSpinBox()
-        self.vel_spin.setRange(0.001, 1.0)
-        self.vel_spin.setSingleStep(0.005)
-        self.vel_spin.setDecimals(3)
-        self.vel_spin.setValue(self._defaults.velocity_mps)
+        self.vel_spin.setRange(1.0, 1000.0)
+        self.vel_spin.setSingleStep(5.0)
+        self.vel_spin.setDecimals(1)
+        self.vel_spin.setValue(
+            self._defaults.velocity_mps * MILLIMETRES_PER_METRE
+        )
         vel_row.addWidget(self.vel_spin)
-        vel_row.addWidget(QLabel('End (m):'))
+        vel_row.addWidget(QLabel('End (mm):'))
         self.end_spin = QDoubleSpinBox()
-        self.end_spin.setRange(0.05, 5.0)
-        self.end_spin.setSingleStep(0.05)
-        self.end_spin.setDecimals(2)
-        self.end_spin.setValue(self._defaults.end_position_m)
+        self.end_spin.setRange(50.0, 5000.0)
+        self.end_spin.setSingleStep(50.0)
+        self.end_spin.setDecimals(1)
+        self.end_spin.setValue(
+            self._defaults.end_position_m * MILLIMETRES_PER_METRE
+        )
         vel_row.addWidget(self.end_spin)
         layout.addLayout(vel_row)
 
@@ -155,8 +160,8 @@ class CapturePanel(QWidget):
         self.capture_requested.emit(
             backend_pref,
             self.out_edit.text(),
-            self.vel_spin.value(),
-            self.end_spin.value(),
+            self.vel_spin.value() / MILLIMETRES_PER_METRE,
+            self.end_spin.value() / MILLIMETRES_PER_METRE,
             self.fps_spin.value(),
             self.dur_spin.value(),
         )

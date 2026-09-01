@@ -13,8 +13,9 @@ import importlib.util
 import threading
 from typing import Optional
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
+from capture.base import MILLIMETRES_PER_METRE
 from capture.ros_runtime import ros_is_installed
 
 
@@ -70,6 +71,11 @@ class GantryController(QObject):
     def current_position_m(self) -> float:
         return self._current_position_m
 
+    @pyqtSlot(float)
+    def update_position_from_capture(self, position_m: float) -> None:
+        """Publish feedback received by the combined capture connection."""
+        self._handle_position(float(position_m))
+
     def start_jog(self, velocity_mps: float) -> None:
         """Move at a signed velocity until :meth:`stop` is called."""
 
@@ -100,9 +106,11 @@ class GantryController(QObject):
         clamped = max(self.pos_min_m, min(self.pos_max_m, float(position_m)))
         if clamped != position_m:
             self.error.emit(
-                f"Position {position_m:.3f} m clamped to "
-                f"[{self.pos_min_m:.3f}, {self.pos_max_m:.3f}] m -> "
-                f"{clamped:.3f} m"
+                f"Position {position_m * MILLIMETRES_PER_METRE:.1f} mm "
+                "clamped to "
+                f"[{self.pos_min_m * MILLIMETRES_PER_METRE:.1f}, "
+                f"{self.pos_max_m * MILLIMETRES_PER_METRE:.1f}] mm -> "
+                f"{clamped * MILLIMETRES_PER_METRE:.1f} mm"
             )
 
         with self._lock:

@@ -174,6 +174,9 @@ class Controller(QObject):
         self.capture_started.emit()
         self.capture_worker = CaptureWorker(backend_pref, params)
         self.capture_worker.frame_captured.connect(self.capture_progress)
+        self.capture_worker.gantry_position_changed.connect(
+            self.gantry.update_position_from_capture
+        )
         self.capture_worker.capture_finished.connect(self._on_capture_finished)
         self.capture_worker.error.connect(self._on_capture_error)
         worker = self.capture_worker

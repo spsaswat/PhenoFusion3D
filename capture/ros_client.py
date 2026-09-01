@@ -163,8 +163,8 @@ class RosAgentClient:
     def stop_moving(self) -> None:
         self.stop()
 
-    def go_home(self) -> None:
-        self.home()
+    def go_home(self) -> bool:
+        return self.home()
 
     # --------------------------------------------------------------- state
 

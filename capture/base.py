@@ -24,6 +24,7 @@ from typing import Callable, Optional
 
 
 GIB = 1024 ** 3
+MILLIMETRES_PER_METRE = 1000.0
 DEFAULT_MAX_BUFFER_GIB = 6.0
 MEMORY_HEADROOM_FRACTION = 0.5
 DISK_RESERVE_BYTES = 512 * 1024 ** 2
@@ -81,7 +82,7 @@ class CaptureBackend(abc.ABC):
 
     Lifecycle:
         backend = SomeBackend()
-        backend.start(params, on_progress, on_done, on_error)
+        backend.start(params, on_progress, on_done, on_error, on_position)
         ...
         backend.stop()                   # request graceful halt
     """
@@ -92,6 +93,7 @@ class CaptureBackend(abc.ABC):
         self._stop_flag = False
         self.session: Optional[CaptureSession] = None
         self.out_dir: Optional[str] = None
+        self._position_callback: Optional[Callable[[float], None]] = None
 
     # ---- subclasses implement these ---------------------------------------
     @abc.abstractmethod
@@ -110,12 +112,14 @@ class CaptureBackend(abc.ABC):
         on_progress: Optional[Callable[[int, int], None]] = None,
         on_done: Optional[Callable[[str, int], None]] = None,
         on_error: Optional[Callable[[str], None]] = None,
+        on_position: Optional[Callable[[float], None]] = None,
     ) -> Optional[str]:
         """
         Run the capture synchronously (the QThread worker takes care of
         running this off the UI thread). Returns the output directory or None
         on failure.
         """
+        self._position_callback = on_position
         if self._stop_flag:
             message = "Capture was cancelled before camera startup completed."
             if on_error:
@@ -190,6 +194,11 @@ class CaptureBackend(abc.ABC):
     def _record_position(self, frame_idx: int, position_m: float) -> None:
         if self.session is not None:
             self.session.frame_positions[str(frame_idx)] = float(position_m)
+
+    def _report_position(self, position_m: float) -> None:
+        """Forward live gantry feedback when the backend provides it."""
+        if self._position_callback is not None:
+            self._position_callback(float(position_m))
 
 
 def _available_memory_bytes() -> Optional[int]:

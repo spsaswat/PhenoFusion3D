@@ -15,7 +15,12 @@ except Exception:  # pragma: no cover - dependency gate
     pytest.skip("PyQt5 unavailable", allow_module_level=True)
 
 from capture.gantry import GantryController, _ros_importable
-from capture.base import GIB, CaptureParams, frame_pair_bytes
+from capture.base import (
+    GIB,
+    CaptureParams,
+    MILLIMETRES_PER_METRE,
+    frame_pair_bytes,
+)
 from capture.realsense_capture import RealSenseCapture
 from app.capture_worker import CaptureWorker
 from app.panels.capture_panel import CapturePanel
@@ -57,7 +62,7 @@ def test_jog_buttons_use_lab_verified_reversed_directions(qapp):
     panel = GantryPanel(available=True)
     velocities = []
     panel.jog_requested.connect(velocities.append)
-    panel.vel_spin.setValue(0.038)
+    panel.vel_spin.setValue(38.0)
 
     panel._on_jog_back_pressed()
     panel._on_jog_fwd_pressed()
@@ -81,11 +86,36 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
     assert RealSenseCapture.WARMUP_FRAMES == 4
 
     assert panel.out_edit.text() == defaults.out_root
-    assert panel.vel_spin.value() == defaults.velocity_mps
-    assert panel.end_spin.value() == defaults.end_position_m
+    assert (
+        panel.vel_spin.value()
+        == defaults.velocity_mps * MILLIMETRES_PER_METRE
+    )
+    assert (
+        panel.end_spin.value()
+        == defaults.end_position_m * MILLIMETRES_PER_METRE
+    )
     assert panel.fps_spin.value() == defaults.fps
     assert panel.dur_spin.value() == defaults.duration_s
-    assert gantry_panel.vel_spin.value() == defaults.velocity_mps
+    assert (
+        gantry_panel.vel_spin.value()
+        == defaults.velocity_mps * MILLIMETRES_PER_METRE
+    )
+
+    capture_requests = []
+    panel.capture_requested.connect(lambda *args: capture_requests.append(args))
+    panel._on_capture()
+    assert capture_requests[0][2:4] == (
+        defaults.velocity_mps, defaults.end_position_m
+    )
+
+    goto_positions = []
+    gantry_panel.goto_requested.connect(goto_positions.append)
+    gantry_panel.goto_spin.setValue(1640.0)
+    gantry_panel.goto_btn.click()
+    assert goto_positions == [1.64]
+
+    gantry_panel.update_position(GantryController.HOME_POSITION_M)
+    assert gantry_panel.pos_lbl.text() == '+5.0 mm'
 
     estimated_frames = math.ceil(
         defaults.end_position_m / defaults.velocity_mps * defaults.fps
@@ -124,6 +154,30 @@ def test_capture_stop_is_not_lost_during_worker_startup(qapp, monkeypatch):
     assert backend.stopped is True
     assert backend.started is True
     assert errors == ["cancelled before startup"]
+
+
+def test_capture_worker_forwards_position_to_standard_gantry_signal(
+    qapp, monkeypatch
+):
+    class Backend:
+        @staticmethod
+        def start(_params, **callbacks):
+            callbacks["on_position"](0.42)
+            return "/tmp/capture"
+
+    monkeypatch.setattr("app.capture_worker.get_backend", lambda _pref: Backend())
+    worker = CaptureWorker("ros", CaptureParams())
+    controller = GantryController()
+    positions = []
+    worker.gantry_position_changed.connect(
+        controller.update_position_from_capture
+    )
+    controller.position_changed.connect(positions.append)
+
+    worker.run()
+
+    assert positions == [0.42]
+    assert controller.current_position_m() == 0.42
 
 
 def test_connection_failure_is_nonblocking_and_retryable(qapp, monkeypatch):

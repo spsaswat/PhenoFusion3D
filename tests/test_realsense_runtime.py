@@ -421,11 +421,13 @@ def test_realsense_stops_camera_before_saving_buffered_frames(
     ]
 
 
-def test_ros_stops_gantry_and_camera_before_saving_buffered_frames(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize("failure_stage", [None, "capture", "stall", "save"])
+def test_ros_returns_home_after_capture_and_before_saving_buffered_frames(
+    tmp_path, monkeypatch, failure_stage
 ):
     events = []
     progress = []
+    positions = []
 
     class Pipeline:
         @staticmethod
@@ -472,7 +474,8 @@ def test_ros_stops_gantry_and_camera_before_saving_buffered_frames(
             return True
 
         def start_moving(self, _velocity):
-            self.on_position(2.0)
+            if failure_stage != "stall":
+                self.on_position(2.0)
 
         @staticmethod
         def stop_moving():
@@ -513,33 +516,80 @@ def test_ros_stops_gantry_and_camera_before_saving_buffered_frames(
         "_save_intrinsics",
         lambda _self, payloads: events.append(("saved intrinsics", payloads)),
     )
+
+    def write_frame_batch(_out, pairs, cv2_module):
+        events.append(("batch write", len(pairs)))
+        if failure_stage == "save":
+            raise RuntimeError("frame save failed")
+
     monkeypatch.setattr(
-        "capture.realsense_capture.write_frame_batch",
-        lambda _out, pairs, cv2_module: events.append(
-            ("saved batch", len(pairs))
-        ),
+        "capture.realsense_capture.write_frame_batch", write_frame_batch
     )
     capture = RosCapture()
     capture.out_dir = str(tmp_path)
+    capture._position_callback = positions.append
 
-    count = capture._run(
-        CaptureParams(
-            width=2,
-            height=2,
-            fps=30,
-            end_position_m=1.64,
-        ),
-        lambda current, total: progress.append((current, total)),
+    if failure_stage == "stall":
+        monotonic_values = iter((0.0, 0.0, 6.0, 6.0))
+        monkeypatch.setattr(
+            "capture.ros_capture.time.monotonic",
+            lambda: next(monotonic_values),
+        )
+
+    if failure_stage == "capture":
+        def fail_capture(*_args):
+            raise RuntimeError("capture failed")
+
+        monkeypatch.setattr(capture, "_capture_one", fail_capture)
+
+    def run_capture():
+        return capture._run(
+            CaptureParams(width=2, height=2, fps=30, end_position_m=1.64),
+            lambda current, total: progress.append((current, total)),
+        )
+
+    if failure_stage is None:
+        assert run_capture() == 1
+    else:
+        expected_error = (
+            "position did not advance"
+            if failure_stage == "stall"
+            else failure_stage
+        )
+        with pytest.raises(RuntimeError, match=expected_error):
+            run_capture()
+
+    home_index = events.index("gantry home")
+    assert events.index("gantry stopped") < home_index
+    assert events.index("camera stopped") < home_index
+    assert events.index("gantry shutdown") > events.index("gantry home")
+    assert positions == (
+        [0.0, 0.005]
+        if failure_stage == "stall"
+        else [0.0, 2.0, 0.005]
     )
 
-    assert count == 1
-    assert progress == [(1, 0), (1, -1)]
-    save_index = events.index(("saved batch", 1))
-    assert events.index("gantry stopped") < save_index
-    assert events.index("camera stopped") < save_index
-    assert events[save_index + 1] == ("saved intrinsics", {"intrinsics": {}})
-    assert events.index("gantry home") > save_index
-    assert events.index("gantry shutdown") > events.index("gantry home")
+    if failure_stage in {"capture", "stall"}:
+        assert progress == (
+            [] if failure_stage == "capture" else [(1, 0), (2, 0)]
+        )
+        assert not any(
+            isinstance(event, tuple) and event[0] == "batch write"
+            for event in events
+        )
+    else:
+        assert progress == [(1, 0), (1, -1)]
+        save_index = events.index(("batch write", 1))
+        assert home_index < save_index
+        if failure_stage is None:
+            assert events[save_index + 1] == (
+                "saved intrinsics", {"intrinsics": {}}
+            )
+        else:
+            assert not any(
+                isinstance(event, tuple) and event[0] == "saved intrinsics"
+                for event in events
+            )
 
 
 def test_completed_frame_batch_is_written_with_numeric_names(tmp_path):

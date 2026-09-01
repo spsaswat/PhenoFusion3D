@@ -3,8 +3,8 @@ capture/ros_capture.py
 ----------------------
 ROS + RealSense + gantry capture backend.
 
-Thin adapter around the stakeholder-provided
-`stakeholder_reference/rospy_thread_fin_1.py`. The capture loop, ROS
+Thin adapter around the gantry control script
+`rospy_thread_fin_1.py`. The capture loop, ROS
 topics, velocity command, and intrinsics save logic are kept identical
 to the working stakeholder script -- we only:
 
@@ -32,6 +32,7 @@ from typing import Callable
 from capture.base import (
     CaptureBackend,
     CaptureParams,
+    MILLIMETRES_PER_METRE,
     capture_buffer_limit_bytes,
     ensure_capture_capacity,
 )
@@ -109,6 +110,7 @@ class RosCapture(CaptureBackend):
         frame_buffer = None
         endpoint_reached = False
         buffer_limit_reached = False
+        motion_started = False
 
         try:
             try:
@@ -139,6 +141,7 @@ class RosCapture(CaptureBackend):
 
                 def update_position(position_m):
                     self._current_position = position_m
+                    self._report_position(position_m)
 
                 gantry = RosAgentClient(on_position=update_position)
                 self._gantry = gantry
@@ -153,8 +156,11 @@ class RosCapture(CaptureBackend):
                     raise RuntimeError("Gantry capture velocity must be positive.")
                 if self._current_position >= params.end_position_m:
                     raise RuntimeError(
-                        f"Gantry is already at {self._current_position:.3f} m, "
-                        f"at or beyond the {params.end_position_m:.3f} m capture "
+                        "Gantry is already at "
+                        f"{self._current_position * MILLIMETRES_PER_METRE:.1f} "
+                        "mm, at or beyond the "
+                        f"{params.end_position_m * MILLIMETRES_PER_METRE:.1f} "
+                        "mm capture "
                         "endpoint. Return it home before starting another pass."
                     )
 
@@ -197,6 +203,7 @@ class RosCapture(CaptureBackend):
                         )
 
                     gantry.start_moving(params.velocity_mps)
+                    motion_started = True
                     for _ in range(2):
                         frame_pair = self._capture_one(
                             pipeline, align, color_format, rs
@@ -227,11 +234,28 @@ class RosCapture(CaptureBackend):
                         self.session.termination_reason = "user_stop"
             finally:
                 if gantry is not None:
-                    gantry.stop_moving()
+                    try:
+                        gantry.stop_moving()
+                    except Exception:
+                        pass
                 try:
                     pipeline.stop()
                 except Exception:
                     pass
+                if (
+                    gantry is not None
+                    and motion_started
+                    and not self._stop_flag
+                ):
+                    home_returned = self._return_home_safely(
+                        gantry, HOME_POSITION_M
+                    )
+                    if self.session is not None:
+                        self.session.home_returned = home_returned
+                        if endpoint_reached and not home_returned:
+                            self.session.termination_reason = (
+                                "endpoint_reached_home_failed"
+                            )
 
             from capture.realsense_capture import (
                 remove_frame_batch,
@@ -250,12 +274,6 @@ class RosCapture(CaptureBackend):
                 remove_frame_batch(self.out_dir, range(frame_count))
                 raise
 
-            if endpoint_reached and not self._stop_flag:
-                home_returned = self._return_home(gantry, HOME_POSITION_M)
-                if self.session is not None:
-                    self.session.home_returned = home_returned
-                    if not home_returned:
-                        self.session.termination_reason = "endpoint_reached_home_failed"
             return frame_count
         finally:
             if gantry is not None:
@@ -275,8 +293,10 @@ class RosCapture(CaptureBackend):
         )
 
     def _return_home(self, gantry, home_position_m: float) -> bool:
-        """Send the stakeholder go-home command and bound the wait for arrival."""
-        gantry.go_home()
+        """Send the go-home command and bound the wait for arrival."""
+        if gantry.go_home() is False:
+            gantry.stop_moving()
+            return False
         deadline = time.monotonic() + self.HOME_TIMEOUT_S
         while gantry.is_running() and not self._stop_flag:
             if abs(self._current_position - home_position_m) <= self.HOME_TOLERANCE_M:
@@ -286,3 +306,14 @@ class RosCapture(CaptureBackend):
             time.sleep(0.05)
         gantry.stop_moving()
         return False
+
+    def _return_home_safely(self, gantry, home_position_m: float) -> bool:
+        """Attempt Home without masking an acquisition or persistence error."""
+        try:
+            return self._return_home(gantry, home_position_m)
+        except Exception:
+            try:
+                gantry.stop_moving()
+            except Exception:
+                pass
+            return False

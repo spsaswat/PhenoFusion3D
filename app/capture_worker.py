@@ -17,6 +17,7 @@ class CaptureWorker(QThread):
 
     # idx, total estimate: 0 = unknown capture length, -1 = saving batch
     frame_captured = pyqtSignal(int, int)
+    gantry_position_changed = pyqtSignal(float)
     capture_finished = pyqtSignal(str, int)      # out_dir, n_frames
     error          = pyqtSignal(str)
 
@@ -37,6 +38,9 @@ class CaptureWorker(QThread):
                 on_progress=lambda i, t: self.frame_captured.emit(i, t),
                 on_done=lambda d, n: self.capture_finished.emit(d, n),
                 on_error=lambda msg: self.error.emit(msg),
+                on_position=lambda position: self.gantry_position_changed.emit(
+                    position
+                ),
             )
             # Note: on_done is called inside backend.start(); nothing else to do
             if out_dir is None:

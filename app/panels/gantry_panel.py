@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QWidget, QFrame,
 )
 
-from capture.base import CaptureParams
+from capture.base import CaptureParams, MILLIMETRES_PER_METRE
 
 
 class GantryPanel(QWidget):
@@ -62,7 +62,7 @@ class GantryPanel(QWidget):
         # ---- status row: live position + READY/OFFLINE badge ----
         status_row = QHBoxLayout()
         status_row.addWidget(QLabel('Position:'))
-        self.pos_lbl = QLabel('--- m')
+        self.pos_lbl = QLabel('--- mm')
         self.pos_lbl.setStyleSheet(
             'font-family: monospace; font-size:13px; font-weight:bold;'
         )
@@ -94,12 +94,14 @@ class GantryPanel(QWidget):
         layout.addLayout(jog_row)
 
         vel_row = QHBoxLayout()
-        vel_row.addWidget(QLabel('Velocity (m/s):'))
+        vel_row.addWidget(QLabel('Velocity (mm/s):'))
         self.vel_spin = QDoubleSpinBox()
-        self.vel_spin.setRange(0.001, 0.2)
-        self.vel_spin.setSingleStep(0.005)
-        self.vel_spin.setDecimals(3)
-        self.vel_spin.setValue(self._default_velocity_mps)
+        self.vel_spin.setRange(1.0, 200.0)
+        self.vel_spin.setSingleStep(5.0)
+        self.vel_spin.setDecimals(1)
+        self.vel_spin.setValue(
+            self._default_velocity_mps * MILLIMETRES_PER_METRE
+        )
         vel_row.addWidget(self.vel_spin)
         vel_row.addStretch()
         layout.addLayout(vel_row)
@@ -111,17 +113,19 @@ class GantryPanel(QWidget):
 
         # ---- absolute go-to row ----
         goto_row = QHBoxLayout()
-        goto_row.addWidget(QLabel('Go to (m):'))
+        goto_row.addWidget(QLabel('Go to (mm):'))
         self.goto_spin = QDoubleSpinBox()
-        self.goto_spin.setRange(0.0, 5.0)
-        self.goto_spin.setSingleStep(0.05)
-        self.goto_spin.setDecimals(3)
+        self.goto_spin.setRange(0.0, 5000.0)
+        self.goto_spin.setSingleStep(50.0)
+        self.goto_spin.setDecimals(1)
         self.goto_spin.setValue(0.0)
         goto_row.addWidget(self.goto_spin)
         self.goto_btn = QPushButton('Go')
         self.goto_btn.setFixedWidth(50)
         self.goto_btn.clicked.connect(
-            lambda: self.goto_requested.emit(self.goto_spin.value())
+            lambda: self.goto_requested.emit(
+                self.goto_spin.value() / MILLIMETRES_PER_METRE
+            )
         )
         goto_row.addWidget(self.goto_btn)
         layout.addLayout(goto_row)
@@ -151,10 +155,14 @@ class GantryPanel(QWidget):
     # ----------------------------------------------------------- behaviour
 
     def _on_jog_fwd_pressed(self):
-        self.jog_requested.emit(-self.vel_spin.value())
+        self.jog_requested.emit(
+            -self.vel_spin.value() / MILLIMETRES_PER_METRE
+        )
 
     def _on_jog_back_pressed(self):
-        self.jog_requested.emit(+self.vel_spin.value())
+        self.jog_requested.emit(
+            self.vel_spin.value() / MILLIMETRES_PER_METRE
+        )
 
     def _on_jog_released(self):
         # Always emit a stop on release -- this is the only safety
@@ -188,7 +196,8 @@ class GantryPanel(QWidget):
     # ------------------------------------------------------------- public
 
     def update_position(self, position_m: float) -> None:
-        self.pos_lbl.setText(f'{position_m:+.4f} m')
+        position_mm = position_m * MILLIMETRES_PER_METRE
+        self.pos_lbl.setText(f'{position_mm:+.1f} mm')
 
     def show_status(self, text: str) -> None:
         self.status_lbl.setText(text)
