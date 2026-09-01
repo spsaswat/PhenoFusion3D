@@ -228,8 +228,8 @@ try:
         # give light command continously
         #switch_light(1)
         capture_images(pipeline, current_position)
-        # 1.65
-        if current_position != 0.0 and current_position >= 0.78:
+        # Stop at the required end of the gantry capture pass.
+        if current_position != 0.0 and current_position >= 1.64:
             stop_moving_robot()
             # Turn off the light
             #switch_light(0)

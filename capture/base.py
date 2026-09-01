@@ -24,7 +24,7 @@ from typing import Callable, Optional
 
 
 GIB = 1024 ** 3
-DEFAULT_MAX_BUFFER_GIB = 4.0
+DEFAULT_MAX_BUFFER_GIB = 6.0
 MEMORY_HEADROOM_FRACTION = 0.5
 DISK_RESERVE_BYTES = 512 * 1024 ** 2
 PNG_WORST_CASE_FACTOR = 1.1
@@ -43,7 +43,7 @@ class CaptureParams:
 
     # ROS / gantry only -- ignored by realsense backend
     velocity_mps: float = 0.038        # gantry linear X velocity (m/s)
-    end_position_m: float = 0.78       # stop when current_position >= this
+    end_position_m: float = 1.64       # stop when current_position >= this
     gantry_axis: int = 0               # 0=X, 1=Y in camera frame
 
     # RealSense-only mode: capture for N seconds (-1 = manual stop)

@@ -122,9 +122,9 @@ Two on-disk layouts are accepted by `load_image_pairs`
 | `width` × `height` | `1280 × 720` | Requested capture resolution |
 | `fps` | `30` | Requested frame rate |
 | `duration_s` | `10.0` | RealSense-only capture length (`-1` = manual stop) |
-| `max_buffer_gib` | `4.0` | Absolute ceiling before RAM/disk safety limits are applied |
+| `max_buffer_gib` | `6.0` | Absolute ceiling before RAM/disk safety limits are applied |
 | `velocity_mps` | `0.038` | Gantry linear velocity (m/s) |
-| `end_position_m` | `0.78` | Gantry position at which the pass stops |
+| `end_position_m` | `1.64` | Gantry position at which the pass stops |
 | Camera warm-up | `4` frames | Frames discarded before acquisition |
 | Home position | `0.005 m` | Gantry go-home target |
 | Home velocity | `0.2 m/s` | Gantry go-home velocity |
@@ -190,6 +190,8 @@ batch is saved as PNG files, followed by the intrinsics and `session.json`.
 This keeps image compression and disk I/O out of the time-critical capture loop.
 At the default 1280x720, 30 FPS settings, a 10-second raw buffer uses roughly
 1.3 GiB of RAM before Python/driver overhead; longer captures scale linearly.
+The required `0.005 m` to `1.64 m` ROS pass uses approximately 5.54 GiB of
+raw frame storage and is covered by the 6 GiB configured ceiling.
 Before acquisition, the app checks the estimated raw buffer against available
 RAM and output-disk space. Manual captures are stopped and saved at the runtime
 safety ceiling rather than allowing the process to exhaust memory. ROS passes

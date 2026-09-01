@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 import time
 
@@ -14,7 +15,7 @@ except Exception:  # pragma: no cover - dependency gate
     pytest.skip("PyQt5 unavailable", allow_module_level=True)
 
 from capture.gantry import GantryController, _ros_importable
-from capture.base import CaptureParams
+from capture.base import GIB, CaptureParams, frame_pair_bytes
 from capture.realsense_capture import RealSenseCapture
 from app.capture_worker import CaptureWorker
 from app.panels.capture_panel import CapturePanel
@@ -66,14 +67,15 @@ def test_jog_buttons_use_lab_verified_reversed_directions(qapp):
     assert panel.jog_fwd_btn.toolTip().endswith('-X')
 
 
-def test_initial_capture_values_match_the_stakeholder_script(qapp):
+def test_initial_capture_values_match_the_required_lab_settings(qapp):
     defaults = CaptureParams()
     panel = CapturePanel()
     gantry_panel = GantryPanel(available=True)
 
     assert (defaults.width, defaults.height, defaults.fps) == (1280, 720, 30)
     assert defaults.velocity_mps == 0.038
-    assert defaults.end_position_m == 0.78
+    assert defaults.end_position_m == 1.64
+    assert defaults.max_buffer_gib == 6.0
     assert GantryController.HOME_POSITION_M == 0.005
     assert GantryController.HOME_VELOCITY_MPS == 0.2
     assert RealSenseCapture.WARMUP_FRAMES == 4
@@ -84,6 +86,14 @@ def test_initial_capture_values_match_the_stakeholder_script(qapp):
     assert panel.fps_spin.value() == defaults.fps
     assert panel.dur_spin.value() == defaults.duration_s
     assert gantry_panel.vel_spin.value() == defaults.velocity_mps
+
+    estimated_frames = math.ceil(
+        defaults.end_position_m / defaults.velocity_mps * defaults.fps
+    )
+    required_bytes = frame_pair_bytes(
+        defaults.width, defaults.height
+    ) * estimated_frames
+    assert required_bytes <= defaults.max_buffer_gib * GIB
 
 
 def test_capture_stop_is_not_lost_during_worker_startup(qapp, monkeypatch):

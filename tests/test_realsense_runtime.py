@@ -472,7 +472,7 @@ def test_ros_stops_gantry_and_camera_before_saving_buffered_frames(
             return True
 
         def start_moving(self, _velocity):
-            self.on_position(1.0)
+            self.on_position(2.0)
 
         @staticmethod
         def stop_moving():
@@ -527,7 +527,7 @@ def test_ros_stops_gantry_and_camera_before_saving_buffered_frames(
             width=2,
             height=2,
             fps=30,
-            end_position_m=0.78,
+            end_position_m=1.64,
         ),
         lambda current, total: progress.append((current, total)),
     )
