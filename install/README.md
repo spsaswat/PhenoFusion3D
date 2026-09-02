@@ -53,7 +53,10 @@ yourself.
 
 After setup succeeds, press the Super key and search for **PhenoFusion3D** in
 Ubuntu Activities. The launcher is updated safely whenever `setup.sh` is run
-again and always points to the venv in the current checkout.
+again and always points to the venv in the current checkout. If
+`PHENOFUSION_ROS_WS` or `PHENOFUSION_CAMERA_SERIAL` is set when setup runs, the
+launcher records that value so an Activities launch uses the same hardware
+configuration. Rerun setup after changing either value.
 
 ## ROS workspace discovery
 
@@ -65,8 +68,9 @@ workspaces. For another location, point to it before launch:
 export PHENOFUSION_ROS_WS=/path/to/gantry_workspace
 ```
 
-You may also source ROS and the workspace normally before starting the app.
-No shell profile is edited automatically.
+Set this before running `setup.sh` to use it from Ubuntu Activities. For a
+terminal launch, you may instead source ROS and the workspace normally before
+starting the app. No shell profile is edited automatically.
 
 ## Check without changing anything
 
@@ -84,6 +88,9 @@ connected, choose one before launching:
 ```bash
 export PHENOFUSION_CAMERA_SERIAL=<serial>
 ```
+
+Set this before running `setup.sh` to retain the selection in the Ubuntu
+Activities launcher, or set it only for a terminal launch.
 
 ## Launch
 

@@ -7,13 +7,15 @@ UI panel for triggering RGB-D capture.
 from __future__ import annotations
 
 import json
+import math
 import os
 
-from PyQt5.QtCore import Qt, QUrl, pyqtSignal
+from PyQt5.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import (
     QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel,
-    QLineEdit, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget,
+    QLineEdit, QMessageBox, QProgressBar, QPushButton, QSpinBox, QVBoxLayout,
+    QWidget,
 )
 
 from capture import CaptureParams, ros_available
@@ -23,6 +25,8 @@ from capture.base import MILLIMETRES_PER_METRE
 class CapturePanel(QWidget):
 
     CAMERA_WEB_UI_URL = 'http://localhost:9976/scm/v1/ui'
+    CAMERA_WEB_UI_MIN_POSITION_M = 0.001
+    CAMERA_WEB_UI_MAX_POSITION_M = 0.0019
 
     # backend_pref, out_root, velocity_mps, end_position_m, fps, duration_s
     capture_requested      = pyqtSignal(str, str, float, float, int, float)
@@ -31,6 +35,7 @@ class CapturePanel(QWidget):
     def __init__(self):
         super().__init__()
         self._defaults = CaptureParams()
+        self._gantry_position_m = None
         self._build_ui()
 
     def _build_ui(self):
@@ -160,10 +165,47 @@ class CapturePanel(QWidget):
             self.out_edit.setText(path)
 
     def _open_camera_web_ui(self):
+        position_m = self._gantry_position_m
+        if position_m is None or not math.isfinite(position_m):
+            position_detail = 'The current gantry position is unavailable.'
+        elif not (
+            self.CAMERA_WEB_UI_MIN_POSITION_M
+            <= position_m
+            <= self.CAMERA_WEB_UI_MAX_POSITION_M
+        ):
+            position_detail = (
+                f'The gantry is currently at '
+                f'{position_m * MILLIMETRES_PER_METRE:.1f} mm.'
+            )
+        else:
+            position_detail = None
+
+        if position_detail is not None:
+            minimum_mm = (
+                self.CAMERA_WEB_UI_MIN_POSITION_M * MILLIMETRES_PER_METRE
+            )
+            maximum_mm = (
+                self.CAMERA_WEB_UI_MAX_POSITION_M * MILLIMETRES_PER_METRE
+            )
+            message = (
+                f'{position_detail} Use the Jog controls to move the gantry '
+                f'and keep its position between {minimum_mm:.1f} mm and '
+                f'{maximum_mm:.1f} mm, then try again.'
+            )
+            self.status_lbl.setText(message)
+            QMessageBox.warning(self, 'Gantry Position Required', message)
+            return
+
         if not QDesktopServices.openUrl(QUrl(self.CAMERA_WEB_UI_URL)):
             self.status_lbl.setText(
                 f'ERROR: Could not open {self.CAMERA_WEB_UI_URL}'
             )
+        else:
+            self.status_lbl.setText('Opened Camera Web UI.')
+
+    @pyqtSlot(float)
+    def update_gantry_position(self, position_m: float) -> None:
+        self._gantry_position_m = float(position_m)
 
     def _on_capture(self):
         backend_pref = self.backend_combo.currentData()

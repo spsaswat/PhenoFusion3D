@@ -59,6 +59,8 @@ python main.py
 
 After setup succeeds, **PhenoFusion3D** is also available from Ubuntu
 Activities. The per-user shortcut points to this checkout's isolated venv.
+Hardware settings supplied through `PHENOFUSION_ROS_WS` or
+`PHENOFUSION_CAMERA_SERIAL` when setup runs are retained by that shortcut.
 `setup.sh` never installs or changes system packages, ROS, RealSense
 drivers/SDKs, apt repositories, kernel modules, shell startup files, or a
 system-wide launcher. See [install/README.md](install/README.md) for the full
@@ -214,6 +216,10 @@ PowerShell equivalent:
 $env:PHENOFUSION_CAMERA_SERIAL = "<serial>"
 python main.py
 ```
+
+The **Open Camera Web UI** button opens the local camera service only when a
+live gantry reading is between 1.0 mm and 1.9 mm. Otherwise, the app keeps the
+website closed and prompts the operator to jog the gantry into that range.
 
 The setup check prints every detected model and serial. Capture probes the
 selected device's supported colour/depth profiles, so L515, D435, D405, and

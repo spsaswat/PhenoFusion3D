@@ -133,7 +133,10 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
     assert required_bytes <= defaults.max_buffer_gib * GIB
 
 
-def test_camera_web_ui_button_opens_local_service(qapp, monkeypatch):
+@pytest.mark.parametrize("position_m", [0.001, 0.0019])
+def test_camera_web_ui_button_opens_at_safe_gantry_position(
+    qapp, monkeypatch, position_m
+):
     import app.panels.capture_panel as capture_panel_module
 
     opened_urls = []
@@ -148,10 +151,60 @@ def test_camera_web_ui_button_opens_local_service(qapp, monkeypatch):
         capture_panel_module, "QDesktopServices", DesktopServices
     )
     panel = CapturePanel()
+    panel.update_gantry_position(position_m)
 
     panel.camera_web_ui_btn.click()
 
     assert opened_urls == ["http://localhost:9976/scm/v1/ui"]
+    assert panel.status_lbl.text() == "Opened Camera Web UI."
+
+
+@pytest.mark.parametrize("position_m", [None, 0.0009, 0.002, float("nan")])
+def test_camera_web_ui_button_requires_safe_gantry_position(
+    qapp, monkeypatch, position_m
+):
+    import app.panels.capture_panel as capture_panel_module
+
+    opened_urls = []
+    warnings = []
+
+    class DesktopServices:
+        @staticmethod
+        def openUrl(url):
+            opened_urls.append(url.toString())
+            return True
+
+    monkeypatch.setattr(
+        capture_panel_module, "QDesktopServices", DesktopServices
+    )
+    monkeypatch.setattr(
+        capture_panel_module.QMessageBox,
+        "warning",
+        lambda parent, title, message: warnings.append((title, message)),
+    )
+    panel = CapturePanel()
+    if position_m is not None:
+        panel.update_gantry_position(position_m)
+
+    panel.camera_web_ui_btn.click()
+
+    assert opened_urls == []
+    assert warnings
+    assert warnings[0][0] == "Gantry Position Required"
+    assert "between 1.0 mm and 1.9 mm" in warnings[0][1]
+    assert panel.status_lbl.text() == warnings[0][1]
+
+
+def test_main_window_forwards_gantry_position_to_camera_web_ui_gate(qapp):
+    from app.main_window import MainWindow
+
+    window = MainWindow()
+    try:
+        window.controller.gantry.position_changed.emit(0.0015)
+
+        assert window.capture_panel._gantry_position_m == 0.0015
+    finally:
+        window.close()
 
 
 def test_capture_stop_is_not_lost_during_worker_startup(qapp, monkeypatch):

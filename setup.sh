@@ -197,20 +197,50 @@ PY
 }
 
 install_user_launcher() {
-    local data_home applications_dir desktop_file launcher_exec launcher_tmp
+    local data_home applications_dir desktop_file app_exec launcher_exec
+    local launcher_tmp wrapper_tmp app_exec_q setting setting_value setting_q
     data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
     applications_dir="$data_home/applications"
     desktop_file="$applications_dir/phenofusion3d.desktop"
-    launcher_exec="$PROJECT_ROOT/$VENV_DIR/bin/phenofusion3d"
+    app_exec="$PROJECT_ROOT/$VENV_DIR/bin/phenofusion3d"
+    launcher_exec="$PROJECT_ROOT/$VENV_DIR/bin/phenofusion3d-activities"
 
-    if [ ! -x "$launcher_exec" ]; then
-        err "Application entry point not found at $launcher_exec."
+    if [ ! -x "$app_exec" ]; then
+        err "Application entry point not found at $app_exec."
+        return 2
+    fi
+
+    # Processes started by Ubuntu Activities do not inherit variables exported
+    # in the terminal that ran setup. Record the two supported per-launch
+    # hardware settings in a venv-local wrapper so the desktop launcher keeps
+    # the setup-time configuration.
+    wrapper_tmp="$(mktemp "$PROJECT_ROOT/$VENV_DIR/bin/.phenofusion3d-activities.XXXXXX")"
+    printf -v app_exec_q '%q' "$app_exec"
+    if ! {
+        printf '#!/usr/bin/env bash\n'
+        printf 'set -euo pipefail\n'
+        for setting in PHENOFUSION_ROS_WS PHENOFUSION_CAMERA_SERIAL; do
+            setting_value="${!setting:-}"
+            if [ -n "$setting_value" ]; then
+                printf -v setting_q '%q' "$setting_value"
+                printf 'export %s=%s\n' "$setting" "$setting_q"
+            fi
+        done
+        printf 'exec %s "$@"\n' "$app_exec_q"
+    } > "$wrapper_tmp"; then
+        rm -f "$wrapper_tmp"
+        err "Could not write the Ubuntu Activities launcher wrapper."
+        return 2
+    fi
+    if ! chmod 0755 "$wrapper_tmp" || ! mv -f "$wrapper_tmp" "$launcher_exec"; then
+        rm -f "$wrapper_tmp"
+        err "Could not install the Ubuntu Activities launcher wrapper."
         return 2
     fi
 
     log "Installing Ubuntu Activities launcher at $desktop_file..."
     mkdir -p "$applications_dir"
-    launcher_tmp="$(mktemp "$applications_dir/.phenofusion3d.desktop.XXXXXX")"
+    launcher_tmp="$(mktemp "$applications_dir/.phenofusion3d.XXXXXX.desktop")"
 
     if ! cat > "$launcher_tmp" <<EOF
 [Desktop Entry]
@@ -224,7 +254,7 @@ TryExec=$launcher_exec
 Path=$PROJECT_ROOT
 Icon=applications-science
 Terminal=false
-Categories=Science;Education;Graphics;
+Categories=Science;DataVisualization;
 Keywords=3D;reconstruction;plant;phenotyping;RGB-D;point-cloud;
 StartupNotify=true
 StartupWMClass=PhenoFusion3D
