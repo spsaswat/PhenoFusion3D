@@ -64,7 +64,7 @@ class CapturePanel(QWidget):
         backend_row.addWidget(self.backend_combo, stretch=1)
         layout.addLayout(backend_row)
 
-        self.camera_web_ui_btn = QPushButton('Open Camera Web UI')
+        self.camera_web_ui_btn = QPushButton('Hypercam UI')
         self.camera_web_ui_btn.setToolTip(self.CAMERA_WEB_UI_URL)
         self.camera_web_ui_btn.clicked.connect(self._open_camera_web_ui)
         layout.addWidget(self.camera_web_ui_btn)
@@ -201,7 +201,7 @@ class CapturePanel(QWidget):
                 f'ERROR: Could not open {self.CAMERA_WEB_UI_URL}'
             )
         else:
-            self.status_lbl.setText('Opened Camera Web UI.')
+            self.status_lbl.setText('Opened Hypercam UI.')
 
     @pyqtSlot(float)
     def update_gantry_position(self, position_m: float) -> None:

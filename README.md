@@ -217,7 +217,7 @@ $env:PHENOFUSION_CAMERA_SERIAL = "<serial>"
 python main.py
 ```
 
-The **Open Camera Web UI** button opens the local camera service only when a
+The **Hypercam UI** button opens the local camera service only when a
 live gantry reading is between 1.0 mm and 1.9 mm. Otherwise, the app keeps the
 website closed and prompts the operator to jog the gantry into that range.
 

@@ -152,11 +152,12 @@ def test_camera_web_ui_button_opens_at_safe_gantry_position(
     )
     panel = CapturePanel()
     panel.update_gantry_position(position_m)
+    assert panel.camera_web_ui_btn.text() == "Hypercam UI"
 
     panel.camera_web_ui_btn.click()
 
     assert opened_urls == ["http://localhost:9976/scm/v1/ui"]
-    assert panel.status_lbl.text() == "Opened Camera Web UI."
+    assert panel.status_lbl.text() == "Opened Hypercam UI."
 
 
 @pytest.mark.parametrize("position_m", [None, 0.0009, 0.002, float("nan")])
