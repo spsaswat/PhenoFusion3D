@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Create the isolated PhenoFusion3D Linux UI venv and nothing else.
+# Create the isolated PhenoFusion3D Linux UI venv and user launcher.
 #
 # This script NEVER installs system packages, ROS, RealSense drivers/SDKs,
 # kernel modules, apt repositories, Python interpreters, or shell settings.
 # Camera support is installed only as a Python package inside the project venv.
 # Gantry support uses the lab's existing ROS installation through a helper
-# process, so rospy does not belong in the GUI venv.
+# process, so rospy does not belong in the GUI venv. A per-user desktop entry
+# is installed under XDG_DATA_HOME so the app appears in Ubuntu Activities.
 #
 # Usage:
 #   ./setup.sh             create/populate the venv, then verify camera + gantry
@@ -37,8 +38,9 @@ log()  { printf '[setup] %s\n' "$*" >&2; }
 warn() { printf '[setup] WARNING: %s\n' "$*" >&2; }
 err()  { printf '[setup] ERROR: %s\n' "$*" >&2; }
 
-# The only writable target is a venv directly below this project. Avoid an
-# environment variable accidentally pointing setup at another directory.
+# The venv is the only project installation target and must remain directly
+# below this checkout. The desktop entry is installed separately in the
+# current user's XDG applications directory.
 case "$VENV_DIR" in
     /*|../*|*/../*|*/..)
         err "PHENOFUSION_VENV must be a path inside $PROJECT_ROOT."
@@ -194,6 +196,62 @@ PY
     log "Verification passed for the GUI, camera, and gantry runtime."
 }
 
+install_user_launcher() {
+    local data_home applications_dir desktop_file launcher_exec launcher_tmp
+    data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+    applications_dir="$data_home/applications"
+    desktop_file="$applications_dir/phenofusion3d.desktop"
+    launcher_exec="$PROJECT_ROOT/$VENV_DIR/bin/phenofusion3d"
+
+    if [ ! -x "$launcher_exec" ]; then
+        err "Application entry point not found at $launcher_exec."
+        return 2
+    fi
+
+    log "Installing Ubuntu Activities launcher at $desktop_file..."
+    mkdir -p "$applications_dir"
+    launcher_tmp="$(mktemp "$applications_dir/.phenofusion3d.desktop.XXXXXX")"
+
+    if ! cat > "$launcher_tmp" <<EOF
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PhenoFusion3D
+GenericName=3D Plant Reconstruction
+Comment=RGB-D capture, quality assessment, and 3D plant reconstruction
+Exec="$launcher_exec"
+TryExec=$launcher_exec
+Path=$PROJECT_ROOT
+Icon=applications-science
+Terminal=false
+Categories=Science;Education;Graphics;
+Keywords=3D;reconstruction;plant;phenotyping;RGB-D;point-cloud;
+StartupNotify=true
+StartupWMClass=PhenoFusion3D
+EOF
+    then
+        rm -f "$launcher_tmp"
+        err "Could not write the Ubuntu Activities launcher."
+        return 2
+    fi
+
+    chmod 0644 "$launcher_tmp"
+    if command -v desktop-file-validate >/dev/null 2>&1; then
+        if ! desktop-file-validate "$launcher_tmp"; then
+            rm -f "$launcher_tmp"
+            err "The generated Ubuntu Activities launcher is invalid."
+            return 2
+        fi
+    fi
+    mv -f "$launcher_tmp" "$desktop_file"
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$applications_dir" >/dev/null 2>&1 || \
+            warn "The desktop application cache could not be refreshed."
+    fi
+    log "Launcher installed. Search for PhenoFusion3D in Ubuntu Activities."
+}
+
 if [ "$CHECK_ONLY" = true ]; then
     verify
     exit $?
@@ -235,5 +293,7 @@ log "Installing the Linux GUI, camera binding, and bundled gantry bridge into th
 
 verify
 
-log "Done. Launch with:"
+install_user_launcher
+
+log "Done. Open PhenoFusion3D from Ubuntu Activities, or launch with:"
 printf '  source %s/bin/activate && python main.py\n' "$VENV_DIR"

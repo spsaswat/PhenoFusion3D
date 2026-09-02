@@ -1,4 +1,4 @@
-"""Guardrails ensuring Linux setup only changes the project venv."""
+"""Guardrails for the isolated venv and per-user Linux launcher."""
 
 from __future__ import annotations
 
@@ -39,6 +39,7 @@ def test_setup_has_no_system_mutation_commands():
         r"\budevadm\b",
         r"\bdpkg\b[^\n]*(?:-i|--install|--remove|--purge)",
         r">\s*/etc/",
+        r"/usr/share/applications",
         r">>?\s*(?:\$HOME|~)/\.bashrc",
         r"\b(?:curl|wget)\b[^|]*\|\s*(?:sh|bash)\b",
     ]
@@ -52,6 +53,30 @@ def test_setup_only_creates_an_isolated_project_venv():
     assert "--system-site-packages" not in text
     assert not re.search(r"\brm\s+-rf\b", _commands(text))
     assert "PHENOFUSION_VENV must be a path inside" in text
+
+
+def test_setup_installs_a_per_user_ubuntu_activities_launcher():
+    text = SETUP.read_text()
+
+    assert '${XDG_DATA_HOME:-$HOME/.local/share}' in text
+    assert 'applications_dir="$data_home/applications"' in text
+    assert 'desktop_file="$applications_dir/phenofusion3d.desktop"' in text
+    assert 'launcher_exec="$PROJECT_ROOT/$VENV_DIR/bin/phenofusion3d"' in text
+    assert 'phenofusion3d = "main:main"' in PYPROJECT.read_text()
+    assert "[Desktop Entry]" in text
+    assert "Name=PhenoFusion3D" in text
+    assert 'Exec="$launcher_exec"' in text
+    assert "Terminal=false" in text
+    assert "Icon=applications-science" in text
+    assert text.rstrip().count("install_user_launcher") == 2
+
+
+def test_check_mode_remains_read_only_and_skips_launcher_installation():
+    text = SETUP.read_text()
+
+    check_exit = text.index('if [ "$CHECK_ONLY" = true ]')
+    launcher_call = text.rindex("\ninstall_user_launcher\n")
+    assert check_exit < launcher_call
 
 
 def test_setup_installs_camera_and_bundled_gantry_bridge_in_venv():

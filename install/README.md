@@ -7,9 +7,12 @@ already belongs to the lab computer.
 ## Safety boundary
 
 `setup.sh` may create and populate `.venv-linux/` inside this repository. It
-does not run `sudo` or `apt`, install ROS or RealSense system components, add
-repositories or signing keys, load drivers, write `/etc`, or change shell
-startup files. It also does not pip-install `rospy` into the GUI venv.
+also writes `phenofusion3d.desktop` to the current user's XDG applications
+directory (normally `~/.local/share/applications`) so PhenoFusion3D appears in
+Ubuntu Activities. It does not run `sudo` or `apt`, install ROS or RealSense
+system components, add repositories or signing keys, load drivers, write
+`/etc`, change shell startup files, or install a system-wide launcher. It also
+does not pip-install `rospy` into the GUI venv.
 
 The compatibility entry point `install/install_linux.sh` simply delegates to
 the same root script.
@@ -48,6 +51,10 @@ The setup script never deletes or recreates an existing directory. If an
 existing target is not a usable compatible venv, choose another path or move it
 yourself.
 
+After setup succeeds, press the Super key and search for **PhenoFusion3D** in
+Ubuntu Activities. The launcher is updated safely whenever `setup.sh` is run
+again and always points to the venv in the current checkout.
+
 ## ROS workspace discovery
 
 The application checks the current environment, `/opt/ros/*/setup.bash`, and
@@ -79,6 +86,8 @@ export PHENOFUSION_CAMERA_SERIAL=<serial>
 ```
 
 ## Launch
+
+Open **PhenoFusion3D** from Ubuntu Activities, or launch it from a terminal:
 
 ```bash
 source .venv-linux/bin/activate

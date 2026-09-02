@@ -57,10 +57,12 @@ source .venv-linux/bin/activate
 python main.py
 ```
 
-`setup.sh` creates and populates only the project venv. It never installs or
-changes system packages, ROS, RealSense drivers/SDKs, apt repositories, kernel
-modules, or shell startup files. See [install/README.md](install/README.md) for
-the full safety boundary and for Windows instructions.
+After setup succeeds, **PhenoFusion3D** is also available from Ubuntu
+Activities. The per-user shortcut points to this checkout's isolated venv.
+`setup.sh` never installs or changes system packages, ROS, RealSense
+drivers/SDKs, apt repositories, kernel modules, shell startup files, or a
+system-wide launcher. See [install/README.md](install/README.md) for the full
+safety boundary and for Windows instructions.
 
 Do not commit large datasets or generated point clouds; see `.gitignore`
 (`data/`, `*.ply`, `*.pcd`, etc.).
