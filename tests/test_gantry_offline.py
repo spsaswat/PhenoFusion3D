@@ -133,6 +133,27 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
     assert required_bytes <= defaults.max_buffer_gib * GIB
 
 
+def test_camera_web_ui_button_opens_local_service(qapp, monkeypatch):
+    import app.panels.capture_panel as capture_panel_module
+
+    opened_urls = []
+
+    class DesktopServices:
+        @staticmethod
+        def openUrl(url):
+            opened_urls.append(url.toString())
+            return True
+
+    monkeypatch.setattr(
+        capture_panel_module, "QDesktopServices", DesktopServices
+    )
+    panel = CapturePanel()
+
+    panel.camera_web_ui_btn.click()
+
+    assert opened_urls == ["http://localhost:9976/scm/v1/ui"]
+
+
 def test_capture_stop_is_not_lost_during_worker_startup(qapp, monkeypatch):
     class Backend:
         def __init__(self):

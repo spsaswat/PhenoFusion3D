@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 import os
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QUrl, pyqtSignal
+from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import (
     QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel,
     QLineEdit, QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget,
@@ -20,6 +21,8 @@ from capture.base import MILLIMETRES_PER_METRE
 
 
 class CapturePanel(QWidget):
+
+    CAMERA_WEB_UI_URL = 'http://localhost:9976/scm/v1/ui'
 
     # backend_pref, out_root, velocity_mps, end_position_m, fps, duration_s
     capture_requested      = pyqtSignal(str, str, float, float, int, float)
@@ -55,6 +58,11 @@ class CapturePanel(QWidget):
             self.backend_combo.setCurrentIndex(2)  # RealSense
         backend_row.addWidget(self.backend_combo, stretch=1)
         layout.addLayout(backend_row)
+
+        self.camera_web_ui_btn = QPushButton('Open Camera Web UI')
+        self.camera_web_ui_btn.setToolTip(self.CAMERA_WEB_UI_URL)
+        self.camera_web_ui_btn.clicked.connect(self._open_camera_web_ui)
+        layout.addWidget(self.camera_web_ui_btn)
 
         # Output root
         layout.addWidget(QLabel('Output folder:'))
@@ -150,6 +158,12 @@ class CapturePanel(QWidget):
         path = QFileDialog.getExistingDirectory(self, 'Output folder root')
         if path:
             self.out_edit.setText(path)
+
+    def _open_camera_web_ui(self):
+        if not QDesktopServices.openUrl(QUrl(self.CAMERA_WEB_UI_URL)):
+            self.status_lbl.setText(
+                f'ERROR: Could not open {self.CAMERA_WEB_UI_URL}'
+            )
 
     def _on_capture(self):
         backend_pref = self.backend_combo.currentData()
