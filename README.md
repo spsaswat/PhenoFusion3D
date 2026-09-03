@@ -31,7 +31,6 @@ Team Project).
 | Adithya Rama | Adithya.Rama@anu.edu.au |
 | Tanisha Sharma | Tanisha.Sharma@anu.edu.au |
 | Howard Zhang | u7877905@anu.edu.au |
-| Flynn Nyhof | u7650207@anu.edu.au |
 | Tianyu Xu | Tianyu.Xu@anu.edu.au |
 
 ## Contact
