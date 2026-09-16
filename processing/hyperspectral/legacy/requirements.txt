@@ -1,0 +1,7 @@
+spectral
+matplotlib
+pandas
+opencv-python
+scikit-image
+pyqt5
+numpy

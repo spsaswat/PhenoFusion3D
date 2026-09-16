@@ -1,0 +1,2 @@
+# Preserve the imported scientific snapshot byte-for-byte on Windows and Linux.
+/processing/hyperspectral/legacy/** -text

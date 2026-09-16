@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(action_exit)
 
         analysis_menu = menubar.addMenu('Analysis')
-        self.action_analysis = QAction('Offline reconstruction and trait validation...', self)
+        self.action_analysis = QAction('Offline reconstruction, traits and hyperspectral fusion...', self)
         self.action_analysis.triggered.connect(self._open_analysis)
         analysis_menu.addAction(self.action_analysis)
 

@@ -21,7 +21,7 @@ def window():
 
 def test_new_dialog_preserves_main_capture_and_gantry_controls(window):
     app,w=window
-    assert w.analysis_dialog.tabs.count()==4
+    assert w.analysis_dialog.tabs.count()==5
     assert w.capture_panel is not None and w.gantry_panel is not None
     assert any(a.text()=='File' for a in w.menuBar().actions())
     assert any(a.text()=='Analysis' for a in w.menuBar().actions())
@@ -71,3 +71,37 @@ def test_invalid_recording_fails_without_crashing_gui(window,tmp_path):
     app.processEvents()
     assert not d.open_result.isEnabled()
     assert 'failed' in d.log.toPlainText().lower()
+
+
+def test_hyperspectral_options_are_separate_and_explicitly_experimental(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    assert 'experimental' in d.tabs.tabText(4).lower()
+    assert [d.hsi_mode.itemData(i) for i in range(d.hsi_mode.count())]==['spectral','fusion','all']
+    d.hsi_mode.setCurrentIndex(2);d.hsi_output.setText(str(tmp_path))
+    calls=[];monkeypatch.setattr(d,'launch',lambda *args:calls.append(args))
+    d.hyperspectral(True)
+    assert calls[0][0]=='processing.hyperspectral'
+    assert calls[0][1][0]=='all' and '--inspect-only' in calls[0][1]
+
+
+def test_capture_also_closes_optional_report_process(window):
+    app,w=window;d=w.analysis_dialog
+    d.report_process.start(__import__('sys').executable,['-c','import time; time.sleep(30)'])
+    assert d.report_process.waitForStarted(3000)
+    w.controller.capture_started.emit()
+    assert d.report_process.waitForFinished(3000)
+    assert d.report_process.state()==QProcess.NotRunning
+
+
+def test_report_viewer_refuses_active_capture(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    class Busy:
+        def isRunning(self):return True
+    report=tmp_path/'index.html';report.write_text('<html>report</html>')
+    w.controller.capture_worker=Busy()
+    messages=[]
+    monkeypatch.setattr(QMessageBox,'information',lambda *args:messages.append(args))
+    d.show_hyperspectral_report(report)
+    assert d.report_process.state()==QProcess.NotRunning
+    assert messages and 'Processing busy' in messages[0]
+    w.controller.capture_worker=None

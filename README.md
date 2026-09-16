@@ -440,6 +440,16 @@ the milestones below are drawn from the commit history.
   Conference on Robotics and Automation (ICRA). — the ICL-NUIM benchmark used as
   this project's reference sequence.
 
+## Experimental hyperspectral analysis and fusion
+
+The **Analysis** window now includes **Hyperspectral / fusion · experimental**:
+spectral analysis, mapping measured spectra onto RGB-D specimens and the legacy
+ICP scene, and an interactive result report. The copied automatic recipe supports
+only the reviewed **28 August 2026** dataset. New datasets and physical fusion
+accuracy remain unvalidated; the existing reconstruction and capture code is
+preserved. See [the operator guide](HYPERSPECTRAL_WORKFLOW.md) and
+[integration evidence](HYPERSPECTRAL_INTEGRATION_EVIDENCE.md).
+
 ## Contributing
 
 - Keep new logic alongside existing modules (`file_io`, `processing`, `capture`) so tests stay easy to run from the repo root.

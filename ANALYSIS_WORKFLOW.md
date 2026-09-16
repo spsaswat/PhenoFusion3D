@@ -127,6 +127,16 @@ Starting capture cancels the optional analysis process. Cancelling or closing th
 analysis dialog terminates its child process and labels partial results as
 cancelled. The existing camera/gantry safety and shutdown code is unchanged.
 
+## Hyperspectral analysis and measured-spectrum fusion
+
+The fifth tab, **Hyperspectral / fusion · experimental**, adds the copied
+28 August 2026 spectral analysis and RGB-D / ICP mapping workflow. It includes
+three automatic modes, the original manual spectral workspace, and an in-software
+HTML result viewer. The automatic recipe is restricted to the historical dataset;
+new recordings and physical fusion accuracy remain unvalidated. Current 3D
+reconstruction and trait code is preserved. Read
+[HYPERSPECTRAL_WORKFLOW.md](HYPERSPECTRAL_WORKFLOW.md) before running it.
+
 ## Lab acceptance
 
 Offline checks cannot establish that the physical camera and gantry operate

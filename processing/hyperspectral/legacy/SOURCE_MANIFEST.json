@@ -1,0 +1,210 @@
+{
+  "repository": "3d_hyperspec_ai",
+  "source_head": "49521698cd7c1fb903071f9d4a0c435c9bce7b46",
+  "copied_on": "2026-09-17",
+  "notes": [
+    "Working scripts were untracked in the source repository. Content hashes, not HEAD alone, identify this snapshot.",
+    "Includes original app, scripts, notebooks and the viewer source asset. Excludes scratch tempCodeRunner files, recordings and generated scientific outputs.",
+    "Scientific algorithms are unchanged. Integration, input guards and report packaging live outside this snapshot."
+  ],
+  "files": [
+    {
+      "source": "app/__init__.py",
+      "destination": "app/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "source": "app/analysis/__init__.py",
+      "destination": "app/analysis/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "source": "app/analysis/spatial_registration.py",
+      "destination": "app/analysis/spatial_registration.py",
+      "sha256": "fed844862d0a23a298d73f7d3017a0bf76a21d6d15fc6ef744a4ea632f455077",
+      "bytes": 7171
+    },
+    {
+      "source": "app/analysis/spectrum_plot.py",
+      "destination": "app/analysis/spectrum_plot.py",
+      "sha256": "6efbfecc4807192ed157ab2bf1acc5dba61c938db4abc90810700b08ba38fa40",
+      "bytes": 6434
+    },
+    {
+      "source": "app/analysis/split.py",
+      "destination": "app/analysis/split.py",
+      "sha256": "4e449a5fd913fe2c6738d9f21527ad71e461427062c65ce1c4ff0b2d39cd4b2f",
+      "bytes": 8813
+    },
+    {
+      "source": "app/analysis/window.py",
+      "destination": "app/analysis/window.py",
+      "sha256": "195c98e77c8aeb6639d2eda55a11f6b7cbbe8decbaf5305c8c77f59cc247da9f",
+      "bytes": 36667
+    },
+    {
+      "source": "app/main.py",
+      "destination": "app/main.py",
+      "sha256": "cc0dda68cab0619658d692ce28d123bfdaee6d51eaf5f4c26c7f7a5973198401",
+      "bytes": 23813
+    },
+    {
+      "source": "app/preprocessing/__init__.py",
+      "destination": "app/preprocessing/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "source": "app/preprocessing/background_removal.py",
+      "destination": "app/preprocessing/background_removal.py",
+      "sha256": "c459382ebdbe5052deb9fde4fa484adb81ba0f4232dda845f30c92c5c0097300",
+      "bytes": 7301
+    },
+    {
+      "source": "app/preprocessing/calibration.py",
+      "destination": "app/preprocessing/calibration.py",
+      "sha256": "de9deec4650033a1e83b7bdb5054cfcd0699cfebd71bb0500d54299654fba6bf",
+      "bytes": 27743
+    },
+    {
+      "source": "app/preprocessing/reflectance_plot.py",
+      "destination": "app/preprocessing/reflectance_plot.py",
+      "sha256": "25c486678778a4993553587d040952cabd10db5e81cbdc09c3b92d8a1c17e97b",
+      "bytes": 2734
+    },
+    {
+      "source": "LICENSE",
+      "destination": "LICENSE",
+      "sha256": "9221c2f936159b8446d329249fb4c0f25be510f447383a0f13336ac7985668a3",
+      "bytes": 17099
+    },
+    {
+      "source": "notebooks/aruco_markers.ipynb",
+      "destination": "notebooks/aruco_markers.ipynb",
+      "sha256": "3d6deecc78ae7d8dd1648e40bb8fec775b697306c495e84315eedad6064941af",
+      "bytes": 2214
+    },
+    {
+      "source": "notebooks/data_processing/3D_reconstruction.ipynb",
+      "destination": "notebooks/data_processing/3D_reconstruction.ipynb",
+      "sha256": "e08380632ea85cc7250bdc0a82446369e2335ec9877d1f0e478ac219802481fd",
+      "bytes": 36482
+    },
+    {
+      "source": "notebooks/data_processing/Hyp_preprocess_calib/New_hyp_test.ipynb",
+      "destination": "notebooks/data_processing/Hyp_preprocess_calib/New_hyp_test.ipynb",
+      "sha256": "c991051acc921e2b449fd283f6af6888a879bf62c07d9219ca164aa1b5be29e9",
+      "bytes": 549700
+    },
+    {
+      "source": "notebooks/data_processing/Hyp_preprocess_calib/Plant-background-removal.ipynb",
+      "destination": "notebooks/data_processing/Hyp_preprocess_calib/Plant-background-removal.ipynb",
+      "sha256": "d7ac424214d7834323df14835910324b8bd29e94b6f2f031a27cae8b13991a19",
+      "bytes": 624006
+    },
+    {
+      "source": "notebooks/data_processing/Hyp_preprocess_calib/Preprocess-white-dark-calib.ipynb",
+      "destination": "notebooks/data_processing/Hyp_preprocess_calib/Preprocess-white-dark-calib.ipynb",
+      "sha256": "9ebde1b69a50b857c95557a6acf702587381b1e7f0244f1cb9c22162b949d979",
+      "bytes": 196452
+    },
+    {
+      "source": "notebooks/data_processing/Hyp_preprocess_calib/Preprocess.ipynb",
+      "destination": "notebooks/data_processing/Hyp_preprocess_calib/Preprocess.ipynb",
+      "sha256": "b08e540b47448025f1322da5ba26e7a479436b71e7e3177187543731b8435278",
+      "bytes": 719044
+    },
+    {
+      "source": "notebooks/ROS/Camtest.ipynb",
+      "destination": "notebooks/ROS/Camtest.ipynb",
+      "sha256": "a3480e46ec6698169ca81226184893db9a863b5008f8a2a0db271a2c95f08736",
+      "bytes": 101528
+    },
+    {
+      "source": "notebooks/visualize.ipynb",
+      "destination": "notebooks/visualize.ipynb",
+      "sha256": "bae1b19d79a572545585a72c6210af7d2487583ee0ee12bd109021f8705000af",
+      "bytes": 232392
+    },
+    {
+      "source": "README.md",
+      "destination": "README.md",
+      "sha256": "9cbc176d1c2ea79274b6a7889c7d83386f069ff457cb374cab6c9ae019c7b880",
+      "bytes": 395
+    },
+    {
+      "source": "requirements.txt",
+      "destination": "requirements.txt",
+      "sha256": "4ee64d743e48ca59fe8d75271c94050fabdc1150cf4b09e222c82aeed659af0f",
+      "bytes": 71
+    },
+    {
+      "source": "scripts/build_interactive_viewer_assets.py",
+      "destination": "scripts/build_interactive_viewer_assets.py",
+      "sha256": "a80bdf6760e8970fe438e24d4ca6a8f729698b941232b7a7cc590d88177700fa",
+      "bytes": 8974
+    },
+    {
+      "source": "scripts/fuse_rgbd_hyperspectral.py",
+      "destination": "scripts/fuse_rgbd_hyperspectral.py",
+      "sha256": "0a09d8f325025c0fecba11ed6e5e1f14d046945d874a58bf8e41139f59afb860",
+      "bytes": 29893
+    },
+    {
+      "source": "scripts/generate_showcase.py",
+      "destination": "scripts/generate_showcase.py",
+      "sha256": "adf0f142838d465d24c47abc020c04e63f8af660ed8b48755570b85ab7840628",
+      "bytes": 86407
+    },
+    {
+      "source": "scripts/recover_global_placement.py",
+      "destination": "scripts/recover_global_placement.py",
+      "sha256": "32e98bb48857b38c18f4f64f6ff97efd8e29948479b23c88fccafda3cdb9fc0e",
+      "bytes": 15064
+    },
+    {
+      "source": "scripts/run_fusion.ps1",
+      "destination": "scripts/run_fusion.ps1",
+      "sha256": "207af510ea4bbbff3404402da191b817c96cdde4827cc5bcc36493cf4939afc8",
+      "bytes": 3586
+    },
+    {
+      "source": "scripts/run_showcase.ps1",
+      "destination": "scripts/run_showcase.ps1",
+      "sha256": "4572e56032d6ccb64de925edfae475179edff1a8d7ccfb816d365d438f82b67c",
+      "bytes": 879
+    },
+    {
+      "source": "scripts/stage_validation_assets.ps1",
+      "destination": "scripts/stage_validation_assets.ps1",
+      "sha256": "e55e9b00a7fd775ae0faf8c089d7c9ae612dfc5688e0bddf9a02b82b26cccef7",
+      "bytes": 2121
+    },
+    {
+      "source": "scripts/test_validate_report_links.py",
+      "destination": "scripts/test_validate_report_links.py",
+      "sha256": "180bef124838061eacdb78f5ae1450f6b2b84aeaf0e9735312b85183b00a4262",
+      "bytes": 1392
+    },
+    {
+      "source": "scripts/validate_fusion.py",
+      "destination": "scripts/validate_fusion.py",
+      "sha256": "e7b383f524bf7e62704f7eda9825e6e814c57689ef732a0cde3fa4cc112a44f0",
+      "bytes": 5967
+    },
+    {
+      "source": "scripts/validate_report_links.py",
+      "destination": "scripts/validate_report_links.py",
+      "sha256": "d96d68c08369513d0045f92fd3d55fd2ea92e83e71642433f47bccb6cddad25e",
+      "bytes": 1678
+    },
+    {
+      "source": "results/20260828_showcase/fusion/viewer.js",
+      "destination": "assets/viewer.js",
+      "sha256": "5465bd5129a26b7648de2cff3c86d9f4aa19af71f48a6f34e8abc8d5742a2f7d",
+      "bytes": 21975
+    }
+  ]
+}
