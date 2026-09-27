@@ -14,9 +14,11 @@ def create_application(argv=None):
     # plugin and abort the process.  Initialising QApplication first makes
     # PyQt5 select its matching platform plugin before any cv2 import.
     from app.main_window import MainWindow
+    from app import theme
 
     app.setApplicationName('PhenoFusion3D')
     app.setStyle('Fusion')
+    theme.apply(app)
     return app, MainWindow()
 
 

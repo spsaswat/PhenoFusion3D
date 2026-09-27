@@ -599,7 +599,21 @@ class Reconstructor:
     def _save_intermediate(self):
         if self.save_path and self.reference_pcd and not self.reference_pcd.is_empty():
             out = os.path.join(self.save_path, 'merge_pcd_live.ply')
-            o3d.io.write_point_cloud(out, self.reference_pcd)
+            # Write beside the target and rename into place. Overwriting
+            # directly leaves a truncated PLY if the process dies mid-write,
+            # and this file is handed straight to post-processing. The
+            # temporary name keeps the .ply suffix so Open3D still infers
+            # the format from it.
+            tmp = os.path.join(self.save_path, '.merge_pcd_live.partial.ply')
+            try:
+                if o3d.io.write_point_cloud(tmp, self.reference_pcd):
+                    os.replace(tmp, out)
+                elif os.path.exists(tmp):
+                    os.remove(tmp)
+            except OSError as exc:
+                print(f'[reconstructor] WARNING: could not save {out}: {exc}')
+                if os.path.exists(tmp):
+                    os.remove(tmp)
 
     def _emergency_save(self):
         if self.reference_pcd and not self.reference_pcd.is_empty():

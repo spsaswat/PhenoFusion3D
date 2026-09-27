@@ -8,6 +8,8 @@ from PyQt5.QtGui import QPixmap,QPainter,QPen,QColor
 from PyQt5.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLabel,QComboBox,
     QSpinBox,QDoubleSpinBox,QPushButton,QFileDialog,QMessageBox)
 
+from app import theme
+
 
 class ImagePoints(QLabel):
     def __init__(self):
@@ -24,11 +26,11 @@ class ImagePoints(QLabel):
         if len(self.points)<4 and x<=event.x()<x+w and y<=event.y()<y+h:
             self.points.append([int((event.x()-x)/scale),int((event.y()-y)/scale)]);self.update()
     def paintEvent(self,event):
-        p=QPainter(self);p.fillRect(self.rect(),QColor('#172620'))
+        p=QPainter(self);p.fillRect(self.rect(),QColor(theme.SURFACE_ALT))
         x,y,w,h,scale=self.image_rect()
         if self.source.isNull():return
         p.drawPixmap(x,y,w,h,self.source)
-        p.setPen(QPen(QColor('#ff6040'),3))
+        p.setPen(QPen(QColor(theme.DANGER),3))
         for i,(u,v) in enumerate(self.points):
             px,py=int(x+u*scale),int(y+v*scale);p.drawEllipse(px-5,py-5,10,10);p.drawText(px+8,py,str(i+1))
 
@@ -55,7 +57,7 @@ class LeafAnnotations(QDialog):
         self.status=QLabel('No leaves recorded.');layout.addWidget(self.status)
         reset=QPushButton('Clear points on current image');reset.clicked.connect(self.reset_points);layout.addWidget(reset)
         add=QPushButton('Add this matched leaf');add.clicked.connect(self.add);layout.addWidget(add)
-        save=QPushButton('Save annotations');save.clicked.connect(self.save);layout.addWidget(save)
+        save=QPushButton('Save annotations');theme.variant(save,'primary');save.clicked.connect(self.save);layout.addWidget(save)
         self.frame.currentIndexChanged.connect(self.load_frame)
         if self.frame.count():self.frame.setCurrentIndex(self.frame.count()//2);self.load_frame()
 

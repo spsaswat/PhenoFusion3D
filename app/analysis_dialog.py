@@ -10,6 +10,8 @@ from PyQt5.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QFormLayout,QLineEd
     QPushButton,QLabel,QComboBox,QDoubleSpinBox,QSpinBox,QPlainTextEdit,
     QFileDialog,QMessageBox,QTabWidget,QWidget,QCheckBox)
 
+from app import theme
+
 
 class AnalysisDialog(QDialog):
     def __init__(self, controller, parent=None):
@@ -29,13 +31,13 @@ class AnalysisDialog(QDialog):
         self.result_path=None;self.cancelled=False;self.log_handle=None
         layout=QVBoxLayout(self)
         intro=QLabel('Process saved recordings locally. No internet or AI service is required.\nResults remain candidates until coverage, specimen identity and physical dimensions are checked.')
-        intro.setWordWrap(True);layout.addWidget(intro)
+        intro.setWordWrap(True);theme.role(intro,'hint');layout.addWidget(intro)
         self.tabs=QTabWidget();layout.addWidget(self.tabs)
         self.buttons=[]
         self.reconstruction_tab();self.traits_tab();self.comparison_tab();self.leaf_tab();self.hyperspectral_tab()
         row=QHBoxLayout()
-        self.stop=QPushButton('Cancel processing');self.stop.setEnabled(False);self.stop.clicked.connect(self.cancel)
-        self.open_result=QPushButton('Open latest result');self.open_result.setEnabled(False);self.open_result.clicked.connect(self.open_latest)
+        self.stop=QPushButton('Cancel processing');self.stop.setEnabled(False);theme.variant(self.stop,'danger');self.stop.clicked.connect(self.cancel)
+        self.open_result=QPushButton('Open latest result');self.open_result.setEnabled(False);theme.variant(self.open_result,'primary');self.open_result.clicked.connect(self.open_latest)
         row.addWidget(self.stop);row.addWidget(self.open_result);layout.addLayout(row)
         self.log=QPlainTextEdit();self.log.setReadOnly(True);self.log.setMaximumBlockCount(2000);layout.addWidget(self.log)
 
@@ -72,7 +74,7 @@ class AnalysisDialog(QDialog):
         self.poses=self.path(form,'Saved camera poses (optional)',False)
         self.method=QComboBox();self.method.addItems(['auto','rgb','sensor']);form.addRow('Reconstruction method',self.method)
         note=QLabel('Automatic mode targets overlapping overhead gantry recordings. It estimates motion direction and separates surfaces above the support. For other geometry use calibrated camera poses. Depth mode retains all surfaces in the chosen interval; colour mode is optional for saturated foliage.')
-        note.setWordWrap(True);form.addRow(note)
+        note.setWordWrap(True);theme.role(note,'hint');form.addRow(note)
         self.button(form,'Check recording and explain settings',lambda:self.reconstruct(True))
         self.button(form,'Reconstruct from photographs + coloured ICP',lambda:self.reconstruct(False))
 
@@ -85,7 +87,7 @@ class AnalysisDialog(QDialog):
         self.ref_dataset=self.path(form,'Recording for image-derived references')
         self.ref_scale=self.number(form,'Raw depth units / metre')
         self.plants=QSpinBox();self.plants.setRange(1,100);form.addRow('Expected plant count',self.plants)
-        note=QLabel('Image references are diagnostic and colour-based. Review selected-frame masks; visible projected areas are not full leaf surface areas.');note.setWordWrap(True);form.addRow(note)
+        note=QLabel('Image references are diagnostic and colour-based. Review selected-frame masks; visible projected areas are not full leaf surface areas.');note.setWordWrap(True);theme.role(note,'hint');form.addRow(note)
         self.button(form,'Extract image-derived reference traits',self.references)
 
     def comparison_tab(self):
@@ -94,7 +96,7 @@ class AnalysisDialog(QDialog):
         self.reference=self.path(form,'Image reference JSON (optional)',False)
         self.manual=self.path(form,'Physical measurement CSV (optional)',False)
         self.matches=QLineEdit();self.matches.setPlaceholderText('Reference:model, e.g. 1:2 2:1');form.addRow('Confirmed specimen pairs',self.matches)
-        note=QLabel('Compare matching quantities only. Physical CSV uses plant_id and physical_plant_height_m, physical_canopy_major_span_m, physical_canopy_minor_span_m, physical_projected_canopy_area_m2 and physical_projected_convex_hull_area_m2. Leave unmeasured values blank.');note.setWordWrap(True);form.addRow(note)
+        note=QLabel('Compare matching quantities only. Physical CSV uses plant_id and physical_plant_height_m, physical_canopy_major_span_m, physical_canopy_minor_span_m, physical_projected_canopy_area_m2 and physical_projected_convex_hull_area_m2. Leave unmeasured values blank.');note.setWordWrap(True);theme.role(note,'hint');form.addRow(note)
         self.button(form,'Create comparison report',self.compare)
 
     def leaf_tab(self):
@@ -102,7 +104,7 @@ class AnalysisDialog(QDialog):
         self.leaf_dataset=self.path(form,'Recording folder for marked leaves')
         self.leaf_scale=self.number(form,'Raw depth units / metre')
         self.leaf_config=self.path(form,'Leaf annotations JSON',False)
-        note=QLabel('Mark the same leaf measured physically: tip, base, then both width edges. The report shows separate length and width rows in millimetres. These are image-derived leaf measurements, not automatic 3D leaf segmentation.');note.setWordWrap(True);form.addRow(note)
+        note=QLabel('Mark the same leaf measured physically: tip, base, then both width edges. The report shows separate length and width rows in millimetres. These are image-derived leaf measurements, not automatic 3D leaf segmentation.');note.setWordWrap(True);theme.role(note,'hint');form.addRow(note)
         self.button(form,'Mark leaves on a source photograph',self.annotate)
         self.button(form,'Measure marked leaves and compare',self.leaves)
 

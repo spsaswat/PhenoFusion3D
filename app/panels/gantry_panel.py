@@ -15,10 +15,11 @@ from __future__ import annotations
 
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import (
-    QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout,
-    QWidget, QFrame,
+    QDoubleSpinBox, QFormLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout,
+    QWidget,
 )
 
+from app import theme
 from capture.base import DEFAULT_END_POSITION_M, MILLIMETRES_PER_METRE
 
 
@@ -54,35 +55,37 @@ class GantryPanel(QWidget):
     # ------------------------------------------------------------------ UI
 
     def _build_ui(self) -> None:
+        theme.card(self)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(theme.MARGIN, theme.MARGIN,
+                                  theme.MARGIN, theme.MARGIN)
+        layout.setSpacing(theme.GAP)
 
-        title = QLabel('Gantry Control')
-        title.setStyleSheet('font-weight:bold; font-size:14px;')
-        layout.addWidget(title)
-
-        # ---- status row: live position + READY/OFFLINE badge ----
-        status_row = QHBoxLayout()
-        status_row.addWidget(QLabel('Position:'))
-        self.pos_lbl = QLabel('--- mm')
-        self.pos_lbl.setStyleSheet(
-            'font-family: monospace; font-size:13px; font-weight:bold;'
-        )
-        status_row.addWidget(self.pos_lbl)
-        status_row.addStretch()
+        # ---- header row: title + READY/OFFLINE badge ----
+        header_row = QHBoxLayout()
+        header_row.addWidget(theme.title('Gantry Control'))
+        header_row.addStretch()
         self.badge = QLabel('READY')
         self.badge.setAlignment(Qt.AlignCenter)
-        self.badge.setFixedWidth(70)
-        self.badge.setStyleSheet(
-            'background:#16a34a; color:white; border-radius:4px; '
-            'padding:2px; font-weight:bold; font-size:11px;'
-        )
-        status_row.addWidget(self.badge)
+        self.badge.setFixedWidth(76)
+        theme.role(self.badge, 'badge')
+        header_row.addWidget(self.badge)
+        layout.addLayout(header_row)
+
+        # ---- live position read-back ----
+        status_row = QHBoxLayout()
+        status_row.setSpacing(8)
+        status_row.addWidget(QLabel('Position'))
+        self.pos_lbl = QLabel('--- mm')
+        self.pos_lbl.setAlignment(Qt.AlignCenter)
+        theme.role(self.pos_lbl, 'readout')
+        status_row.addWidget(self.pos_lbl, stretch=1)
         layout.addLayout(status_row)
 
         # ---- jog row: hold-to-move buttons + velocity ----
+        layout.addWidget(theme.role(QLabel('JOG'), 'section'))
         jog_row = QHBoxLayout()
+        jog_row.setSpacing(8)
         self.jog_back_btn = QPushButton('<<  Jog')
         self.jog_back_btn.setToolTip('Hold to move the gantry in +X')
         self.jog_back_btn.pressed.connect(self._on_jog_back_pressed)
@@ -96,8 +99,12 @@ class GantryPanel(QWidget):
         jog_row.addWidget(self.jog_fwd_btn)
         layout.addLayout(jog_row)
 
-        vel_row = QHBoxLayout()
-        vel_row.addWidget(QLabel('Velocity (mm/s):'))
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+
         self.vel_spin = QDoubleSpinBox()
         self.vel_spin.setRange(1.0, 200.0)
         self.vel_spin.setSingleStep(5.0)
@@ -105,18 +112,9 @@ class GantryPanel(QWidget):
         self.vel_spin.setValue(
             self._default_velocity_mps * MILLIMETRES_PER_METRE
         )
-        vel_row.addWidget(self.vel_spin)
-        vel_row.addStretch()
-        layout.addLayout(vel_row)
-
-        # ---- separator ----
-        sep = QFrame(); sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet('color:#334155;')
-        layout.addWidget(sep)
+        form.addRow('Velocity (mm/s)', self.vel_spin)
 
         # ---- absolute go-to row ----
-        goto_row = QHBoxLayout()
-        goto_row.addWidget(QLabel('Go to (mm):'))
         self.goto_spin = QDoubleSpinBox()
         self.goto_spin.setRange(0.0, 5000.0)
         self.goto_spin.setSingleStep(50.0)
@@ -124,36 +122,40 @@ class GantryPanel(QWidget):
         self.goto_spin.setValue(
             self.DEFAULT_GOTO_POSITION_M * MILLIMETRES_PER_METRE
         )
-        goto_row.addWidget(self.goto_spin)
         self.goto_btn = QPushButton('Go')
-        self.goto_btn.setFixedWidth(50)
+        self.goto_btn.setFixedWidth(56)
         self.goto_btn.clicked.connect(
             lambda: self.goto_requested.emit(
                 self.goto_spin.value() / MILLIMETRES_PER_METRE
             )
         )
-        goto_row.addWidget(self.goto_btn)
-        layout.addLayout(goto_row)
+        goto_field = QWidget()
+        goto_layout = QHBoxLayout(goto_field)
+        goto_layout.setContentsMargins(0, 0, 0, 0)
+        goto_layout.setSpacing(6)
+        goto_layout.addWidget(self.goto_spin)
+        goto_layout.addWidget(self.goto_btn)
+        form.addRow('Go to (mm)', goto_field)
+        layout.addLayout(form)
+
+        layout.addWidget(theme.separator())
 
         # ---- go-home + stop ----
         action_row = QHBoxLayout()
+        action_row.setSpacing(8)
         self.home_btn = QPushButton('Go Home')
         self.home_btn.clicked.connect(self.go_home_requested.emit)
         action_row.addWidget(self.home_btn)
 
         self.stop_btn = QPushButton('STOP')
-        self.stop_btn.setStyleSheet(
-            'QPushButton { background:#dc2626; color:white; border-radius:4px; '
-            'padding:6px; font-weight:bold; font-size:13px; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
+        theme.variant(self.stop_btn, 'danger')
         self.stop_btn.clicked.connect(self.stop_requested.emit)
         action_row.addWidget(self.stop_btn)
         layout.addLayout(action_row)
 
         # ---- last error / status string ----
         self.status_lbl = QLabel('')
-        self.status_lbl.setStyleSheet('color:#64748b; font-size:11px;')
+        theme.role(self.status_lbl, 'hint')
         self.status_lbl.setWordWrap(True)
         layout.addWidget(self.status_lbl)
 
@@ -184,17 +186,11 @@ class GantryPanel(QWidget):
             w.setEnabled(available)
         if available:
             self.badge.setText('READY')
-            self.badge.setStyleSheet(
-                'background:#16a34a; color:white; border-radius:4px; '
-                'padding:2px; font-weight:bold; font-size:11px;'
-            )
+            theme.role(self.badge, 'badge')
             self.setToolTip('')
         else:
             self.badge.setText('OFFLINE')
-            self.badge.setStyleSheet(
-                'background:#94a3b8; color:white; border-radius:4px; '
-                'padding:2px; font-weight:bold; font-size:11px;'
-            )
+            theme.role(self.badge, 'badgeOffline')
             self.setToolTip(self._OFFLINE_TOOLTIP)
             self.status_lbl.setText(self._OFFLINE_TOOLTIP)
 

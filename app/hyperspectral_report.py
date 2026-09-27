@@ -17,6 +17,9 @@ def main():
     if not report.is_file() or report.suffix.lower() not in ('.html', '.htm'):
         raise ValueError('Select an existing HTML result report.')
     application = QApplication(sys.argv)
+    from app import theme
+    application.setStyle('Fusion')
+    theme.apply(application)
     window = QWidget(); window.setWindowTitle('PhenoFusion3D — experimental hyperspectral results'); window.resize(1200, 850)
     layout = QVBoxLayout(window)
     banner = QLabel('EXPERIMENTAL · Historical 28 August 2026 dataset only. New datasets and physical fusion accuracy are unvalidated.')

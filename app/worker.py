@@ -5,7 +5,10 @@ from processing.reconstructor import Reconstructor
 class ProcessingWorker(QThread):
 
     frame_done = pyqtSignal(int, int, object, float, float, str)
-    finished   = pyqtSignal(object, list, list)
+    # Deliberately not named 'finished': that would shadow QThread's own
+    # finished() signal, which the window needs to tell when the thread has
+    # really stopped before it is safe to close.
+    reconstruction_finished = pyqtSignal(object, list, list)
     error      = pyqtSignal(str)
 
     def __init__(
@@ -80,7 +83,7 @@ class ProcessingWorker(QThread):
                 on_frame=self._on_frame,
             )
             final_pcd, succeed, fail = self._reconstructor.run()
-            self.finished.emit(final_pcd, succeed, fail)
+            self.reconstruction_finished.emit(final_pcd, succeed, fail)
         except Exception as e:
             self.error.emit(str(e))
 

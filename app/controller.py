@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
 
 from file_io.loader import (
     get_default_intrinsics,
@@ -22,12 +22,39 @@ from visualiser.viewer import PointCloudViewer
 DEFAULT_MIN_FITNESS = 0.3
 DEFAULT_MAX_RMSE    = 0.015
 
+# Dataset presets. ICL-NUIM stores PNG depth in 1/5000 m units, while the
+# lab's RealSense captures store millimetres, so picking the wrong one
+# scales the whole reconstruction by five.
+ICL_FORMAT       = 'ICL-NUIM'
+REALSENSE_FORMAT = 'RealSense'
+
+# ~30 Hz. An Open3D window only responds to the mouse while something
+# services its event queue, so the GUI keeps pumping it for as long as it
+# is open -- including after a run has finished.
+VIEWER_POLL_INTERVAL_MS = 33
+
+
+def detect_dataset_format(rgb_dir: str) -> str:
+    """Return the dataset preset implied by ``rgb_dir``.
+
+    Only whole path components are considered.  Testing ``'icl' in path``
+    silently misfires on ordinary names that happen to contain those
+    three letters -- ``particles``, ``/home/vicl/``, ``helicL`` -- and a
+    wrong answer here rescales every depth image by five.
+    """
+    for part in os.path.normpath(rgb_dir or '').split(os.sep):
+        name = part.casefold()
+        if name == 'icl' or name.startswith('icl-') or name.startswith('icl_'):
+            return ICL_FORMAT
+    return REALSENSE_FORMAT
+
 
 class Controller(QObject):
 
     status_changed         = pyqtSignal(str)
     frame_processed        = pyqtSignal(int, int, object, float, float, str)
     reconstruction_complete = pyqtSignal(object, list, list)
+    reconstruction_stopped  = pyqtSignal()
     error_occurred         = pyqtSignal(str)
 
     # Capture pipeline signals
@@ -53,6 +80,9 @@ class Controller(QObject):
         self.quality_worker  = None
         self.postprocess_worker = None
         self.viewer          = PointCloudViewer()
+        self._viewer_timer   = QTimer(self)
+        self._viewer_timer.setInterval(VIEWER_POLL_INTERVAL_MS)
+        self._viewer_timer.timeout.connect(self._pump_viewer)
         self.final_pcd       = None
         self.all_metrics     = []
         self.n_success       = 0
@@ -91,9 +121,8 @@ class Controller(QObject):
         self._last_depth_dir = depth_dir
         self._last_intr_path = intrinsics_path
 
-        self.status_changed.emit(f'Starting reconstruction: {len(pairs)} frames...')
-
-        is_icl = 'icl' in rgb_dir.lower()
+        dataset_format = detect_dataset_format(rgb_dir)
+        is_icl = dataset_format == ICL_FORMAT
 
         depth_scale = 5000.0 if is_icl else 1000.0
         depth_trunc = 4.0
@@ -104,6 +133,12 @@ class Controller(QObject):
         erode        = False
         inpaint      = False
         depth_min_mm = 0
+
+        # Name the preset: a misread format silently rescales the result.
+        self.status_changed.emit(
+            f'Starting reconstruction: {len(pairs)} frames, '
+            f'{dataset_format} preset (depth scale {depth_scale:g} units/m)...'
+        )
 
         # Exact gantry feedback prevents an ICP rejection from turning into a
         # permanent target-gap cascade. Legacy datasets learn accepted motion.
@@ -140,10 +175,17 @@ class Controller(QObject):
             save_path=os.path.join(os.path.dirname(rgb_dir), 'output')
         )
         self.worker.frame_done.connect(self._on_frame)
-        self.worker.finished.connect(self._on_finished)
+        self.worker.reconstruction_finished.connect(self._on_finished)
         self.worker.error.connect(self.error_occurred)
+        # QThread.finished fires once run() has actually returned, which is
+        # what makes it safe to let the window close.
+        worker = self.worker
+        worker.finished.connect(
+            lambda: self._on_reconstruction_thread_stopped(worker)
+        )
         self.worker.start()
         self.viewer.start()
+        self._start_viewer_polling()
 
     @pyqtSlot()
     def on_stop_clicked(self):
@@ -161,6 +203,25 @@ class Controller(QObject):
         self.viewer.update(pcd)
         self.frame_processed.emit(idx, total, pcd, fitness, rmse, status)
         self.status_changed.emit(f'Frame {idx + 1}/{total} | fitness={fitness:.4f}')
+
+    def _start_viewer_polling(self):
+        """Keep the Open3D window interactive while it is on screen."""
+        if self.viewer.is_open():
+            self._viewer_timer.start()
+
+    @pyqtSlot()
+    def _pump_viewer(self):
+        if not self.viewer.pump():
+            # Window gone (closed by the user, or never opened).
+            self._viewer_timer.stop()
+
+    def is_reconstructing(self) -> bool:
+        return self.worker is not None and self.worker.isRunning()
+
+    def _on_reconstruction_thread_stopped(self, worker):
+        if self.worker is worker:
+            self.worker = None
+            self.reconstruction_stopped.emit()
 
     @pyqtSlot(object, list, list)
     def _on_finished(self, final_pcd, succeed, fail):
@@ -231,7 +292,7 @@ class Controller(QObject):
 
     # ---------------------------------------------------------------- quality
     def _build_quality_params(self, rgb_dir: str) -> QualityParams:
-        is_icl = 'icl' in rgb_dir.lower()
+        is_icl = detect_dataset_format(rgb_dir) == ICL_FORMAT
         return QualityParams(
             depth_scale=5000.0 if is_icl else 1000.0,
             depth_trunc=4.0,
@@ -273,7 +334,10 @@ class Controller(QObject):
             return
         pairs, K, dist = loaded
         params = self._build_quality_params(self._last_rgb_dir)
-        self.status_changed.emit(f'Quick quality check on {len(pairs)} frames...')
+        self.status_changed.emit(
+            f'Quick quality check on {len(pairs)} frames, '
+            f'{detect_dataset_format(self._last_rgb_dir)} preset...'
+        )
         self.quality_worker = QualityWorker(pairs, K, dist, params, mode='quick', n_samples=15)
         self.quality_worker.progress.connect(self.quality_progress)
         self.quality_worker.report_ready.connect(self._on_quality_ready)
@@ -289,7 +353,10 @@ class Controller(QObject):
         params = self._build_quality_params(self._last_rgb_dir)
         # Save report next to the dataset
         out_dir = os.path.dirname(self._last_rgb_dir)
-        self.status_changed.emit(f'Full quality report on {len(pairs)} frames...')
+        self.status_changed.emit(
+            f'Full quality report on {len(pairs)} frames, '
+            f'{detect_dataset_format(self._last_rgb_dir)} preset...'
+        )
         self.quality_worker = QualityWorker(
             pairs, K, dist, params, mode='full', out_dir=out_dir,
         )
@@ -382,6 +449,18 @@ class Controller(QObject):
         if capture_worker is not None and capture_worker.isRunning():
             capture_worker.stop()
             capture_worker.wait(5000)
+        # A reconstruction writes its point cloud from this thread; give it
+        # a bounded chance to finish that write instead of being torn down
+        # mid-file when the process exits.
+        worker = self.worker
+        if worker is not None and worker.isRunning():
+            worker.stop()
+            worker.wait(10000)
+        self._viewer_timer.stop()
+        try:
+            self.viewer.close()
+        except Exception:
+            pass
         try:
             self.gantry.shutdown()
         except Exception:

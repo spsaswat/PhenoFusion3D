@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFormLayout,
     QPushButton, QLineEdit, QSpinBox, QFileDialog, QMessageBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 import os
+
+from app import theme
 
 
 class DataPanel(QWidget):
@@ -16,87 +18,85 @@ class DataPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        theme.card(self)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(10)
+        layout.setContentsMargins(theme.MARGIN, theme.MARGIN,
+                                  theme.MARGIN, theme.MARGIN)
+        layout.setSpacing(theme.GAP)
 
-        title = QLabel('Data Loading')
-        title.setStyleSheet('font-weight:bold; font-size:14px;')
-        layout.addWidget(title)
+        layout.addWidget(theme.title('Data Loading'))
 
-        self.rgb_edit   = self._add_folder_row(layout, 'RGB Images:')
-        self.depth_edit = self._add_folder_row(layout, 'Depth Images:')
-        self.intr_edit  = self._add_file_row(layout,   'Intrinsics JSON:', optional=True)
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+
+        self.rgb_edit   = self._add_folder_row(form, 'RGB images')
+        self.depth_edit = self._add_folder_row(form, 'Depth images')
+        self.intr_edit  = self._add_file_row(form,   'Intrinsics JSON')
 
         # Step size
-        step_row = QHBoxLayout()
-        step_row.addWidget(QLabel('Step Size:'))
         self.step_spin = QSpinBox()
         self.step_spin.setRange(1, 20)
         self.step_spin.setValue(2)
         self.step_spin.setToolTip('Use every Nth frame (2 = every other frame)')
-        step_row.addWidget(self.step_spin)
-        step_row.addStretch()
-        layout.addLayout(step_row)
+        form.addRow('Step size', self.step_spin)
+        layout.addLayout(form)
+
+        layout.addWidget(theme.hint(
+            'Intrinsics are optional - the default camera intrinsics are used '
+            'when the field is blank.'
+        ))
+
+        layout.addWidget(theme.separator())
 
         # Run / Stop buttons
         btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
         self.run_btn = QPushButton('Run Reconstruction')
         self.run_btn.setEnabled(False)
-        self.run_btn.setStyleSheet(
-            'QPushButton { background:#2563eb; color:white; border-radius:4px; padding:6px; font-weight:bold; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
+        theme.variant(self.run_btn, 'primary')
         self.run_btn.clicked.connect(self._on_run)
 
         self.stop_btn = QPushButton('Stop')
         self.stop_btn.setEnabled(False)
-        self.stop_btn.setStyleSheet(
-            'QPushButton { background:#dc2626; color:white; border-radius:4px; padding:6px; font-weight:bold; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
+        theme.variant(self.stop_btn, 'danger')
         self.stop_btn.clicked.connect(self.stop_requested.emit)
 
         btn_row.addWidget(self.run_btn)
         btn_row.addWidget(self.stop_btn)
         layout.addLayout(btn_row)
-        layout.addStretch()
 
-    def _add_folder_row(self, parent_layout, label):
-        parent_layout.addWidget(QLabel(label))
-        row = QHBoxLayout()
+    def _add_folder_row(self, form, label):
         edit = QLineEdit()
         edit.setReadOnly(True)
         edit.setPlaceholderText('Select folder...')
         browse = QPushButton('Browse')
-        browse.setFixedWidth(60)
+        browse.setFixedWidth(72)
         browse.clicked.connect(lambda: self._browse_folder(edit))
-        row.addWidget(edit)
-        row.addWidget(browse)
-        parent_layout.addLayout(row)
+        form.addRow(label, self._field(edit, browse))
         return edit
 
-    def _add_file_row(self, parent_layout, label, optional=False):
-        lbl_row = QHBoxLayout()
-        lbl_row.addWidget(QLabel(label))
-        if optional:
-            opt = QLabel('(optional)')
-            opt.setStyleSheet('color:#94a3b8; font-size:11px;')
-            lbl_row.addWidget(opt)
-        lbl_row.addStretch()
-        parent_layout.addLayout(lbl_row)
-
-        row = QHBoxLayout()
+    def _add_file_row(self, form, label):
         edit = QLineEdit()
         edit.setReadOnly(True)
-        edit.setPlaceholderText('Select file... (default intrinsics used if blank)')
+        edit.setPlaceholderText('Optional - default intrinsics if blank')
         browse = QPushButton('Browse')
-        browse.setFixedWidth(60)
+        browse.setFixedWidth(72)
         browse.clicked.connect(lambda: self._browse_file(edit))
-        row.addWidget(edit)
-        row.addWidget(browse)
-        parent_layout.addLayout(row)
+        form.addRow(label, self._field(edit, browse))
         return edit
+
+    def _field(self, edit, button):
+        """Pair an input with its Browse button inside one form field."""
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(6)
+        row_layout.addWidget(edit)
+        row_layout.addWidget(button)
+        return row
 
     def _browse_folder(self, edit):
         path = QFileDialog.getExistingDirectory(self, 'Select Folder')

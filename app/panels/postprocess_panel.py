@@ -1,9 +1,12 @@
 import os
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSpinBox, QVBoxLayout, QWidget,
+    QFileDialog, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QProgressBar, QPushButton, QSpinBox, QVBoxLayout, QWidget,
 )
+
+from app import theme
 
 
 class PostProcessPanel(QWidget):
@@ -17,59 +20,79 @@ class PostProcessPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        theme.card(self)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
+        layout.setContentsMargins(theme.MARGIN, theme.MARGIN,
+                                  theme.MARGIN, theme.MARGIN)
+        layout.setSpacing(theme.GAP)
 
-        title = QLabel('Post Processing')
-        title.setStyleSheet('font-weight:bold; font-size:14px;')
-        layout.addWidget(title)
+        layout.addWidget(theme.title('Post Processing'))
 
-        layout.addWidget(QLabel('PLY file:'))
-        file_row = QHBoxLayout()
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+
         self.ply_edit = QLineEdit()
         self.ply_edit.setReadOnly(True)
         self.ply_edit.setPlaceholderText('Select reconstructed or cleaned PLY...')
         browse = QPushButton('Browse')
-        browse.setFixedWidth(60)
+        browse.setFixedWidth(72)
         browse.clicked.connect(self._browse_ply)
-        file_row.addWidget(self.ply_edit)
-        file_row.addWidget(browse)
-        layout.addLayout(file_row)
+        ply_field = QWidget()
+        ply_layout = QHBoxLayout(ply_field)
+        ply_layout.setContentsMargins(0, 0, 0, 0)
+        ply_layout.setSpacing(6)
+        ply_layout.addWidget(self.ply_edit)
+        ply_layout.addWidget(browse)
+        form.addRow('PLY file', ply_field)
 
-        plant_row = QHBoxLayout()
-        plant_row.addWidget(QLabel('Expected plants:'))
         self.expected_spin = QSpinBox()
         self.expected_spin.setRange(1, 20)
         self.expected_spin.setValue(1)
-        plant_row.addWidget(self.expected_spin)
-        layout.addLayout(plant_row)
+        form.addRow('Expected plants', self.expected_spin)
+        layout.addLayout(form)
 
-        btn_row = QHBoxLayout()
+        layout.addWidget(theme.separator())
+
+        # Two-by-two grid: four actions no longer fight for one narrow row.
+        btn_grid = QGridLayout()
+        btn_grid.setHorizontalSpacing(8)
+        btn_grid.setVerticalSpacing(8)
         self.clean_btn = QPushButton('Clean PLY')
         self.segment_btn = QPushButton('Segment')
         self.traits_btn = QPushButton('Extract Traits')
         self.pipeline_btn = QPushButton('Full Analysis')
+        theme.variant(self.pipeline_btn, 'primary')
         self.clean_btn.clicked.connect(self._on_clean)
         self.segment_btn.clicked.connect(self._on_segment)
         self.traits_btn.clicked.connect(self._on_traits)
         self.pipeline_btn.clicked.connect(self._on_pipeline)
-        btn_row.addWidget(self.clean_btn)
-        btn_row.addWidget(self.segment_btn)
-        btn_row.addWidget(self.traits_btn)
-        btn_row.addWidget(self.pipeline_btn)
-        layout.addLayout(btn_row)
+        btn_grid.addWidget(self.clean_btn, 0, 0)
+        btn_grid.addWidget(self.segment_btn, 0, 1)
+        btn_grid.addWidget(self.traits_btn, 1, 0)
+        btn_grid.addWidget(self.pipeline_btn, 1, 1)
+        layout.addLayout(btn_grid)
+
+        # Busy indicator: these jobs can run for minutes.
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        self.progress.setTextVisible(False)
+        self.progress.setVisible(False)
+        layout.addWidget(self.progress)
 
         self.status_lbl = QLabel('No post-processing run yet.')
         self.status_lbl.setWordWrap(True)
-        self.status_lbl.setStyleSheet('color:#475569; font-size:11px;')
+        theme.role(self.status_lbl, 'hint')
         layout.addWidget(self.status_lbl)
 
-        self.points_lbl = QLabel('Points: -')
-        self.hull_lbl = QLabel('Hull: -')
-        self.height_lbl = QLabel('Height: -')
+        self.points_lbl = theme.tile('Points: -')
+        self.hull_lbl = theme.tile('Hull: -')
+        self.height_lbl = theme.tile('Height: -')
         for lbl in (self.points_lbl, self.hull_lbl, self.height_lbl):
-            lbl.setStyleSheet('font-size:12px; padding:2px 6px; background:#e2e8f0; border-radius:3px;')
+            lbl.setWordWrap(True)
             layout.addWidget(lbl)
 
     def _browse_ply(self):
@@ -131,11 +154,18 @@ class PostProcessPanel(QWidget):
     def set_running(self, running: bool, message: str = ''):
         for btn in (self.clean_btn, self.segment_btn, self.traits_btn, self.pipeline_btn):
             btn.setEnabled(not running)
+        # Indeterminate while a job runs; hidden when idle.
+        self.progress.setVisible(running)
+        self.progress.setRange(0, 0 if running else 100)
+        if not running:
+            self.progress.setValue(0)
         if message:
+            theme.role(self.status_lbl, 'hint')
             self.status_lbl.setText(message)
 
     def on_postprocess_done(self, mode: str, result):
         self.set_running(False)
+        theme.role(self.status_lbl, 'hint')
         if mode == 'clean':
             self.ply_edit.setText(result.output_ply)
             self.status_lbl.setText(f'Cleaned PLY: {result.output_ply}')
@@ -178,4 +208,5 @@ class PostProcessPanel(QWidget):
 
     def on_postprocess_error(self, msg: str):
         self.set_running(False)
+        theme.role(self.status_lbl, 'error')
         self.status_lbl.setText(f'ERROR: {msg}')

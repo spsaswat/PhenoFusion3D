@@ -13,11 +13,12 @@ import os
 from PyQt5.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import (
-    QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel,
+    QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QMessageBox, QProgressBar, QPushButton, QSpinBox, QVBoxLayout,
     QWidget,
 )
 
+from app import theme
 from capture import CaptureParams, ros_available
 from capture.base import MILLIMETRES_PER_METRE
 
@@ -39,17 +40,22 @@ class CapturePanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        theme.card(self)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(theme.MARGIN, theme.MARGIN,
+                                  theme.MARGIN, theme.MARGIN)
+        layout.setSpacing(theme.GAP)
 
-        title = QLabel('Data Capture')
-        title.setStyleSheet('font-weight:bold; font-size:14px;')
-        layout.addWidget(title)
+        layout.addWidget(theme.title('Data Capture'))
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Backend selector
-        backend_row = QHBoxLayout()
-        backend_row.addWidget(QLabel('Backend:'))
         self.backend_combo = QComboBox()
         self.backend_combo.addItem('Auto', 'auto')
         ros_item = 'ROS + Gantry' if ros_available() else 'ROS + Gantry (unavailable)'
@@ -61,28 +67,16 @@ class CapturePanel(QWidget):
                 'No ROS installation was detected -- ROS + Gantry is disabled.'
             )
             self.backend_combo.setCurrentIndex(2)  # RealSense
-        backend_row.addWidget(self.backend_combo, stretch=1)
-        layout.addLayout(backend_row)
-
-        self.camera_web_ui_btn = QPushButton('Hypercam UI')
-        self.camera_web_ui_btn.setToolTip(self.CAMERA_WEB_UI_URL)
-        self.camera_web_ui_btn.clicked.connect(self._open_camera_web_ui)
-        layout.addWidget(self.camera_web_ui_btn)
+        form.addRow('Backend', self.backend_combo)
 
         # Output root
-        layout.addWidget(QLabel('Output folder:'))
-        out_row = QHBoxLayout()
         self.out_edit = QLineEdit(self._defaults.out_root)
         browse = QPushButton('Browse')
-        browse.setFixedWidth(60)
+        browse.setFixedWidth(72)
         browse.clicked.connect(self._browse_out)
-        out_row.addWidget(self.out_edit)
-        out_row.addWidget(browse)
-        layout.addLayout(out_row)
+        form.addRow('Output folder', self._with_button(self.out_edit, browse))
 
         # Velocity / end position (ROS only)
-        vel_row = QHBoxLayout()
-        vel_row.addWidget(QLabel('Velocity (mm/s):'))
         self.vel_spin = QDoubleSpinBox()
         self.vel_spin.setRange(1.0, 1000.0)
         self.vel_spin.setSingleStep(5.0)
@@ -90,8 +84,8 @@ class CapturePanel(QWidget):
         self.vel_spin.setValue(
             self._defaults.velocity_mps * MILLIMETRES_PER_METRE
         )
-        vel_row.addWidget(self.vel_spin)
-        vel_row.addWidget(QLabel('End (mm):'))
+        form.addRow('Velocity (mm/s)', self.vel_spin)
+
         self.end_spin = QDoubleSpinBox()
         self.end_spin.setRange(50.0, 5000.0)
         self.end_spin.setSingleStep(50.0)
@@ -99,41 +93,40 @@ class CapturePanel(QWidget):
         self.end_spin.setValue(
             self._defaults.end_position_m * MILLIMETRES_PER_METRE
         )
-        vel_row.addWidget(self.end_spin)
-        layout.addLayout(vel_row)
+        form.addRow('End position (mm)', self.end_spin)
 
         # FPS / duration
-        fps_row = QHBoxLayout()
-        fps_row.addWidget(QLabel('FPS:'))
         self.fps_spin = QSpinBox()
         self.fps_spin.setRange(1, 60)
         self.fps_spin.setValue(self._defaults.fps)
-        fps_row.addWidget(self.fps_spin)
-        fps_row.addWidget(QLabel('Duration (s, RealSense):'))
+        form.addRow('Frame rate (FPS)', self.fps_spin)
+
         self.dur_spin = QDoubleSpinBox()
         self.dur_spin.setRange(0.0, 600.0)
         self.dur_spin.setSingleStep(1.0)
         self.dur_spin.setDecimals(1)
         self.dur_spin.setValue(self._defaults.duration_s)
         self.dur_spin.setToolTip('Used by RealSense-only backend. Set 0 to capture until Stop.')
-        fps_row.addWidget(self.dur_spin)
-        layout.addLayout(fps_row)
+        form.addRow('Duration (s)', self.dur_spin)
+        layout.addLayout(form)
+
+        layout.addWidget(theme.hint(
+            'Velocity and end position drive the ROS gantry pass. '
+            'Duration applies to the RealSense-only backend; 0 captures until Stop.'
+        ))
+
+        layout.addWidget(theme.separator())
 
         # Buttons
         btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
         self.capture_btn = QPushButton('Capture')
-        self.capture_btn.setStyleSheet(
-            'QPushButton { background:#16a34a; color:white; border-radius:4px; padding:6px; font-weight:bold; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
+        theme.variant(self.capture_btn, 'primary')
         self.capture_btn.clicked.connect(self._on_capture)
 
         self.stop_btn = QPushButton('Stop')
         self.stop_btn.setEnabled(False)
-        self.stop_btn.setStyleSheet(
-            'QPushButton { background:#dc2626; color:white; border-radius:4px; padding:6px; font-weight:bold; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
+        theme.variant(self.stop_btn, 'danger')
         self.stop_btn.clicked.connect(self.capture_stop_requested.emit)
         btn_row.addWidget(self.capture_btn)
         btn_row.addWidget(self.stop_btn)
@@ -147,17 +140,37 @@ class CapturePanel(QWidget):
         layout.addWidget(self.progress)
 
         self.status_lbl = QLabel('')
-        self.status_lbl.setStyleSheet('color:#64748b; font-size:11px;')
+        theme.role(self.status_lbl, 'hint')
         self.status_lbl.setWordWrap(True)
         layout.addWidget(self.status_lbl)
+
+        # Secondary actions kept out of the main action row.
+        tool_row = QHBoxLayout()
+        tool_row.setSpacing(8)
+        self.camera_web_ui_btn = QPushButton('Hypercam UI')
+        self.camera_web_ui_btn.setToolTip(self.CAMERA_WEB_UI_URL)
+        self.camera_web_ui_btn.clicked.connect(self._open_camera_web_ui)
+        tool_row.addWidget(self.camera_web_ui_btn)
 
         # "Open captured folder" button (hidden until capture finishes)
         self.open_btn = QPushButton('Open captured folder')
         self.open_btn.setVisible(False)
         self.open_btn.clicked.connect(self._open_last)
-        layout.addWidget(self.open_btn)
+        tool_row.addWidget(self.open_btn)
+        tool_row.addStretch()
+        layout.addLayout(tool_row)
 
         self._last_out = None
+
+    def _with_button(self, edit, button):
+        """Pair an input with its Browse button inside one form field."""
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(6)
+        row_layout.addWidget(edit)
+        row_layout.addWidget(button)
+        return row
 
     def _browse_out(self):
         path = QFileDialog.getExistingDirectory(self, 'Output folder root')
@@ -192,15 +205,18 @@ class CapturePanel(QWidget):
                 f'and keep its position between {minimum_mm:.1f} mm and '
                 f'{maximum_mm:.1f} mm, then try again.'
             )
+            theme.role(self.status_lbl, 'error')
             self.status_lbl.setText(message)
             QMessageBox.warning(self, 'Gantry Position Required', message)
             return
 
         if not QDesktopServices.openUrl(QUrl(self.CAMERA_WEB_UI_URL)):
+            theme.role(self.status_lbl, 'error')
             self.status_lbl.setText(
                 f'ERROR: Could not open {self.CAMERA_WEB_UI_URL}'
             )
         else:
+            theme.role(self.status_lbl, 'hint')
             self.status_lbl.setText('Opened Hypercam UI.')
 
     @pyqtSlot(float)
@@ -211,6 +227,7 @@ class CapturePanel(QWidget):
         backend_pref = self.backend_combo.currentData()
         self.set_running(True)
         self.progress.setValue(0)
+        theme.role(self.status_lbl, 'hint')
         self.status_lbl.setText('Starting capture...')
         self.open_btn.setVisible(False)
         self.capture_requested.emit(
@@ -261,6 +278,7 @@ class CapturePanel(QWidget):
                 message += ' WARNING: the gantry did not confirm its return home.'
         except (OSError, ValueError, TypeError):
             pass
+        theme.role(self.status_lbl, 'hint')
         self.status_lbl.setText(message)
         self._last_out = out_dir
         self.open_btn.setVisible(True)
@@ -269,6 +287,7 @@ class CapturePanel(QWidget):
         self.set_running(False)
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
+        theme.role(self.status_lbl, 'error')
         self.status_lbl.setText(f'ERROR: {msg}')
 
     def _open_last(self):

@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QSplitter, QVBoxLayout,
-    QHBoxLayout, QStatusBar, QMenuBar, QAction,
-    QFileDialog, QMessageBox, QLabel
+    QHBoxLayout, QStatusBar, QAction, QApplication,
+    QFileDialog, QMessageBox, QLabel, QPushButton, QScrollArea, QTabWidget
 )
 from PyQt5.QtCore import QTimer, Qt, pyqtSlot
-from PyQt5.QtGui import QFont
 
+from app import theme
 from app.panels.data_panel    import DataPanel
 from app.panels.metrics_panel import MetricsPanel
 from app.panels.log_panel     import LogPanel
@@ -14,6 +14,7 @@ from app.panels.quality_panel import QualityPanel
 from app.panels.gantry_panel  import GantryPanel
 from app.panels.postprocess_panel import PostProcessPanel
 from app.controller           import Controller
+from capture.base              import MILLIMETRES_PER_METRE
 
 
 class MainWindow(QMainWindow):
@@ -21,9 +22,15 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('PhenoFusion3D')
-        self.setMinimumSize(1280, 800)
-        self.resize(1400, 900)
+        self.setMinimumSize(1180, 760)
+        self.resize(1440, 920)
         self._close_pending = False
+
+        # Style the UI even when the window is built directly (tests,
+        # embedding) instead of through main.create_application().
+        app = QApplication.instance()
+        if not theme.is_applied(app):
+            theme.apply(app)
 
         self.controller = Controller(self)
 
@@ -39,21 +46,74 @@ class MainWindow(QMainWindow):
     def _build_layout(self):
         central = QWidget()
         self.setCentralWidget(central)
-        root_layout = QHBoxLayout(central)
-        root_layout.setContentsMargins(6, 6, 6, 6)
-        root_layout.setSpacing(6)
+        root_layout = QVBoxLayout(central)
+        root_layout.setContentsMargins(theme.MARGIN, theme.MARGIN,
+                                       theme.MARGIN, theme.MARGIN)
+        root_layout.setSpacing(theme.GAP)
+
+        root_layout.addWidget(self._build_header())
 
         # Main horizontal splitter
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setHandleWidth(theme.GAP)
+        splitter.setChildrenCollapsible(False)
 
-        # --- Left pane: data + controls ---
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(6)
+        splitter.addWidget(self._build_left_pane())
+        splitter.addWidget(self._build_right_pane())
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([420, 960])
 
-        from PyQt5.QtWidgets import QScrollArea
+        root_layout.addWidget(splitter, stretch=1)
 
+    def _build_header(self):
+        """Slim title strip, plus the always-visible gantry safety controls.
+
+        The workflow panels live in tabs, so the emergency STOP must not
+        sit inside one of them -- it stays here, reachable from every tab
+        and never scrolled out of view.
+        """
+        header = QWidget()
+        row = QHBoxLayout(header)
+        row.setContentsMargins(2, 0, 2, 0)
+        row.setSpacing(10)
+
+        name = QLabel('PhenoFusion3D')
+        theme.role(name, 'appTitle')
+        row.addWidget(name)
+
+        subtitle = QLabel('RGB-D capture, quality assessment and 3D plant reconstruction')
+        theme.role(subtitle, 'appSubtitle')
+        row.addWidget(subtitle)
+        row.addStretch()
+
+        gantry_available = self.controller.gantry.is_available()
+
+        row.addWidget(theme.role(QLabel('Gantry'), 'section'))
+        self.header_position_lbl = QLabel('--- mm')
+        self.header_position_lbl.setAlignment(Qt.AlignCenter)
+        self.header_position_lbl.setMinimumWidth(110)
+        theme.role(self.header_position_lbl, 'readout')
+        row.addWidget(self.header_position_lbl)
+
+        self.header_stop_btn = QPushButton('STOP')
+        self.header_stop_btn.setMinimumWidth(96)
+        theme.variant(self.header_stop_btn, 'danger')
+        self.header_stop_btn.setEnabled(gantry_available)
+        self.header_stop_btn.setToolTip(
+            'Stop all gantry motion immediately.' if gantry_available
+            else GantryPanel._OFFLINE_TOOLTIP
+        )
+        row.addWidget(self.header_stop_btn)
+        return header
+
+    def _build_left_pane(self):
+        """Workflow controls, grouped into tabs.
+
+        The panels themselves are unchanged -- stacking all five in one
+        column was what made the window feel crowded, so related steps
+        now share a tab and only one group is visible at a time.
+        """
         self.capture_panel = CapturePanel()
         self.gantry_panel  = GantryPanel(
             available=self.controller.gantry.is_available()
@@ -62,55 +122,73 @@ class MainWindow(QMainWindow):
         self.quality_panel = QualityPanel()
         self.postprocess_panel = PostProcessPanel()
 
-        # Stack into a scroll area so the left pane stays usable on small screens
+        self.workflow_tabs = QTabWidget()
+        self.workflow_tabs.setDocumentMode(False)
+        self.workflow_tabs.addTab(
+            self._tab_page(self.capture_panel, self.gantry_panel), 'Capture'
+        )
+        self.workflow_tabs.addTab(
+            self._tab_page(self.data_panel, self.quality_panel), 'Reconstruct'
+        )
+        self.workflow_tabs.addTab(
+            self._tab_page(self.postprocess_panel), 'Analyse'
+        )
+
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+        left_layout.addWidget(self.workflow_tabs)
+        left_widget.setMinimumWidth(390)
+        left_widget.setMaximumWidth(560)
+        return left_widget
+
+    def _tab_page(self, *panels):
+        """Put panels in a scrollable page so a small screen still works."""
         inner = QWidget()
         inner_layout = QVBoxLayout(inner)
         inner_layout.setContentsMargins(0, 0, 0, 0)
-        inner_layout.setSpacing(6)
-        inner_layout.addWidget(self.capture_panel)
-        inner_layout.addWidget(self.gantry_panel)
-        inner_layout.addWidget(self.data_panel)
-        inner_layout.addWidget(self.quality_panel)
-        inner_layout.addWidget(self.postprocess_panel)
+        inner_layout.setSpacing(theme.GAP)
+        for panel in panels:
+            inner_layout.addWidget(panel)
         inner_layout.addStretch()
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(inner)
         scroll.setFrameShape(QScrollArea.NoFrame)
-        left_layout.addWidget(scroll)
-        left_widget.setFixedWidth(360)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        # --- Right pane: placeholder + metrics + log ---
+        page = QWidget()
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(theme.GAP, theme.GAP,
+                                       theme.GAP, theme.GAP)
+        page_layout.addWidget(scroll)
+        return page
+
+    def _build_right_pane(self):
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(6)
+        right_layout.setSpacing(theme.GAP)
 
         # Viewer placeholder (Open3D opens its own window for now)
         self.viewer_placeholder = QLabel(
-            'Point cloud viewer will appear in a\n'
-            'separate Open3D window when reconstruction starts.'
+            'Point cloud viewer\n\n'
+            'The 3D view opens in a separate Open3D window\n'
+            'when reconstruction starts.'
         )
         self.viewer_placeholder.setAlignment(Qt.AlignCenter)
-        self.viewer_placeholder.setStyleSheet(
-            'background:#1e1e2e; color:#888; border-radius:6px; font-size:13px;'
-        )
-        self.viewer_placeholder.setMinimumHeight(380)
+        theme.role(self.viewer_placeholder, 'viewer')
+        self.viewer_placeholder.setMinimumHeight(240)
 
         self.metrics_panel = MetricsPanel()
         self.log_panel     = LogPanel()
 
-        right_layout.addWidget(self.viewer_placeholder, stretch=3)
-        right_layout.addWidget(self.metrics_panel,      stretch=1)
-        right_layout.addWidget(self.log_panel,          stretch=1)
-
-        splitter.addWidget(left_widget)
-        splitter.addWidget(right_widget)
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-
-        root_layout.addWidget(splitter)
+        right_layout.addWidget(self.viewer_placeholder, stretch=5)
+        right_layout.addWidget(self.metrics_panel,      stretch=0)
+        right_layout.addWidget(self.log_panel,          stretch=2)
+        return right_widget
 
     def _build_menu(self):
         menubar = self.menuBar()
@@ -127,6 +205,7 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
         action_exit = QAction('Exit', self)
+        action_exit.setShortcut('Ctrl+Q')
         action_exit.triggered.connect(self.close)
         file_menu.addAction(action_exit)
 
@@ -175,6 +254,9 @@ class MainWindow(QMainWindow):
         self.controller.capture_complete.connect(self._on_capture_complete)
         self.controller.capture_error.connect(self.capture_panel.on_error)
         self.controller.capture_stopped.connect(self._continue_pending_close)
+        self.controller.reconstruction_stopped.connect(
+            self._continue_pending_close
+        )
 
         # Gantry panel -> controller -> gantry panel
         self.gantry_panel.jog_requested.connect(self.controller.on_gantry_jog)
@@ -184,6 +266,11 @@ class MainWindow(QMainWindow):
         self.controller.gantry.position_changed.connect(self.gantry_panel.update_position)
         self.controller.gantry.position_changed.connect(
             self.capture_panel.update_gantry_position
+        )
+        # Always-visible safety controls in the header use the same paths.
+        self.header_stop_btn.clicked.connect(self.controller.on_gantry_stop)
+        self.controller.gantry.position_changed.connect(
+            self._update_header_position
         )
         self.controller.gantry.error.connect(self.gantry_panel.show_status)
         # Disable jog/go-to during capture so two motion sources don't fight.
@@ -221,6 +308,12 @@ class MainWindow(QMainWindow):
         # Export actions -> controller
         self.action_export_ply.triggered.connect(self._export_ply)
         self.action_export_csv.triggered.connect(self._export_csv)
+
+    @pyqtSlot(float)
+    def _update_header_position(self, position_m):
+        self.header_position_lbl.setText(
+            f'{position_m * MILLIMETRES_PER_METRE:+.1f} mm'
+        )
 
     @pyqtSlot(str, int)
     def _on_capture_complete(self, out_dir, n_frames):
@@ -306,6 +399,19 @@ class MainWindow(QMainWindow):
             self.controller.on_capture_stop()
             self.capture_panel.status_lbl.setText(
                 'Stopping capture and finishing the save before closing...'
+            )
+            event.ignore()
+            return
+
+        # A reconstruction writes its point cloud incrementally, so it gets
+        # the same courtesy as a capture: ask it to stop, stay open until it
+        # has, then close. Exiting underneath it would abandon the run and
+        # could leave a half-written PLY behind.
+        if self.controller.is_reconstructing():
+            self._close_pending = True
+            self.controller.on_stop_clicked()
+            self.status.showMessage(
+                'Stopping reconstruction and finishing the save before closing...'
             )
             event.ignore()
             return

@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QFileDialog,
 )
 
+from app import theme
+
 
 class QualityPanel(QWidget):
 
@@ -27,30 +29,24 @@ class QualityPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        theme.card(self)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(theme.MARGIN, theme.MARGIN,
+                                  theme.MARGIN, theme.MARGIN)
+        layout.setSpacing(theme.GAP)
 
-        title = QLabel('Data Quality')
-        title.setStyleSheet('font-weight:bold; font-size:14px;')
-        layout.addWidget(title)
+        layout.addWidget(theme.title('Data Quality'))
 
         # Buttons
         btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
         self.quick_btn = QPushButton('Quick Check')
         self.quick_btn.setToolTip('Sample ~15 random pairs (10-30 s)')
-        self.quick_btn.setStyleSheet(
-            'QPushButton { background:#0ea5e9; color:white; border-radius:4px; padding:6px; font-weight:bold; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
+        theme.variant(self.quick_btn, 'primary')
         self.quick_btn.clicked.connect(self.quick_requested.emit)
 
         self.full_btn = QPushButton('Full Report')
         self.full_btn.setToolTip('Evaluate every consecutive pair (slow)')
-        self.full_btn.setStyleSheet(
-            'QPushButton { background:#7c3aed; color:white; border-radius:4px; padding:6px; font-weight:bold; }'
-            'QPushButton:disabled { background:#94a3b8; }'
-        )
         self.full_btn.clicked.connect(self.full_requested.emit)
 
         btn_row.addWidget(self.quick_btn)
@@ -60,10 +56,8 @@ class QualityPanel(QWidget):
         # Verdict banner
         self.verdict_lbl = QLabel('No quality check run yet.')
         self.verdict_lbl.setAlignment(Qt.AlignCenter)
-        self.verdict_lbl.setStyleSheet(
-            'background:#1e1e2e; color:#94a3b8; padding:8px; '
-            'border-radius:6px; font-weight:bold;'
-        )
+        self.verdict_lbl.setWordWrap(True)
+        theme.role(self.verdict_lbl, 'banner')
         layout.addWidget(self.verdict_lbl)
 
         # Progress
@@ -77,17 +71,18 @@ class QualityPanel(QWidget):
         self.table.setHorizontalHeaderLabels(['mean', 'median', 'p25', 'p75'])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.verticalHeader().setVisible(True)
+        self.table.verticalHeader().setDefaultSectionSize(24)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.table.setMinimumHeight(180)
+        self.table.setAlternatingRowColors(True)
+        self.table.setShowGrid(False)
+        self.table.setMinimumHeight(150)
         layout.addWidget(self.table)
 
         # Save report
-        save_row = QHBoxLayout()
         self.save_btn = QPushButton('Save report (CSV + TXT)')
         self.save_btn.setEnabled(False)
         self.save_btn.clicked.connect(self._save_report)
-        save_row.addWidget(self.save_btn)
-        layout.addLayout(save_row)
+        layout.addWidget(self.save_btn)
 
     def set_running(self, running: bool):
         self.quick_btn.setEnabled(not running)
@@ -106,20 +101,21 @@ class QualityPanel(QWidget):
         self.set_running(False)
         self.save_btn.setEnabled(True)
 
-        # Verdict banner colour
+        # Verdict banner colour. Result semantics stay conventional
+        # (green/amber/red) so a reading is never ambiguous.
         v = report.verdict
         colour = {
-            'PASS': '#16a34a',
-            'WARN': '#f59e0b',
-            'FAIL': '#dc2626',
-        }.get(v, '#64748b')
+            'PASS': theme.SUCCESS,
+            'WARN': theme.WARNING,
+            'FAIL': theme.DANGER,
+        }.get(v, theme.TEXT_MUTED)
         msg = f'{v}  --  {report.n_pairs_evaluated} pairs evaluated'
         if report.failing_metrics:
             msg += '\n' + '; '.join(report.failing_metrics)
         self.verdict_lbl.setText(msg)
         self.verdict_lbl.setStyleSheet(
-            f'background:{colour}; color:white; padding:8px; '
-            f'border-radius:6px; font-weight:bold;'
+            f'background:{colour}; color:{theme.TEXT_INVERTED}; padding:10px; '
+            f'border:1px solid {colour}; border-radius:8px; font-weight:600;'
         )
 
         # Table
@@ -136,8 +132,9 @@ class QualityPanel(QWidget):
         self.progress.setValue(0)
         self.verdict_lbl.setText(f'ERROR: {msg}')
         self.verdict_lbl.setStyleSheet(
-            'background:#dc2626; color:white; padding:8px; '
-            'border-radius:6px; font-weight:bold;'
+            f'background:{theme.DANGER}; color:{theme.TEXT_INVERTED}; '
+            f'padding:10px; border:1px solid {theme.DANGER}; '
+            f'border-radius:8px; font-weight:600;'
         )
 
     def _save_report(self):
