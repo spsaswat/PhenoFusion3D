@@ -252,6 +252,55 @@ for the buffered batch to finish saving before the window exits. The gantry
 panel continues to show live position during combined capture and its automatic
 return Home.
 
+## Capture Distance (in-app)
+
+The **Capture Distance** panel reports whether the camera is at a workable
+height above the plant *before* a pass is recorded.
+
+The D405 is trustworthy between **7 cm and 50 cm**. Nearer than 7 cm it cannot
+triangulate and returns nothing; beyond 50 cm stereo error grows with the square
+of the distance, so a surface is still reported but is no longer reliable. The
+panel measures where the plant actually sits and says which way to move.
+
+- **Check Camera** opens the selected RealSense briefly, reads its own depth
+  scale, measures a few aligned depth frames and stops. No output directory,
+  PNG, `session.json` or gantry command is produced, so it is safe to press
+  while the rig is still being positioned. It is disabled while a capture owns
+  the camera.
+- **Check Recording** measures the depth folder currently selected under **Data
+  Loading**, sampling frames evenly across the sequence. This path needs the raw
+  depth unit, entered as **Depth units/m** — a D405 reporting `0.0001 m` per unit
+  is `10000`; millimetre depth is `1000`. The live check reads this from the
+  device instead of assuming it.
+
+The verdict describes the **nearest surface layer**, which for an overhead rig is
+the canopy; the bench and floor behind it are reported separately rather than
+counted against the camera position.
+
+| Verdict | Meaning |
+|---|---|
+| `GOOD` | ≥ 90 % of the plant is inside 7–50 cm and no height change is needed |
+| `ADJUST` | ≥ 60 % is in range, or it is in range but pressed against a boundary — the advice gives the recommended move in cm |
+| `OUT_OF_RANGE` | < 60 % is in range; raise or lower the camera by the stated amount |
+| `NO_DATA` | Too few depth pixels to measure — nothing is within range, or the scene is too dark, glossy or featureless for the stereo module |
+
+Surfaces behind that layer are reported rather than assumed away. The check
+cannot tell a bench from a tall plant without segmentation, so when a large share
+of the frame sits beyond 50 cm behind a reachable layer it says so and names both
+readings: normally background, but a plant reaching that far back cannot be fully
+covered from any one height. It also warns when the nearest readings are pressed
+against the 7 cm floor, because anything closer is dropped by the sensor rather
+than measured — which is exactly where the top of the plant would go missing.
+
+Command-line equivalent for a saved recording (no camera required):
+
+```bash
+python -m processing.capture_distance data/captures/<ts>/depth --depth-scale 10000
+```
+
+Exit status is `0` for `GOOD`, `1` for any other verdict, and `2` on a bad
+argument or unreadable folder.
+
 ## Quality Check (in-app)
 
 The **Data Quality** panel runs depth + ICP diagnostics on the loaded sequence:
@@ -334,6 +383,7 @@ should not be assumed:
 | `processing/rgbd.py` | **`rgbd2pcd`** — RGB + depth → Open3D coloured point cloud |
 | `processing/icp.py` | Colour ICP with point-to-plane fallback |
 | `processing/quality.py` | Depth + ICP diagnostics, thresholds, PASS/WARN/FAIL verdicts |
+| `processing/capture_distance.py` | Capture-distance check against the D405 7-50 cm high-confidence range; also a CLI for saved recordings |
 | `processing/utils.py` | Downsampling, outlier removal, normals, optional GPU/CuPy check |
 | `processing/reconstructor.py` | **`Reconstructor`** — sequential merge via ICP; optional **`save_path`** writes **`merge_pcd_live.ply`** after each successful frame (live merge snapshot) |
 | `processing/pointcloud_post.py` | Post-merge cleanup of the reconstructed cloud |
@@ -342,7 +392,8 @@ should not be assumed:
 | `capture/ros_capture.py` | ROS + gantry backend (synchronised motion and frame capture) |
 | `capture/ros_runtime.py`, `capture/ros_client.py`, `capture/ros_agent.py` | Bridge to the lab's system ROS interpreter without pip-installing `rospy` into the venv |
 | `capture/gantry.py` | `GantryController` — `/cmd_vel` + `/joint_states` motion control |
-| `app/`, `main.py` | PyQt5 UI: capture, gantry, data loading, quality, reconstruction panels |
+| `capture/distance_probe.py` | Read-only depth probe: a few frames plus the device depth scale, no files written |
+| `app/`, `main.py` | PyQt5 UI: capture, capture-distance, gantry, data loading, quality, reconstruction panels |
 | `visualiser/` | Live Open3D viewer |
 | `scripts/reorganize_to_icl_layout.py` | CLI: convert stakeholder flat `rgb_*`/`depth_*` layout → `rgb/N.png`, `depth/N.png` + `kdc_intrinsics.txt` |
 | `scripts/reorganize_data_main.py` | Wrapper: batch that for each subfolder of `data/main` |

@@ -12,6 +12,7 @@ from app.worker       import ProcessingWorker
 from app.capture_worker import CaptureWorker
 from app.quality_worker import QualityWorker
 from app.postprocess_worker import PostProcessWorker
+from app.distance_worker import DistanceWorker
 from capture          import CaptureParams
 from capture.gantry   import GantryController
 from processing.quality import QualityParams, QualityThresholds
@@ -43,6 +44,11 @@ class Controller(QObject):
     postprocess_ready = pyqtSignal(str, object)
     postprocess_error = pyqtSignal(str)
 
+    # Capture-distance pipeline signals
+    distance_status  = pyqtSignal(str)
+    distance_ready   = pyqtSignal(object)
+    distance_error   = pyqtSignal(str)
+
     # Capture lifecycle (panel needs this to disable jog during capture).
     capture_started  = pyqtSignal()
 
@@ -52,6 +58,7 @@ class Controller(QObject):
         self.capture_worker  = None
         self.quality_worker  = None
         self.postprocess_worker = None
+        self.distance_worker = None
         self.viewer          = PointCloudViewer()
         self.final_pcd       = None
         self.all_metrics     = []
@@ -355,6 +362,77 @@ class Controller(QObject):
         self.postprocess_error.emit(msg)
         self.postprocess_worker = None
 
+    # ------------------------------------------------------- capture distance
+    @pyqtSlot(int)
+    def on_distance_camera_check(self, n_frames: int):
+        """Measure how far the plant is from the attached camera."""
+        if self._distance_busy():
+            return
+        if self.capture_worker is not None and self.capture_worker.isRunning():
+            self.distance_error.emit(
+                'A capture is running and owns the camera. Measure the '
+                'distance before starting a capture, or check the recording '
+                'it produces.'
+            )
+            return
+        self.status_changed.emit('Measuring capture distance from the camera...')
+        self._start_distance_worker(
+            DistanceWorker(mode='camera', n_frames=n_frames)
+        )
+
+    @pyqtSlot(str, float, int)
+    def on_distance_dataset_check(
+        self, depth_dir: str, depth_scale: float, n_frames: int
+    ):
+        """Measure the capture distance recorded in saved depth frames."""
+        if self._distance_busy():
+            return
+        depth_dir = depth_dir or self._last_depth_dir or ''
+        if not depth_dir:
+            self.distance_error.emit(
+                'Select a depth folder under Data Loading first.'
+            )
+            return
+        self.status_changed.emit(f'Measuring capture distance in {depth_dir}...')
+        self._start_distance_worker(
+            DistanceWorker(
+                mode='dataset',
+                depth_dir=depth_dir,
+                depth_scale=depth_scale,
+                n_frames=n_frames,
+            )
+        )
+
+    def _distance_busy(self) -> bool:
+        if self.distance_worker is not None and self.distance_worker.isRunning():
+            self.distance_error.emit('A distance check is already running.')
+            return True
+        return False
+
+    def _start_distance_worker(self, worker) -> None:
+        self.distance_worker = worker
+        worker.status.connect(self.distance_status)
+        worker.check_ready.connect(self._on_distance_ready)
+        worker.error.connect(self._on_distance_error)
+        worker.finished.connect(
+            lambda: self._on_distance_thread_stopped(worker)
+        )
+        worker.start()
+
+    @pyqtSlot(object)
+    def _on_distance_ready(self, check):
+        self.status_changed.emit(f'Capture distance: {check.summary()}')
+        self.distance_ready.emit(check)
+
+    @pyqtSlot(str)
+    def _on_distance_error(self, msg: str):
+        self.status_changed.emit(f'Distance check error: {msg}')
+        self.distance_error.emit(msg)
+
+    def _on_distance_thread_stopped(self, worker) -> None:
+        if self.distance_worker is worker:
+            self.distance_worker = None
+
     # ---------------------------------------------------------------- gantry
     @pyqtSlot(float)
     def on_gantry_jog(self, velocity_mps: float):
@@ -382,6 +460,13 @@ class Controller(QObject):
         if capture_worker is not None and capture_worker.isRunning():
             capture_worker.stop()
             capture_worker.wait(5000)
+        # A distance probe holds the camera pipeline. Ask it to stop and wait,
+        # so the device is released before the process exits. The allowance
+        # covers one blocked frame request plus the cancellation check.
+        distance_worker = self.distance_worker
+        if distance_worker is not None and distance_worker.isRunning():
+            distance_worker.stop()
+            distance_worker.wait(8000)
         try:
             self.gantry.shutdown()
         except Exception:

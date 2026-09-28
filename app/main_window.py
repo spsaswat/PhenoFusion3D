@@ -10,6 +10,7 @@ from app.panels.data_panel    import DataPanel
 from app.panels.metrics_panel import MetricsPanel
 from app.panels.log_panel     import LogPanel
 from app.panels.capture_panel import CapturePanel
+from app.panels.distance_panel import DistancePanel
 from app.panels.quality_panel import QualityPanel
 from app.panels.gantry_panel  import GantryPanel
 from app.panels.postprocess_panel import PostProcessPanel
@@ -55,6 +56,7 @@ class MainWindow(QMainWindow):
         from PyQt5.QtWidgets import QScrollArea
 
         self.capture_panel = CapturePanel()
+        self.distance_panel = DistancePanel()
         self.gantry_panel  = GantryPanel(
             available=self.controller.gantry.is_available()
         )
@@ -68,6 +70,7 @@ class MainWindow(QMainWindow):
         inner_layout.setContentsMargins(0, 0, 0, 0)
         inner_layout.setSpacing(6)
         inner_layout.addWidget(self.capture_panel)
+        inner_layout.addWidget(self.distance_panel)
         inner_layout.addWidget(self.gantry_panel)
         inner_layout.addWidget(self.data_panel)
         inner_layout.addWidget(self.quality_panel)
@@ -197,6 +200,30 @@ class MainWindow(QMainWindow):
             lambda *_: self.gantry_panel.set_capture_active(False)
         )
 
+        # Distance panel -> controller -> distance panel
+        self.distance_panel.camera_check_requested.connect(
+            self.controller.on_distance_camera_check
+        )
+        self.distance_panel.dataset_check_requested.connect(
+            self._on_distance_dataset_requested
+        )
+        self.controller.distance_status.connect(self.distance_panel.on_status)
+        self.controller.distance_ready.connect(self.distance_panel.show_check)
+        self.controller.distance_error.connect(self.distance_panel.on_error)
+        # The camera belongs to a running capture, so disable the probe then.
+        self.controller.capture_started.connect(
+            lambda: self.distance_panel.set_camera_available(False)
+        )
+        self.controller.capture_complete.connect(
+            lambda *_: self.distance_panel.set_camera_available(True)
+        )
+        self.controller.capture_error.connect(
+            lambda *_: self.distance_panel.set_camera_available(True)
+        )
+        self.controller.capture_stopped.connect(
+            lambda: self.distance_panel.set_camera_available(True)
+        )
+
         # Quality panel -> controller -> quality panel
         self.quality_panel.quick_requested.connect(self._on_quick_check_requested)
         self.quality_panel.full_requested.connect(self._on_full_report_requested)
@@ -221,6 +248,12 @@ class MainWindow(QMainWindow):
         # Export actions -> controller
         self.action_export_ply.triggered.connect(self._export_ply)
         self.action_export_csv.triggered.connect(self._export_csv)
+
+    @pyqtSlot(float, int)
+    def _on_distance_dataset_requested(self, depth_scale, n_frames):
+        self.controller.on_distance_dataset_check(
+            self.data_panel.depth_edit.text(), depth_scale, n_frames
+        )
 
     @pyqtSlot(str, int)
     def _on_capture_complete(self, out_dir, n_frames):
