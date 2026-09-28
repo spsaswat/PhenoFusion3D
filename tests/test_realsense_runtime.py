@@ -422,7 +422,8 @@ def test_realsense_stops_camera_before_saving_buffered_frames(
 
 
 @pytest.mark.parametrize(
-    "failure_stage", [None, "capture", "stall", "save", "intrinsics"]
+    "failure_stage",
+    [None, "capacity", "capture", "stall", "save", "intrinsics"],
 )
 def test_ros_saves_buffered_frames_before_returning_home(
     tmp_path, monkeypatch, failure_stage
@@ -546,6 +547,14 @@ def test_ros_saves_buffered_frames_before_returning_home(
 
         monkeypatch.setattr(capture, "_capture_one", fail_capture)
 
+    if failure_stage == "capacity":
+        def reject_capacity(*_args, **_kwargs):
+            raise RuntimeError("capacity rejected")
+
+        monkeypatch.setattr(
+            "capture.ros_capture.ensure_capture_capacity", reject_capacity
+        )
+
     def run_capture():
         return capture._run(
             CaptureParams(width=2, height=2, fps=30),
@@ -568,13 +577,13 @@ def test_ros_saves_buffered_frames_before_returning_home(
     assert events.index("gantry shutdown") > events.index("gantry home")
     assert positions == (
         [0.0, 0.005]
-        if failure_stage == "stall"
+        if failure_stage in {"stall", "capacity"}
         else [0.0, 2.0, 0.005]
     )
 
-    if failure_stage in {"capture", "stall"}:
+    if failure_stage in {"capture", "stall", "capacity"}:
         assert progress == (
-            [] if failure_stage == "capture" else [(1, 0), (2, 0)]
+            [] if failure_stage in {"capture", "capacity"} else [(1, 0), (2, 0)]
         )
         assert not any(
             isinstance(event, tuple) and event[0] == "batch write"

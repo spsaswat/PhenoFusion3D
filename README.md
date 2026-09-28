@@ -245,9 +245,12 @@ data/captures/<YYYYMMDDhhmmss>/
 After a successful capture the **Data Loading** fields are auto-populated so you can immediately run the quality check or reconstruction.
 After ROS acquisition stops, buffered frames and intrinsics are saved at the
 endpoint. The go-home command then returns the gantry to `5 mm` at `150 mm/s`;
-the session records whether that return was confirmed. Automatic failures after
-motion begins also attempt Home, while an operator-requested Stop does not
-initiate new motion. Closing the app during capture requests a stop and waits
+the session records whether that return was confirmed. Any automatic failure on a
+gantry whose position has been read also attempts Home — including a pass rejected
+before it starts, which previously left the gantry standing wherever the last run
+finished. A driver that never published `/joint_states` is still left alone rather
+than commanded to move blind, and an operator-requested Stop does not initiate new
+motion. Closing the app during capture requests a stop and waits
 for the buffered batch to finish saving before the window exits. The gantry
 panel continues to show live position during combined capture and its automatic
 return Home.

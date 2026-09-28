@@ -111,6 +111,7 @@ class RosCapture(CaptureBackend):
         endpoint_reached = False
         buffer_limit_reached = False
         motion_started = False
+        position_known = False
 
         try:
             try:
@@ -152,6 +153,7 @@ class RosCapture(CaptureBackend):
                         "/joint_states within 8 seconds. Start the gantry driver "
                         "before capture."
                     )
+                position_known = True
                 if params.velocity_mps <= 0:
                     raise RuntimeError("Gantry capture velocity must be positive.")
                 if self._current_position >= params.end_position_m:
@@ -265,9 +267,16 @@ class RosCapture(CaptureBackend):
             # Returning Home belongs after the buffered image and intrinsics
             # save attempt. Keeping it in this outer cleanup also guarantees
             # that acquisition or persistence failures cannot skip Home.
+            #
+            # position_known covers the checks that reject a pass before it
+            # starts -- capacity, velocity, an endpoint overshoot. Those left
+            # the gantry wherever it was standing, which for a rejected run is
+            # usually mid-rail from the previous pass. Home needs a known
+            # position, so a driver that never published /joint_states is still
+            # left alone rather than commanded to move blind.
             if (
                 gantry is not None
-                and motion_started
+                and (motion_started or position_known)
                 and not self._stop_flag
             ):
                 home_returned = self._return_home_safely(
