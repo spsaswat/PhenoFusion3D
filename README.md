@@ -201,10 +201,16 @@ At the default 1280x720, 30 FPS settings, a 10-second raw buffer uses roughly
 1.3 GiB of RAM before Python/driver overhead; longer captures scale linearly.
 The required `0.005 m` to `1.65 m` ROS pass uses approximately 5.57 GiB of
 raw frame storage and is covered by the 6 GiB configured ceiling.
-Before acquisition, the app checks the estimated raw buffer against available
-RAM and output-disk space. Manual captures are stopped and saved at the runtime
-safety ceiling rather than allowing the process to exhaust memory. ROS passes
-also stop if gantry position does not advance for five seconds.
+Before acquisition, the app checks the estimated raw buffer against three
+ceilings — the configured `max_buffer_gib`, available memory, and free output-disk
+space — and the rejection names whichever one ran out. On Linux, available memory
+is read from `MemAvailable`, not `MemFree`: the reclaimable page cache keeps
+`MemFree` at a few hundred MiB on any machine that has been running for a while,
+which made the check reject passes that fit comfortably. A full pass needs roughly
+`11 GiB` of `MemAvailable`, because capture takes at most half of what is
+available. Manual captures are stopped and saved at the runtime safety ceiling
+rather than allowing the process to exhaust memory. ROS passes also stop if gantry
+position does not advance for five seconds.
 
 Camera selection happens when capture starts. One connected RGB-D RealSense is
 selected automatically. If several are connected, select one by serial before

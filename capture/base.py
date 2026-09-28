@@ -29,7 +29,12 @@ DEFAULT_END_POSITION_M = 1.65
 DEFAULT_MAX_BUFFER_GIB = 6.0
 MEMORY_HEADROOM_FRACTION = 0.5
 DISK_RESERVE_BYTES = 512 * 1024 ** 2
-PNG_WORST_CASE_FACTOR = 1.1
+# Bytes the saved PNGs occupy per byte of raw frame. Lossless PNG cannot exceed
+# the raw image by more than container overhead, which the 512 MiB reserve
+# absorbs, so 1.0 is the safe bound. Real RGB-D frames compress to roughly
+# half of this; measure a capture (see docs) before lowering it on evidence.
+PNG_DISK_FACTOR = 1.0
+MEMINFO_PATH = "/proc/meminfo"
 
 
 @dataclass
@@ -202,8 +207,28 @@ class CaptureBackend(abc.ABC):
             self._position_callback(float(position_m))
 
 
+def _meminfo_bytes(field: str) -> Optional[int]:
+    """Read one ``/proc/meminfo`` field as bytes, or None if unavailable."""
+    try:
+        with open(MEMINFO_PATH, "r") as meminfo:
+            for line in meminfo:
+                name, separator, rest = line.partition(":")
+                if not separator or name.strip() != field:
+                    continue
+                parts = rest.split()
+                if not parts:
+                    return None
+                value = int(parts[0])
+                if len(parts) > 1 and parts[1].lower() == "kb":
+                    value *= 1024
+                return value
+    except (OSError, ValueError):
+        return None
+    return None
+
+
 def _available_memory_bytes() -> Optional[int]:
-    """Best-effort free-memory query using only the standard library."""
+    """Best-effort available-memory query using only the standard library."""
     if os.name == "nt":
         class MemoryStatus(ctypes.Structure):
             _fields_ = [
@@ -226,6 +251,15 @@ def _available_memory_bytes() -> Optional[int]:
         except Exception:
             return None
 
+    # MemAvailable is the kernel's own estimate of what a new allocation can
+    # obtain without swapping. SC_AVPHYS_PAGES reports MemFree instead, which
+    # counts the reclaimable page cache as unavailable -- on a machine that has
+    # been running for a while that is a few hundred MiB no matter how much RAM
+    # is installed, so a capture that fits comfortably was being rejected.
+    available = _meminfo_bytes("MemAvailable")
+    if available is not None:
+        return available
+
     try:
         pages = os.sysconf("SC_AVPHYS_PAGES")
         page_size = os.sysconf("SC_PAGE_SIZE")
@@ -239,16 +273,25 @@ def frame_pair_bytes(width: int, height: int) -> int:
     return int(width) * int(height) * 5
 
 
-def capture_buffer_limit_bytes(out_dir: str, max_buffer_gib: float) -> int:
-    """Return a conservative RAM/disk-backed raw-frame buffer ceiling."""
+def _capture_buffer_limits(out_dir: str, max_buffer_gib: float) -> list:
+    """Candidate raw-buffer ceilings as (resource, bytes, human detail)."""
     if max_buffer_gib <= 0:
         raise RuntimeError("Capture buffer limit must be greater than zero.")
-    configured = max(1, int(float(max_buffer_gib) * GIB))
-    limits = [configured]
+
+    limits = [(
+        "configured",
+        max(1, int(float(max_buffer_gib) * GIB)),
+        f"the configured ceiling of {float(max_buffer_gib):.2f} GiB",
+    )]
 
     available_memory = _available_memory_bytes()
     if available_memory is not None:
-        limits.append(max(1, int(available_memory * MEMORY_HEADROOM_FRACTION)))
+        limits.append((
+            "memory",
+            max(1, int(available_memory * MEMORY_HEADROOM_FRACTION)),
+            f"{available_memory / GIB:.2f} GiB of available memory, of which "
+            f"capture may use {MEMORY_HEADROOM_FRACTION:.0%}",
+        ))
 
     disk_free = shutil.disk_usage(out_dir).free
     usable_disk = max(0, disk_free - DISK_RESERVE_BYTES)
@@ -256,8 +299,23 @@ def capture_buffer_limit_bytes(out_dir: str, max_buffer_gib: float) -> int:
         raise RuntimeError(
             "The output disk has less than the required 512 MiB safety reserve."
         )
-    limits.append(max(1, int(usable_disk / PNG_WORST_CASE_FACTOR)))
-    return min(limits)
+    limits.append((
+        "disk",
+        max(1, int(usable_disk / PNG_DISK_FACTOR)),
+        f"{disk_free / GIB:.2f} GiB free on the output disk, less the "
+        f"{DISK_RESERVE_BYTES / GIB:.2f} GiB safety reserve",
+    ))
+    return limits
+
+
+def capture_buffer_limit_bytes(out_dir: str, max_buffer_gib: float) -> int:
+    """Return a conservative RAM/disk-backed raw-frame buffer ceiling."""
+    return min(
+        limit
+        for _resource, limit, _detail in _capture_buffer_limits(
+            out_dir, max_buffer_gib
+        )
+    )
 
 
 def ensure_capture_capacity(
@@ -268,13 +326,21 @@ def ensure_capture_capacity(
     height: int,
 ) -> int:
     """Reject a requested capture that cannot safely fit in RAM and on disk."""
-    limit = capture_buffer_limit_bytes(out_dir, params.max_buffer_gib)
+    resource, limit, detail = min(
+        _capture_buffer_limits(out_dir, params.max_buffer_gib),
+        key=lambda candidate: candidate[1],
+    )
     required = frame_pair_bytes(width, height) * max(0, int(frame_count))
     if required > limit:
+        remedy = {
+            "configured": "Raise max_buffer_gib, or reduce",
+            "memory": "Close other applications to free memory, or reduce",
+            "disk": "Free space on the output disk, or reduce",
+        }[resource]
         raise RuntimeError(
             "Capture settings require approximately "
-            f"{required / GIB:.2f} GiB of raw RGB/depth buffering, but the "
-            f"current safe RAM/disk limit is {limit / GIB:.2f} GiB. Reduce "
-            "duration, FPS, resolution, end position, or gantry travel time."
+            f"{required / GIB:.2f} GiB of raw RGB/depth buffering, but "
+            f"{detail} allows only {limit / GIB:.2f} GiB. {remedy} duration, "
+            "FPS, resolution, end position, or gantry travel time."
         )
     return limit

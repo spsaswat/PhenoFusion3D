@@ -264,7 +264,7 @@ def test_capture_capacity_rejects_an_unsafe_memory_request(tmp_path):
     out_dir = CaptureBackend._make_out_dir(str(tmp_path))
     params = CaptureParams(max_buffer_gib=0.000001)
 
-    with pytest.raises(RuntimeError, match="safe RAM/disk limit"):
+    with pytest.raises(RuntimeError, match="raw RGB/depth buffering"):
         ensure_capture_capacity(out_dir, params, 2, 100, 100)
 
 
