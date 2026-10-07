@@ -1,0 +1,20 @@
+# Research gaps: 28 September 2026 five-plant recordings
+
+Status recorded 7 October 2026. The user explicitly cannot supply the physical ChArUco size or recording units yet and requested that processing continue with these gaps recorded. No guessed value is accepted as measured calibration.
+
+| Gap | Current evidence | Consequence | Work that can continue |
+|---|---|---|---|
+| Printed ChArUco square pitch | Actual recorded targets are ChArUco. Conditional image/motion estimates exist; remembered 127/76 measurement is unresolved. | Absolute lengths, areas and registration tolerances retain conditional scale. | Source matching, observed geometry, conditional descriptors, calibration diagnostics. |
+| Recording depth and gantry units | Export/session metadata did not preserve independent unit verification. Current D405/L515 conventions have internal consistency evidence. | Internal agreement is not independent physical accuracy. No scale fitting to validation measurements. | Preserve current coordinates and document conventions; recompute derived measurements when independent units become available. |
+| True plant base and tip / organ identity | Cleanup excludes approximate basal bands; some leaves and tips are incomplete or overlap. | Bounding-box height cannot silently become stem-base-to-tip height. Only explicitly matched organs are comparable. | Review original source views and fused point IDs; retain unmatched dimensions and reasons instead of inventing measurements. |
+| Manual reference definitions | Some ruler endpoints/junctions are unreadable; P1 width annotation conflicts with photographed section; P4 organ type unresolved. | Operator annotations and approximate photo intervals are different evidence classes. Some leaf comparisons remain ineligible. | Preserve original annotations and separately report photo readings and definition-compatible matches. |
+| HSI radiometric reference | White board at scan start and fixed exposure confirmed; spectral reflectance unknown; shutter-closed dark tail unconfirmed. | White-board-relative signals and indices are exploratory, not verified reflectance or physiological measurements. | Measured DN, reference/clip masks, provisional ratios, sensitivity analysis, per-region spectra. |
+| HSI projection at plant height | Planar controls support table alignment; independent height-dependent spatial calibration and line/start synchronization are missing. | A table homography cannot establish accurate measured spectra on elevated 3D leaves. | Build control/configuration records, compare planar diagnostics, prepare mapping with explicit calibration requirements. |
+| Missing plant surfaces | Limited viewpoints, occlusion and unreliable thin-surface observations leave gaps. | Completeness and true whole-leaf area/volume cannot be inferred from appearance. | Quantify observed surfaces and identify unsupported regions; retain uncertainty. |
+| Generalization and lab verification | Latest selections include reviewed dataset-specific masks. No newly captured independent dataset or lab hardware is available here. | New offline functions can be tested computationally, but arbitrary-plant robustness and lab operation remain unverified. | Add isolated offline tools and test input/output invariants, cancellation and capture-busy guards without changing acquisition paths. |
+
+## Reporting rule
+
+Keep successful computational checks, conditional scientific results and missing physical evidence separate. A configuration flag or a low table-plane residual is not sufficient to declare physical calibration. Do not substitute cleanup cut planes for stem bases, use validation traits to tune scale, invent spectra on unmapped points, or count empty validation sets as zero error.
+
+The separate research continuation folder is `generated/research_followthrough_20261007/`. Original recordings, D405/L515 reconstructions, fused cloud and cleanup partitions remain preserved. Additional evidence can resolve individual gaps later without rerunning or discarding unrelated completed stages.

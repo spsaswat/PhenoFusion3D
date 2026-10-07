@@ -1,0 +1,416 @@
+{
+  "schema_version": 1,
+  "dataset_label": "20260928 run003 fx17: reviewed tissue patches, not automatic plant segmentation",
+  "header": "../../data/main/test_plant_10-7/20260928/003-specim-fx17.hdr",
+  "data": "../../data/main/test_plant_10-7/20260928/003-specim-fx17.bil",
+  "suspected_clipping_dn": 65520,
+  "sampling": {
+    "line_step": 2,
+    "column_step": 2
+  },
+  "selection": {
+    "review_status": "assistant_reviewed",
+    "provenance": "Recorded run003 camera imagery reviewed 2026-10-07; candidate tissue interiors only. R1-R5 are scan-order regions, not operator-confirmed specimen or organ labels. Each camera reviewed independently.",
+    "polygons": [
+      {
+        "patch_id": 1,
+        "name": "green_tissue_a",
+        "region_id": "R1",
+        "column_line": [
+          [
+            462,
+            253
+          ],
+          [
+            481,
+            247
+          ],
+          [
+            495,
+            252
+          ],
+          [
+            483,
+            260
+          ],
+          [
+            465,
+            260
+          ]
+        ]
+      },
+      {
+        "patch_id": 2,
+        "name": "green_tissue_b",
+        "region_id": "R1",
+        "column_line": [
+          [
+            408,
+            277
+          ],
+          [
+            432,
+            275
+          ],
+          [
+            449,
+            274
+          ],
+          [
+            435,
+            280
+          ],
+          [
+            409,
+            281
+          ]
+        ]
+      },
+      {
+        "patch_id": 3,
+        "name": "upper_broad_leaf",
+        "region_id": "R2",
+        "column_line": [
+          [
+            220,
+            516
+          ],
+          [
+            244,
+            504
+          ],
+          [
+            271,
+            511
+          ],
+          [
+            293,
+            533
+          ],
+          [
+            276,
+            548
+          ],
+          [
+            235,
+            543
+          ]
+        ]
+      },
+      {
+        "patch_id": 4,
+        "name": "lower_leaf",
+        "region_id": "R2",
+        "column_line": [
+          [
+            223,
+            704
+          ],
+          [
+            248,
+            696
+          ],
+          [
+            277,
+            704
+          ],
+          [
+            278,
+            716
+          ],
+          [
+            249,
+            722
+          ],
+          [
+            230,
+            718
+          ]
+        ]
+      },
+      {
+        "patch_id": 5,
+        "name": "upper_left_leaf",
+        "region_id": "R3",
+        "column_line": [
+          [
+            238,
+            843
+          ],
+          [
+            271,
+            839
+          ],
+          [
+            297,
+            849
+          ],
+          [
+            306,
+            861
+          ],
+          [
+            280,
+            870
+          ],
+          [
+            250,
+            860
+          ]
+        ]
+      },
+      {
+        "patch_id": 6,
+        "name": "upper_right_leaf",
+        "region_id": "R3",
+        "column_line": [
+          [
+            426,
+            833
+          ],
+          [
+            455,
+            826
+          ],
+          [
+            480,
+            837
+          ],
+          [
+            488,
+            858
+          ],
+          [
+            458,
+            865
+          ],
+          [
+            430,
+            853
+          ]
+        ]
+      },
+      {
+        "patch_id": 7,
+        "name": "lower_right_leaf",
+        "region_id": "R3",
+        "column_line": [
+          [
+            416,
+            1054
+          ],
+          [
+            445,
+            1039
+          ],
+          [
+            480,
+            1054
+          ],
+          [
+            474,
+            1079
+          ],
+          [
+            445,
+            1088
+          ],
+          [
+            419,
+            1073
+          ]
+        ]
+      },
+      {
+        "patch_id": 8,
+        "name": "upper_leaf",
+        "region_id": "R4",
+        "column_line": [
+          [
+            326,
+            1184
+          ],
+          [
+            351,
+            1180
+          ],
+          [
+            376,
+            1186
+          ],
+          [
+            383,
+            1201
+          ],
+          [
+            360,
+            1205
+          ],
+          [
+            335,
+            1198
+          ]
+        ]
+      },
+      {
+        "patch_id": 9,
+        "name": "lower_leaf",
+        "region_id": "R4",
+        "column_line": [
+          [
+            303,
+            1340
+          ],
+          [
+            316,
+            1326
+          ],
+          [
+            334,
+            1333
+          ],
+          [
+            337,
+            1351
+          ],
+          [
+            316,
+            1372
+          ],
+          [
+            305,
+            1360
+          ]
+        ]
+      },
+      {
+        "patch_id": 10,
+        "name": "lower_left_leaf",
+        "region_id": "R5",
+        "column_line": [
+          [
+            177,
+            1725
+          ],
+          [
+            207,
+            1707
+          ],
+          [
+            239,
+            1689
+          ],
+          [
+            278,
+            1706
+          ],
+          [
+            292,
+            1737
+          ],
+          [
+            265,
+            1762
+          ],
+          [
+            217,
+            1756
+          ]
+        ]
+      },
+      {
+        "patch_id": 11,
+        "name": "upper_left_leaf",
+        "region_id": "R5",
+        "column_line": [
+          [
+            156,
+            1551
+          ],
+          [
+            180,
+            1548
+          ],
+          [
+            207,
+            1566
+          ],
+          [
+            243,
+            1572
+          ],
+          [
+            235,
+            1592
+          ],
+          [
+            193,
+            1597
+          ],
+          [
+            168,
+            1582
+          ]
+        ]
+      },
+      {
+        "patch_id": 12,
+        "name": "outer_leaf_UNCOVERED",
+        "region_id": "R5",
+        "column_line": [
+          [
+            553,
+            1519
+          ],
+          [
+            577,
+            1501
+          ],
+          [
+            607,
+            1518
+          ],
+          [
+            623,
+            1543
+          ],
+          [
+            604,
+            1558
+          ],
+          [
+            569,
+            1550
+          ]
+        ]
+      }
+    ]
+  },
+  "normalization": {
+    "white_roi": [
+      8,
+      45,
+      90,
+      520
+    ],
+    "dark_roi": [
+      2080,
+      2127,
+      0,
+      640
+    ],
+    "white_identity": "User-confirmed white board at scan start; spectral reflectance unknown",
+    "settings_assumption": "User confirmed fixed exposure; gain and source export packing not independently established",
+    "dark_status": "assumed_tail",
+    "dark_provenance": "Abrupt final low-signal tail; shutter closure unconfirmed. This is an explicit assumed offset, not certified dark calibration."
+  },
+  "indices": [
+    "NDVI_800_680",
+    "NDRE_790_720",
+    "GNDVI_800_550",
+    "PRI_531_570",
+    "PSRI_678_500_750",
+    "SIPI_800_445_680"
+  ],
+  "max_band_error_nm": 3
+}

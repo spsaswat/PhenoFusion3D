@@ -10,11 +10,17 @@ tell, before reconstructing, whether the data is good enough to use.
 Developed by the ANU COMP8715 TechLauncher team for plant-phenotyping and
 controlled-environment plant-imaging workflows.
 
-The application also provides **Analysis → Offline reconstruction and trait
-validation** for saved recordings. It includes automatic RGB stereo/ICP recovery,
+The application also provides **Analysis → Offline reconstruction, traits and
+hyperspectral fusion...** for saved recordings. It includes automatic RGB stereo/ICP recovery,
 the existing sensor-depth ICP route, canopy comparisons and matched leaf
 measurements. See [the offline analysis guide](ANALYSIS_WORKFLOW.md) for supported
 capture geometry, calibration requirements and lab acceptance checks.
+
+The **Research workspace** tab assembles saved specimen clouds, reports and an
+evidence-gap ledger, with source-index endpoint review and provisional matched
+measurements. See [the Research workspace guide](docs/RESEARCH_WORKSPACE.md) for
+setup files, offline use and the distinction between conditional results and
+physical calibration.
 
 ## Keywords
 

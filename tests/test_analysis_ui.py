@@ -21,7 +21,7 @@ def window():
 
 def test_new_dialog_preserves_main_capture_and_gantry_controls(window):
     app,w=window
-    assert w.analysis_dialog.tabs.count()==5
+    assert w.analysis_dialog.tabs.count()==6
     assert w.capture_panel is not None and w.gantry_panel is not None
     assert any(a.text()=='File' for a in w.menuBar().actions())
     assert any(a.text()=='Analysis' for a in w.menuBar().actions())
@@ -105,3 +105,93 @@ def test_report_viewer_refuses_active_capture(window,tmp_path,monkeypatch):
     assert d.report_process.state()==QProcess.NotRunning
     assert messages and 'Processing busy' in messages[0]
     w.controller.capture_worker=None
+
+
+def test_research_template_and_build_use_isolated_workspace_module(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    assert d.tabs.tabText(5)=='Research workspace'
+    d.research_output.setText(str(tmp_path))
+    calls=[];monkeypatch.setattr(d,'launch',lambda *args:calls.append(args))
+    d.research_template()
+    module,args,output=calls.pop()
+    assert module=='processing.research_workspace'
+    assert args==['template','--output',output] and output.parent==tmp_path
+    manifest=tmp_path/'setup.json';annotations=tmp_path/'reviewed_landmarks.json'
+    d.research_manifest.setText(str(manifest));d.research_annotations.setText(str(annotations))
+    d.build_research_workspace()
+    module,args,output=calls.pop()
+    assert module=='processing.research_workspace'
+    assert args==['build','--manifest',str(manifest),'--output',output,'--annotations',str(annotations)]
+    d.research_annotations.clear();d.build_research_workspace()
+    assert '--annotations' not in calls.pop()[1]
+
+
+def test_research_workspace_requires_setup_and_output_selection(window):
+    app,w=window;d=w.analysis_dialog
+    d.research_manifest.clear()
+    with pytest.raises(ValueError,match='setup JSON'):d.build_research_workspace()
+    d.research_output.clear()
+    with pytest.raises(ValueError,match='results parent'):d.research_template()
+    assert d.process.state()==QProcess.NotRunning
+
+
+def test_spectral_extraction_uses_explicit_setup_and_isolated_process(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    d.spectral_config.clear()
+    with pytest.raises(ValueError,match='spectral extraction setup'):d.extract_research_spectra()
+    config=tmp_path/'regions.json';d.spectral_config.setText(str(config));d.research_output.setText(str(tmp_path))
+    calls=[];monkeypatch.setattr(d,'launch',lambda *args:calls.append(args))
+    d.extract_research_spectra()
+    module,args,out=calls[0]
+    assert module=='processing.research_workspace.spectral_extract'
+    assert args==['--config',str(config),'--output',out] and out.parent==tmp_path
+
+
+def test_research_build_refuses_active_capture(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    class Busy:
+        def isRunning(self):return True
+    w.controller.capture_worker=Busy()
+    d.research_manifest.setText(str(tmp_path/'setup.json'));d.research_output.setText(str(tmp_path))
+    messages=[];monkeypatch.setattr(QMessageBox,'information',lambda *args:messages.append(args))
+    d.build_research_workspace()
+    assert d.process.state()==QProcess.NotRunning
+    assert not list(tmp_path.iterdir())
+    assert messages and 'Processing busy' in messages[0]
+    w.controller.capture_worker=None
+
+
+def test_workspace_report_precedes_json_and_opens_in_guarded_viewer(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    (tmp_path/'result').mkdir();report=tmp_path/'result/index.html';report.write_text('<html>Conditional research report</html>')
+    template=tmp_path/'workspace_template.json';template.write_text('{}')
+    (tmp_path/'preflight.json').write_text('{}')
+    d.output_path=tmp_path;d.active_module='processing.research_workspace'
+    d.finished(0,QProcess.NormalExit)
+    assert d.result_path==report and d.open_result.isEnabled()
+    assert d.research_manifest.text()==str(template)
+    assert not d.research_annotations.text()
+    assert d.research_report.text()==str(report)
+    calls=[];monkeypatch.setattr(d,'show_hyperspectral_report',lambda path,**kw:calls.append((path,kw)))
+    d.open_latest()
+    assert calls==[(report,{'research':True})]
+    d.result_module='processing.research_workspace.spectral_extract';d.open_latest()
+    assert calls[-1]==(report,{'research':True})
+    # Existing historical reports keep their original specialized route.
+    historical=tmp_path/'20260828_showcase/index.html'
+    d.result_path=historical;d.result_module='processing.hyperspectral';d.open_latest()
+    assert calls[-1]==(historical,{}) and d.hsi_report.text()==str(historical)
+
+
+def test_capture_cancels_workspace_and_does_not_offer_partial_report(window,tmp_path):
+    app,w=window;d=w.analysis_dialog
+    d.output_path=tmp_path;d.active_module='processing.research_workspace'
+    (tmp_path/'result').mkdir();(tmp_path/'result/index.html').write_text('<html>Partial</html>')
+    d.process.start(__import__('sys').executable,['-c','import time; time.sleep(30)'])
+    assert d.process.waitForStarted(3000)
+    w.controller.capture_started.emit()
+    assert d.process.waitForFinished(3000)
+    app.processEvents()
+    assert d.cancelled and d.result_path is None
+    assert not d.open_result.isEnabled()
+    assert json.loads((tmp_path/'run_status.json').read_text())['status']=='cancelled'

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "dataset_label": "REPLACE with reviewed recording identity",
+  "header": "../../data/YOUR_RECORDING/cube.hdr",
+  "data": "../../data/YOUR_RECORDING/cube.bil",
+  "suspected_clipping_dn": null,
+  "sampling": {
+    "line_step": 2,
+    "column_step": 2
+  },
+  "selection": {
+    "review_status": "operator_reviewed",
+    "provenance": "REPLACE with source imagery and reviewer evidence for these region labels",
+    "label_mask_npy": "YOUR_REVIEWED_INTEGER_LABEL_MASK.npy",
+    "label_names": {
+      "1": "reviewed_tissue_patch"
+    }
+  },
+  "normalization": null,
+  "indices": [],
+  "max_band_error_nm": 3
+}

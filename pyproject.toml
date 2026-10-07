@@ -54,6 +54,9 @@ dev = [
 [project.scripts]
 phenofusion3d = "main:main"
 
+[tool.setuptools]
+py-modules = ["main"]
+
 [tool.setuptools.packages.find]
 include = ["app*", "capture*", "processing*", "file_io*", "visualiser*"]
 exclude = ["data*", "stakeholder_reference*", "tests*", "venv*"]

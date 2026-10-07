@@ -1,7 +1,7 @@
 # Offline reconstruction and trait validation
 
 Open the normal application with `python main.py` or the existing lab launcher,
-then choose **Analysis → Offline reconstruction and trait validation**. Capture,
+then choose **Analysis → Offline reconstruction, traits and hyperspectral fusion...**. Capture,
 gantry movement, the original reconstruction button and the lab launcher retain
 their existing implementation. Analysis runs in a separate local Python process;
 no API, model service, token, internet connection or Codex session is required.
@@ -136,6 +136,19 @@ HTML result viewer. The automatic recipe is restricted to the historical dataset
 new recordings and physical fusion accuracy remain unvalidated. Current 3D
 reconstruction and trait code is preserved. Read
 [HYPERSPECTRAL_WORKFLOW.md](HYPERSPECTRAL_WORKFLOW.md) before running it.
+
+## Research workspace
+
+The sixth tab, **Research workspace**, brings saved specimen/context clouds,
+research reports, an evidence-gap ledger and source-index endpoint measurements
+into a local report. Use a setup JSON and a fresh output folder; the tab can create
+a setup template. Source-mask choices remain dataset-specific, coordinate units
+can remain conditional, and explicit endpoint comparisons stay provisional.
+Physical accuracy and calibrated spectral fusion are not certified by a successful
+workspace build. Source clouds and linked report dependencies must remain available.
+
+See [the Research workspace guide](docs/RESEARCH_WORKSPACE.md) for the schema,
+point-review procedure, command-line equivalents and calibration boundaries.
 
 ## Lab acceptance
 

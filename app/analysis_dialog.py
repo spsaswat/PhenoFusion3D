@@ -26,13 +26,14 @@ class AnalysisDialog(QDialog):
         self.report_process.setProcessChannelMode(QProcess.MergedChannels)
         self.report_process.readyReadStandardOutput.connect(self.read_report_output)
         self.report_process.errorOccurred.connect(self.report_error)
-        self.result_path=None;self.cancelled=False;self.log_handle=None
+        self.result_path=None;self.result_module=None;self.active_module=None
+        self.cancelled=False;self.log_handle=None
         layout=QVBoxLayout(self)
         intro=QLabel('Process saved recordings locally. No internet or AI service is required.\nResults remain candidates until coverage, specimen identity and physical dimensions are checked.')
         intro.setWordWrap(True);layout.addWidget(intro)
         self.tabs=QTabWidget();layout.addWidget(self.tabs)
         self.buttons=[]
-        self.reconstruction_tab();self.traits_tab();self.comparison_tab();self.leaf_tab();self.hyperspectral_tab()
+        self.reconstruction_tab();self.traits_tab();self.comparison_tab();self.leaf_tab();self.hyperspectral_tab();self.research_tab()
         row=QHBoxLayout()
         self.stop=QPushButton('Cancel processing');self.stop.setEnabled(False);self.stop.clicked.connect(self.cancel)
         self.open_result=QPushButton('Open latest result');self.open_result.setEnabled(False);self.open_result.clicked.connect(self.open_latest)
@@ -151,7 +152,58 @@ class AnalysisDialog(QDialog):
         out=self.hyperspectral_output()
         self.launch('processing.hyperspectral',['workspace','--output',out],out)
 
-    def show_hyperspectral_report(self,path):
+    def research_tab(self):
+        form=self.page('Research workspace')
+        note=QLabel('Build an offline report from saved research evidence. Source masks remain dataset-specific reviewed candidates. Metric units are conditional until verified; incomplete plant geometry does not establish physical plant height. Missing calibration evidence remains a recorded gap.')
+        note.setWordWrap(True);form.addRow(note)
+        self.research_manifest=self.path(form,'Workspace setup JSON',False)
+        self.research_annotations=self.path(form,'Reviewed landmark JSON (optional)',False)
+        self.research_output=self.path(form,'New results parent folder')
+        self.button(form,'Create workspace setup template',self.research_template)
+        self.button(form,'Build / check research workspace',self.build_research_workspace)
+        self.research_report=self.path(form,'Saved workspace report (index.html)',False)
+        self.button(form,'Open saved workspace report in software',lambda:self.show_hyperspectral_report(self.research_report.text(),research=True))
+        spectral_note=QLabel('Measured spectra: use an explicit ENVI/reference/region setup. Tissue regions require review; unknown references stay provisional. This step does not map spectra onto 3D leaves.')
+        spectral_note.setWordWrap(True);form.addRow(spectral_note)
+        self.spectral_config=self.path(form,'Spectral extraction setup JSON',False)
+        self.button(form,'Extract measured spectra from reviewed regions',self.extract_research_spectra)
+        project=Path(__file__).resolve().parents[1]
+        manifest=project/'generated/research_followthrough_20261007/workspace_manifest.json'
+        if manifest.is_file():
+            self.research_manifest.setText(str(manifest))
+            endpoints=manifest.parent/'workspace_endpoints.json'
+            if endpoints.is_file():self.research_annotations.setText(str(endpoints))
+            report=manifest.parent/'index.html'
+            if report.is_file():self.research_report.setText(str(report))
+            spectral=manifest.parent/'spectral/extraction_config.json'
+            if spectral.is_file():self.spectral_config.setText(str(spectral))
+        self.research_output.setText(str(project/'generated/research_workspace'))
+
+    def research_run_output(self):
+        parent=self.research_output.text().strip()
+        if not parent:raise ValueError('Choose a new results parent folder outside the selected inputs.')
+        return Path(parent)/f'run_{datetime.now():%Y%m%d_%H%M%S_%f}'
+
+    def research_template(self):
+        out=self.research_run_output()
+        self.launch('processing.research_workspace',['template','--output',out],out)
+
+    def build_research_workspace(self):
+        manifest=self.research_manifest.text().strip()
+        if not manifest:raise ValueError('Choose a workspace setup JSON or create a template first.')
+        out=self.research_run_output()
+        args=['build','--manifest',manifest,'--output',out]
+        annotations=self.research_annotations.text().strip()
+        if annotations:args+=['--annotations',annotations]
+        self.launch('processing.research_workspace',args,out)
+
+    def extract_research_spectra(self):
+        config=self.spectral_config.text().strip()
+        if not config:raise ValueError('Choose a spectral extraction setup with reviewed regions and reference assumptions.')
+        out=self.research_run_output()
+        self.launch('processing.research_workspace.spectral_extract',['--config',config,'--output',out],out)
+
+    def show_hyperspectral_report(self,path,research=False):
         for name in ('capture_worker','worker','quality_worker','postprocess_worker'):
             worker=getattr(self.controller,name,None)
             if worker is not None and worker.isRunning():
@@ -162,7 +214,8 @@ class AnalysisDialog(QDialog):
         if self.report_process.state()!=QProcess.NotRunning:
             self.report_process.kill();self.report_process.waitForFinished(2000)
         self.report_process.setWorkingDirectory(str(Path(__file__).resolve().parents[1]))
-        self.report_process.start(sys.executable,['-m','app.hyperspectral_report',str(path.resolve())])
+        viewer_module='app.research_report' if research else 'app.hyperspectral_report'
+        self.report_process.start(sys.executable,['-m',viewer_module,str(path.resolve())])
 
     def read_report_output(self):
         text=bytes(self.report_process.readAllStandardOutput()).decode('utf-8',errors='replace')
@@ -180,7 +233,8 @@ class AnalysisDialog(QDialog):
             worker=getattr(self.controller,name,None)
             if worker is not None and worker.isRunning():
                 QMessageBox.information(self,'Processing busy','Finish the current capture or processing job before starting offline analysis.');return
-        self.result_path=None;self.cancelled=False;self.output_path=Path(output)
+        self.result_path=None;self.result_module=None;self.active_module=module
+        self.cancelled=False;self.output_path=Path(output)
         # Sibling log is outside the new run directory, which must remain empty.
         self.output_path.parent.mkdir(parents=True,exist_ok=True)
         self.log_handle=self.output_path.with_suffix('.log').open('w',encoding='utf-8')
@@ -250,6 +304,14 @@ class AnalysisDialog(QDialog):
         for name in ('results/20260828_showcase/index.html','result/index.html','manual_report.html','validation_report.html','plant_1/traits.json','reference_traits.json','profile.json','preflight.json'):
             path=self.output_path/name
             if path.is_file():self.result_path=path;break
+        if self.result_path:
+            self.result_module=self.active_module
+            if self.result_module in ('processing.research_workspace','processing.research_workspace.spectral_extract'):
+                self.research_report.setText(str(self.result_path))
+                template=self.output_path/'workspace_template.json'
+                if template.is_file():
+                    self.research_manifest.setText(str(template))
+                    self.research_annotations.clear()
         self.open_result.setEnabled(self.result_path is not None)
         self.log.appendPlainText('Finished. Review the result and its measurement limitations.')
 
@@ -263,7 +325,9 @@ class AnalysisDialog(QDialog):
         if self.report_process.state()!=QProcess.NotRunning:self.report_process.kill()
 
     def open_latest(self):
-        if self.result_path and self.result_path.parent.name=='20260828_showcase':
+        if self.result_path and self.result_module in ('processing.research_workspace','processing.research_workspace.spectral_extract'):
+            self.research_report.setText(str(self.result_path));self.show_hyperspectral_report(self.result_path,research=True)
+        elif self.result_path and self.result_path.parent.name=='20260828_showcase':
             self.hsi_report.setText(str(self.result_path));self.show_hyperspectral_report(self.result_path)
         elif self.result_path:QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.result_path)))
 
