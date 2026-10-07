@@ -1,0 +1,16 @@
+{
+  "plants": 5,
+  "manual_dimensions": 47,
+  "source_unchanged": true,
+  "manual_photos_original": true,
+  "source_point_identity_remap": true,
+  "all_selected_endpoints_d405": true,
+  "all_current_endpoint_pools_d405": true,
+  "excluded_historical_l515_pool_points": 1,
+  "eligible_accuracy_pairs": 0,
+  "board_dimensions_operator_confirmed": true,
+  "physical_accuracy_validated": false,
+  "current_cleanup_points": 430060,
+  "trait_source": "generated/research_confirmed_board_20261007/traits_metric",
+  "site": "generated/research_confirmed_board_20261007/website/traits"
+}

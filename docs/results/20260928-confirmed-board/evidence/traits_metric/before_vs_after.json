@@ -1,0 +1,138 @@
+{
+  "status": "descriptive_recheck_not_proof_all_metrics_improved",
+  "old_coordinate_status": "Conditional pre-confirmed-board metres; historical model",
+  "new_coordinate_status": "Board-referenced metres; supplied 25 mm pitch and empirical selected L515 gain",
+  "model_changes": [
+    "D405 uniform metric gauge factor 1.0288746669066682, no new stereo surfaces",
+    "L515 rebuilt from selected board-gain candidate with new source-point IDs",
+    "New cross-camera empirical rigid alignment",
+    "Frozen image masks unchanged; native physical fusion/cleanup thresholds unchanged; soil coordinates scaled before unchanged 15/25 mm offsets"
+  ],
+  "comparison_limit": "Counts and observed extents describe different retained subsets; more points, greater extent or closer operator agreement is not by itself greater accuracy.",
+  "plants": [
+    {
+      "plant_id": "P1",
+      "old_points": 21891,
+      "new_points": 21444,
+      "change_points": -447,
+      "old_core_points": 12089,
+      "new_core_points": 11737,
+      "old_l515_points": 0,
+      "new_l515_points": 35,
+      "old_observed_span_conditional_cm": [
+        17.01782723593456,
+        33.06295415389997,
+        46.733408012839604
+      ],
+      "new_observed_span_board_cm": [
+        17.566513000602555,
+        34.15382049992169,
+        48.156094823814705
+      ],
+      "old_xy_hull_conditional_cm2": 346.75942311707536,
+      "new_xy_hull_board_cm2": 368.2927069775509,
+      "height_estimate_cm": null
+    },
+    {
+      "plant_id": "P2",
+      "old_points": 74306,
+      "new_points": 72786,
+      "change_points": -1520,
+      "old_core_points": 50252,
+      "new_core_points": 49181,
+      "old_l515_points": 66,
+      "new_l515_points": 268,
+      "old_observed_span_conditional_cm": [
+        33.133937806305376,
+        19.031735825552744,
+        49.843899252530896
+      ],
+      "new_observed_span_board_cm": [
+        34.09066922376871,
+        19.563838465018733,
+        51.32792412716801
+      ],
+      "old_xy_hull_conditional_cm2": 357.8961775819211,
+      "new_xy_hull_board_cm2": 378.82214294675344,
+      "height_estimate_cm": null
+    },
+    {
+      "plant_id": "P3",
+      "old_points": 113901,
+      "new_points": 112943,
+      "change_points": -958,
+      "old_core_points": 85055,
+      "new_core_points": 84440,
+      "old_l515_points": 840,
+      "new_l515_points": 1841,
+      "old_observed_span_conditional_cm": [
+        24.806796925301477,
+        24.126645121046984,
+        49.0037762920705
+      ],
+      "new_observed_span_board_cm": [
+        25.523084923540917,
+        24.823293962492613,
+        50.49421445257626
+      ],
+      "old_xy_hull_conditional_cm2": 451.8304212977968,
+      "new_xy_hull_board_cm2": 478.30003910652795,
+      "height_estimate_cm": null
+    },
+    {
+      "plant_id": "P4",
+      "old_points": 69634,
+      "new_points": 68239,
+      "change_points": -1395,
+      "old_core_points": 41137,
+      "new_core_points": 40458,
+      "old_l515_points": 74,
+      "new_l515_points": 196,
+      "old_observed_span_conditional_cm": [
+        17.46443407906064,
+        17.154955703374636,
+        43.55300420756314
+      ],
+      "new_observed_span_board_cm": [
+        17.96871379580699,
+        17.650299335108226,
+        44.81058269684123
+      ],
+      "old_xy_hull_conditional_cm2": 222.64856043898308,
+      "new_xy_hull_board_cm2": 235.53845978594921,
+      "height_estimate_cm": null
+    },
+    {
+      "plant_id": "P5",
+      "old_points": 156185,
+      "new_points": 154648,
+      "change_points": -1537,
+      "old_core_points": 121810,
+      "new_core_points": 120777,
+      "old_l515_points": 1194,
+      "new_l515_points": 2382,
+      "old_observed_span_conditional_cm": [
+        33.32321121512316,
+        35.232691336787084,
+        24.387250568490753
+      ],
+      "new_observed_span_board_cm": [
+        34.28540783922038,
+        36.204872535603734,
+        24.988223710532992
+      ],
+      "old_xy_hull_conditional_cm2": 847.5093858770911,
+      "new_xy_hull_board_cm2": 895.1240926505645,
+      "height_estimate_cm": null
+    }
+  ],
+  "p3_operator_comparison": {
+    "old_chord_conditional_cm": 7.475255446013435,
+    "new_chord_board_cm": 7.691100957059331,
+    "operator_annotation_cm": 7.5,
+    "old_difference_cm": -0.024744553986565,
+    "new_difference_cm": 0.19110095705933094,
+    "physical_accuracy_validated": false,
+    "interpretation": "The old near-agreement did not establish accuracy; fixing the independently supplied board gauge moves the same observed-endpoint chord away from that annotation."
+  }
+}

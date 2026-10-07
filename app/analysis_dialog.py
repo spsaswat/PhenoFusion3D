@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 import sys
+from uuid import uuid4
 
 from PyQt5.QtCore import QProcess, QProcessEnvironment, QUrl
 from PyQt5.QtGui import QDesktopServices
@@ -33,7 +34,7 @@ class AnalysisDialog(QDialog):
         intro.setWordWrap(True);layout.addWidget(intro)
         self.tabs=QTabWidget();layout.addWidget(self.tabs)
         self.buttons=[]
-        self.reconstruction_tab();self.traits_tab();self.comparison_tab();self.leaf_tab();self.hyperspectral_tab();self.research_tab()
+        self.reconstruction_tab();self.traits_tab();self.comparison_tab();self.leaf_tab();self.hyperspectral_tab();self.research_tab();self.spectral_fusion_tab()
         row=QHBoxLayout()
         self.stop=QPushButton('Cancel processing');self.stop.setEnabled(False);self.stop.clicked.connect(self.cancel)
         self.open_result=QPushButton('Open latest result');self.open_result.setEnabled(False);self.open_result.clicked.connect(self.open_latest)
@@ -203,6 +204,50 @@ class AnalysisDialog(QDialog):
         out=self.research_run_output()
         self.launch('processing.research_workspace.spectral_extract',['--config',config,'--output',out],out)
 
+    def spectral_fusion_tab(self):
+        form=self.page('Spectral review / 3D fusion')
+        note=QLabel('Inspect measured spectra from reviewed extraction results. Sparse 3D fusion uses explicit reviewed source-pixel / cloud-point correspondences. These partial associations remain provisional until independently validated; they do not establish whole-plant fusion or physically calibrated reflectance.')
+        note.setWordWrap(True);form.addRow(note)
+        self.fusion_fx10=self.path(form,'FX10 extracted-result folder (optional)')
+        self.fusion_fx17=self.path(form,'FX17 extracted-result folder (optional)')
+        self.fusion_output=self.path(form,'New results parent folder')
+        self.button(form,'Build interactive spectral review',self.build_spectral_review)
+        self.fusion_config=self.path(form,'Reviewed 3D fusion setup JSON',False)
+        self.button(form,'Create 3D fusion setup template',self.fusion_template)
+        self.button(form,'Build sparse measured fusion',self.build_spectral_fusion)
+        self.fusion_report=self.path(form,'Saved spectral / fusion report (index.html)',False)
+        self.button(form,'Open saved spectral / fusion report',lambda:self.show_hyperspectral_report(self.fusion_report.text(),research=True))
+        project=Path(__file__).resolve().parents[1]
+        extracted=project/'generated/research_followthrough_20261007/spectral_extraction_v1'
+        for field,sensor in ((self.fusion_fx10,'fx10'),(self.fusion_fx17,'fx17')):
+            result=extracted/sensor/'result'
+            if result.is_dir():field.setText(str(result))
+        self.fusion_output.setText(str(project/'generated/spectral_fusion'))
+
+    def fusion_run_output(self,kind):
+        parent=self.fusion_output.text().strip()
+        if not parent:raise ValueError('Choose a new results parent folder outside the spectral and cloud inputs.')
+        return Path(parent)/f'{kind}_{datetime.now():%Y%m%d_%H%M%S_%f}_{uuid4().hex[:8]}'
+
+    def build_spectral_review(self):
+        args=[]
+        for sensor,field in (('fx10',self.fusion_fx10),('fx17',self.fusion_fx17)):
+            source=field.text().strip()
+            if source:args+=['--sensor',f'{sensor}={source}']
+        if not args:raise ValueError('Choose at least one extracted-result folder for spectral review.')
+        out=self.fusion_run_output('spectral_review')
+        self.launch('processing.research_workspace.spectral_viewer',[*args,'--output',out],out)
+
+    def fusion_template(self):
+        out=self.fusion_run_output('fusion_template')
+        self.launch('processing.research_workspace.spectral_fusion',['template','--output',out],out)
+
+    def build_spectral_fusion(self):
+        config=self.fusion_config.text().strip()
+        if not config:raise ValueError('Choose a reviewed 3D fusion setup JSON or create a template first.')
+        out=self.fusion_run_output('sparse_fusion')
+        self.launch('processing.research_workspace.spectral_fusion',['build','--config',config,'--output',out],out)
+
     def show_hyperspectral_report(self,path,research=False):
         for name in ('capture_worker','worker','quality_worker','postprocess_worker'):
             worker=getattr(self.controller,name,None)
@@ -301,11 +346,18 @@ class AnalysisDialog(QDialog):
             self.log.appendPlainText('Cancelled. Partial output is not a completed result.');return
         if code!=0:
             self.log.appendPlainText('Processing failed. See the explanation above; existing results were preserved.');return
-        for name in ('results/20260828_showcase/index.html','result/index.html','manual_report.html','validation_report.html','plant_1/traits.json','reference_traits.json','profile.json','preflight.json'):
+        direct_report_modules=('processing.research_workspace.spectral_viewer','processing.research_workspace.spectral_fusion')
+        reports=('index.html',) if self.active_module in direct_report_modules else ()
+        for name in (*reports,'results/20260828_showcase/index.html','result/index.html','manual_report.html','validation_report.html','plant_1/traits.json','reference_traits.json','profile.json','preflight.json'):
             path=self.output_path/name
             if path.is_file():self.result_path=path;break
+        if self.active_module=='processing.research_workspace.spectral_fusion':
+            template=self.output_path/'spectral_fusion_template.json'
+            if template.is_file():self.fusion_config.setText(str(template))
         if self.result_path:
             self.result_module=self.active_module
+            if self.result_module in direct_report_modules:
+                self.fusion_report.setText(str(self.result_path))
             if self.result_module in ('processing.research_workspace','processing.research_workspace.spectral_extract'):
                 self.research_report.setText(str(self.result_path))
                 template=self.output_path/'workspace_template.json'
@@ -325,7 +377,9 @@ class AnalysisDialog(QDialog):
         if self.report_process.state()!=QProcess.NotRunning:self.report_process.kill()
 
     def open_latest(self):
-        if self.result_path and self.result_module in ('processing.research_workspace','processing.research_workspace.spectral_extract'):
+        if self.result_path and self.result_module in ('processing.research_workspace.spectral_viewer','processing.research_workspace.spectral_fusion'):
+            self.fusion_report.setText(str(self.result_path));self.show_hyperspectral_report(self.result_path,research=True)
+        elif self.result_path and self.result_module in ('processing.research_workspace','processing.research_workspace.spectral_extract'):
             self.research_report.setText(str(self.result_path));self.show_hyperspectral_report(self.result_path,research=True)
         elif self.result_path and self.result_path.parent.name=='20260828_showcase':
             self.hsi_report.setText(str(self.result_path));self.show_hyperspectral_report(self.result_path)

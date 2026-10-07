@@ -1,0 +1,272 @@
+{
+  "status": "source_reviewed_plant_cleanup_candidate_not_validated_trait_segmentation",
+  "coordinate_units": "metres referenced to confirmed 25mm checker pitch; empirical cross-camera alignment",
+  "d405_scale_factor": 1.0288746669066682,
+  "physical_cleanup_thresholds_unchanged": true,
+  "source_image_polygons_reused_without_edits": true,
+  "old_stereo_depth_scaled_at_read": true,
+  "input_points": 1740673,
+  "counts": {
+    "P1": 21444,
+    "P2": 72786,
+    "P3": 112943,
+    "P4": 68239,
+    "P5": 154648,
+    "plants_cleaned": 430060,
+    "uncertain": 592585,
+    "scene_context": 718028
+  },
+  "per_plant": {
+    "P1": {
+      "total": 21444,
+      "multi_view_core": 11737,
+      "one_view_near_core_edge": 9707,
+      "d405": 21409,
+      "l515": 35
+    },
+    "P2": {
+      "total": 72786,
+      "multi_view_core": 49181,
+      "one_view_near_core_edge": 23605,
+      "d405": 72518,
+      "l515": 268
+    },
+    "P3": {
+      "total": 112943,
+      "multi_view_core": 84440,
+      "one_view_near_core_edge": 28503,
+      "d405": 111102,
+      "l515": 1841
+    },
+    "P4": {
+      "total": 68239,
+      "multi_view_core": 40458,
+      "one_view_near_core_edge": 27781,
+      "d405": 68043,
+      "l515": 196
+    },
+    "P5": {
+      "total": 154648,
+      "multi_view_core": 120777,
+      "one_view_near_core_edge": 33871,
+      "d405": 152266,
+      "l515": 2382
+    }
+  },
+  "reason_codes": {
+    "0": "Unassigned scene context; not asserted noise",
+    "1": "At least two visible positive source masks; above basal band; no competing clear positive assignment",
+    "2": "One or more visible positive masks and <=4mm from that plants core; no competing clear positive assignment",
+    "3": "Uncertain evidence, basal region, ownership, contradiction or insufficient views",
+    "4": "Explicit source nonplant evidence without positive or ambiguous source mask"
+  },
+  "parameters": {
+    "mask_boundary_margin_px": 2,
+    "self_occlusion_tolerance_m": 0.01,
+    "stereo_occlusion_tolerance_m": 0.012,
+    "negative_requires_stereo_agreement_m": 0.012,
+    "primary_min_positive_views": 2,
+    "edge_extension_radius_m": 0.004,
+    "basal_floor_upright_z_m": [
+      -0.734442612789297,
+      -0.7153574425110091,
+      -0.727756321007422,
+      -0.7150978608026258,
+      -0.7071571183725133
+    ],
+    "soil_seed_upright": [
+      [
+        0.3050683207896422,
+        0.010296502887158294,
+        -0.759442612789297
+      ],
+      [
+        0.4985645865206136,
+        -0.00759814104883757,
+        -0.7303574425110091
+      ],
+      [
+        0.8580838973164677,
+        0.0003896114404020295,
+        -0.7427563210074221
+      ],
+      [
+        1.0835177959544053,
+        0.021271967799789758,
+        -0.7300978608026258
+      ],
+      [
+        1.3792561193433832,
+        0.007378774757329669,
+        -0.7221571183725133
+      ]
+    ],
+    "basal_floor_policy": "Frozen reviewed soil coordinates multiplied by the D405 board factor, then physical 15mm (P1 25mm) offsets applied unchanged. This is an approximate exclusion band, not stem-base height. Positive points below it remain uncertain."
+  },
+  "upright_R": [
+    [
+      0.9997320091584629,
+      -0.022989551247924105,
+      0.002718528536188047
+    ],
+    [
+      -0.023027275267776585,
+      -0.9996256969203645,
+      0.014771954854300693
+    ],
+    [
+      0.0023779103694299077,
+      -0.014830596410614249,
+      -0.9998871931134934
+    ]
+  ],
+  "vertices_moved": false,
+  "vertices_created": false,
+  "manual_trait_dimensions_used": false,
+  "original_fusion_unchanged": true,
+  "views": [
+    {
+      "plant": "P1",
+      "frame": 143152,
+      "projected": 771974,
+      "visible": 453295,
+      "positive": 54667,
+      "uncertain": 52614,
+      "nonplant": 76824
+    },
+    {
+      "plant": "P1",
+      "frame": 302754,
+      "projected": 984255,
+      "visible": 502337,
+      "positive": 32631,
+      "uncertain": 42132,
+      "nonplant": 48742
+    },
+    {
+      "plant": "P1",
+      "frame": 459309,
+      "projected": 1137543,
+      "visible": 553443,
+      "positive": 55145,
+      "uncertain": 44564,
+      "nonplant": 13593
+    },
+    {
+      "plant": "P2",
+      "frame": 249551,
+      "projected": 905193,
+      "visible": 487339,
+      "positive": 67481,
+      "uncertain": 26633,
+      "nonplant": 20311
+    },
+    {
+      "plant": "P2",
+      "frame": 459309,
+      "projected": 1137543,
+      "visible": 553443,
+      "positive": 61860,
+      "uncertain": 26849,
+      "nonplant": 24384
+    },
+    {
+      "plant": "P2",
+      "frame": 670589,
+      "projected": 1381011,
+      "visible": 673620,
+      "positive": 79351,
+      "uncertain": 25794,
+      "nonplant": 17436
+    },
+    {
+      "plant": "P3",
+      "frame": 618150,
+      "projected": 1305004,
+      "visible": 667096,
+      "positive": 110539,
+      "uncertain": 19260,
+      "nonplant": 16150
+    },
+    {
+      "plant": "P3",
+      "frame": 824869,
+      "projected": 1548117,
+      "visible": 653859,
+      "positive": 108384,
+      "uncertain": 9866,
+      "nonplant": 4811
+    },
+    {
+      "plant": "P3",
+      "frame": 1055904,
+      "projected": 1292406,
+      "visible": 578924,
+      "positive": 87573,
+      "uncertain": 59891,
+      "nonplant": 5157
+    },
+    {
+      "plant": "P4",
+      "frame": 851470,
+      "projected": 1550900,
+      "visible": 661617,
+      "positive": 79140,
+      "uncertain": 87125,
+      "nonplant": 5796
+    },
+    {
+      "plant": "P4",
+      "frame": 1003470,
+      "projected": 1380563,
+      "visible": 637616,
+      "positive": 61483,
+      "uncertain": 43247,
+      "nonplant": 3608
+    },
+    {
+      "plant": "P4",
+      "frame": 1160788,
+      "projected": 1201053,
+      "visible": 503985,
+      "positive": 46192,
+      "uncertain": 128104,
+      "nonplant": 6244
+    },
+    {
+      "plant": "P5",
+      "frame": 1030829,
+      "projected": 1328391,
+      "visible": 610361,
+      "positive": 132224,
+      "uncertain": 42840,
+      "nonplant": 16701
+    },
+    {
+      "plant": "P5",
+      "frame": 1445026,
+      "projected": 854479,
+      "visible": 407962,
+      "positive": 136968,
+      "uncertain": 45811,
+      "nonplant": 14828
+    },
+    {
+      "plant": "P5",
+      "frame": 1639585,
+      "projected": 616617,
+      "visible": 295282,
+      "positive": 131159,
+      "uncertain": 40039,
+      "nonplant": 15840
+    }
+  ],
+  "limits": [
+    "Assistant source polygons are approximate and dataset-specific, not accepted ground truth.",
+    "Unknown pixels abstain. Broad plant polygons may contain background; unseen/back surfaces remain unlabelled.",
+    "The approximate basal band and sparse review can omit true tissue from primary output; uncertain pool is essential.",
+    "Checker pitch is now operator-confirmed. Print uncertainty, empirical cross-camera alignment and anatomical trait validation remain unresolved.",
+    "Input was a fused review-region crop. This cleanup cannot recover previously omitted or never-observed surfaces."
+  ],
+  "exact_source_records_and_complete_partition_verified": true
+}

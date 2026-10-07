@@ -1,0 +1,36 @@
+{
+  "status": "completed_confirmed_board_recheck_and_local_website",
+  "board_square_m": 0.025,
+  "board_marker_m": 0.018,
+  "layout": [
+    7,
+    10
+  ],
+  "dictionary": "DICT_4X4_50",
+  "complete": [
+    "D405 metric calibration and exact source-preserving re-expression",
+    "Both L515 metric raw-depth reconstructions",
+    "Fixed-control cross-camera comparison and empirical candidate selection",
+    "Recomputed fusion, cleanup and traits",
+    "Both-camera spectral remap and quality diagnostics",
+    "Table-plane and scan correspondence plus rejected elevation test",
+    "Website static build,414 local link checks,24 browser geometry selections,47 comparison rows and both spectral inspectors",
+    "Desktop and narrow-screen review"
+  ],
+  "in_progress": [],
+  "remaining_scientific_gaps": [
+    "Known board pitch does not establish independent physical accuracy or complete surfaces.",
+    "Cross-camera checks informed candidate selection; no final untouched accuracy test.",
+    "No accepted anatomical/manual reference pairs for trait accuracy statistics.",
+    "Elevated spectral height model failed held-out prediction and was rejected for dense assignment.",
+    "Six provisional spectral observations cover three P5 vertices, not all plant surfaces.",
+    "White-panel reflectance and shutter-dark conditions remain unverified."
+  ],
+  "results": "website/",
+  "website_route": "/results/final-sprint-20260928/",
+  "preview": "http://127.0.0.1:8879/results/final-sprint-20260928/",
+  "previous_results_preserved": true,
+  "protected_lab_sources_unchanged": 26,
+  "published": false,
+  "pushed": false
+}

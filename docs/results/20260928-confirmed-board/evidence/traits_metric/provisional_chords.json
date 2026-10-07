@@ -1,0 +1,719 @@
+[
+  {
+    "id": "P1.O03.observed_blade_extent",
+    "plant": 1,
+    "frame": 459309,
+    "base": [
+      240,
+      401
+    ],
+    "tip": [
+      149,
+      379
+    ],
+    "radius": 4,
+    "secondary": [
+      143152,
+      302754
+    ],
+    "scope": "Reconstructed upper narrow blade portion; the thin dry terminal tip is not included.",
+    "manual_dimension_id": "P1.O03.length",
+    "comparison": "not_homologous_partial_extent",
+    "limitation": "Magnified source review shows the thin dry terminal tip extends beyond this reconstructed endpoint. This is partial observed extent, not whole-leaf length, so no reference residual is computed.",
+    "endpoints": [
+      {
+        "role": "base",
+        "source_pixel_xy": [
+          240,
+          401
+        ],
+        "fused_point_index": 49071,
+        "camera_id": 0,
+        "original_point_index": 300697,
+        "source_reprojection_pixel_xy": [
+          240.17194962037968,
+          400.9103055486601
+        ],
+        "source_click_distance_px": 0.193937532597168,
+        "candidate_count": 56,
+        "candidate_index_key": "P1_O03_observed_blade_extent_base_fused_indices",
+        "historical_fused_point_index": 49071,
+        "reference_xyz_m": [
+          0.2774192464232363,
+          0.00977430933561335,
+          0.3112345867392672
+        ],
+        "current_cleaned_plant_id": 1,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 56,
+          "exact_d405_remap_count": 56,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "1": 56
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      },
+      {
+        "role": "tip",
+        "source_pixel_xy": [
+          149,
+          379
+        ],
+        "fused_point_index": 158296,
+        "camera_id": 0,
+        "original_point_index": 1029316,
+        "source_reprojection_pixel_xy": [
+          148.38560254477034,
+          377.82841480296577
+        ],
+        "source_click_distance_px": 1.322911980028312,
+        "candidate_count": 14,
+        "candidate_index_key": "P1_O03_observed_blade_extent_tip_fused_indices",
+        "historical_fused_point_index": 158296,
+        "reference_xyz_m": [
+          0.27522397339753374,
+          -0.0030207704150645217,
+          0.2546464800594004
+        ],
+        "current_cleaned_plant_id": 1,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 14,
+          "exact_d405_remap_count": 14,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "1": 14
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      }
+    ],
+    "physical_accuracy_validated": false,
+    "scale_status": "Board-referenced metres from supplied 25 mm checker pitch; same observed D405 endpoints; anatomical and reference accuracy remain unvalidated.",
+    "sensitivity_interpretation": "Full min/max of all endpoint-pair distances within independently clicked 4px source disks; not a confidence interval or calibrated physical uncertainty.",
+    "projections": [
+      {
+        "frame": 459309,
+        "endpoint_pixels_xy": [
+          [
+            240.17194962037968,
+            400.9103055486601
+          ],
+          [
+            148.38560254477034,
+            377.82841480296577
+          ]
+        ],
+        "stereo_votes": [
+          3,
+          1
+        ],
+        "point_minus_stereo_depth_m": [
+          -0.0003765059364334685,
+          -0.0019262604212742756
+        ]
+      },
+      {
+        "frame": 143152,
+        "endpoint_pixels_xy": [
+          [
+            910.8201408625761,
+            386.532724538262
+          ],
+          [
+            965.9334828949148,
+            360.1950856468146
+          ]
+        ],
+        "stereo_votes": [
+          4,
+          2
+        ],
+        "point_minus_stereo_depth_m": [
+          0.0020949069081055024,
+          0.00062230817406214
+        ]
+      },
+      {
+        "frame": 302754,
+        "endpoint_pixels_xy": [
+          [
+            571.0159948929876,
+            394.6633634734361
+          ],
+          [
+            551.3622016268082,
+            369.85592404711974
+          ]
+        ],
+        "stereo_votes": [
+          1,
+          0
+        ],
+        "point_minus_stereo_depth_m": [
+          0.0004271093629136447,
+          null
+        ]
+      }
+    ],
+    "reference_class": "photo_supported_approximate",
+    "reference_annotation_cm": 7.3,
+    "photo_reference_candidate_cm": 7.3,
+    "photo_reading_interval_cm": [
+      7.0,
+      7.6
+    ],
+    "signed_difference_from_operator_annotation_cm": null,
+    "included_in_physical_accuracy_statistics": false,
+    "comparison_status": "No homologous whole-organ comparison: Magnified source review shows the thin dry terminal tip extends beyond this reconstructed endpoint. This is partial observed extent, not whole-leaf length, so no reference residual is computed.",
+    "historical_chord_cm": 5.642877354066358,
+    "endpoint_selection_policy": "Exact preserved camera=0/source-point ID and frozen source-image click; no closest-geometry rematching or manual-value tuning.",
+    "chord_m": 0.058058135580602056,
+    "chord_cm": 5.805813558060206,
+    "endpoint_pixel_disk_sensitivity_m": [
+      0.05120479019345103,
+      0.06863425757334306
+    ],
+    "current_cleaned_endpoint_pool_sensitivity_m": [
+      0.05120479019345103,
+      0.06863425757334306
+    ],
+    "sensitivity_scope": "Exact remapped historical D405 source-disk pool in full fusion; cleanup membership counts are explicit. Separate cleaned-only range supplied. One old P5 L515 candidate is not remappable and excluded."
+  },
+  {
+    "id": "P1.O03.true_tip_attempt",
+    "plant": 1,
+    "frame": 143152,
+    "base": [
+      909,
+      387
+    ],
+    "tip": [
+      983,
+      354
+    ],
+    "radius": 4,
+    "secondary": [
+      302754,
+      459309
+    ],
+    "scope": "Attempted source-visible narrow blade base to fine dry terminal tip.",
+    "manual_dimension_id": "P1.O03.length",
+    "comparison": "conditional_candidate_if_both_endpoints_supported",
+    "limitation": "True dry terminal tip is selected from the source silhouette; no farther nearest point is substituted if this disk lacks reconstructed support.",
+    "endpoints": [
+      {
+        "role": "base",
+        "source_pixel_xy": [
+          909,
+          387
+        ],
+        "fused_point_index": 48904,
+        "camera_id": 0,
+        "original_point_index": 300530,
+        "source_reprojection_pixel_xy": [
+          909.2696137769228,
+          386.70694868476306
+        ],
+        "source_click_distance_px": 0.3982093194146632,
+        "candidate_count": 74,
+        "candidate_index_key": "P1_O03_true_tip_attempt_base_fused_indices",
+        "historical_fused_point_index": 48904,
+        "reference_xyz_m": [
+          0.27577492211283133,
+          0.00977430933561335,
+          0.3091768374054538
+        ],
+        "current_cleaned_plant_id": 1,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 74,
+          "exact_d405_remap_count": 74,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "1": 74
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      },
+      {
+        "role": "tip",
+        "source_pixel_xy": [
+          983,
+          354
+        ],
+        "point_index": null,
+        "candidate_count": 0
+      }
+    ],
+    "physical_accuracy_validated": false,
+    "scale_status": "Board-referenced metres from supplied 25 mm checker pitch; same observed D405 endpoints; anatomical and reference accuracy remain unvalidated.",
+    "status": "No existing source-supported endpoint within prescribed click disk.",
+    "reference_class": "photo_supported_approximate",
+    "reference_annotation_cm": 7.3,
+    "photo_reference_candidate_cm": 7.3,
+    "photo_reading_interval_cm": [
+      7.0,
+      7.6
+    ],
+    "signed_difference_from_operator_annotation_cm": null,
+    "included_in_physical_accuracy_statistics": false,
+    "comparison_status": "No homologous whole-organ comparison: True dry terminal tip is selected from the source silhouette; no farther nearest point is substituted if this disk lacks reconstructed support.",
+    "historical_chord_cm": null,
+    "endpoint_selection_policy": "Exact preserved camera=0/source-point ID and frozen source-image click; no closest-geometry rematching or manual-value tuning.",
+    "chord_m": null,
+    "chord_cm": null
+  },
+  {
+    "id": "P1.O04.ear_body_chord",
+    "plant": 1,
+    "frame": 459309,
+    "base": [
+      232,
+      412
+    ],
+    "tip": [
+      157,
+      469
+    ],
+    "radius": 4,
+    "secondary": [
+      143152,
+      302754
+    ],
+    "scope": "Cereal ear body base-to-distal-body straight chord candidate, excluding awns.",
+    "manual_dimension_id": "P1.O04.length",
+    "comparison": "conditional_candidate",
+    "limitation": "Body-to-awn transition is a source-visible candidate; exact distal glume boundary has pixel-scale ambiguity. This is an ear, never a leaf.",
+    "endpoints": [
+      {
+        "role": "base",
+        "source_pixel_xy": [
+          232,
+          412
+        ],
+        "fused_point_index": 49084,
+        "camera_id": 0,
+        "original_point_index": 300710,
+        "source_reprojection_pixel_xy": [
+          232.02490488408728,
+          409.3982649474286
+        ],
+        "source_click_distance_px": 2.6018542497669332,
+        "candidate_count": 9,
+        "candidate_index_key": "P1_O04_ear_body_chord_base_fused_indices",
+        "historical_fused_point_index": 49084,
+        "reference_xyz_m": [
+          0.2772817227313471,
+          0.013462458174219592,
+          0.30506133873782715
+        ],
+        "current_cleaned_plant_id": 0,
+        "current_cleanup_reason": 3,
+        "current_candidate_pool_audit": {
+          "historical_count": 9,
+          "exact_d405_remap_count": 9,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "0": 1,
+            "1": 8
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      },
+      {
+        "role": "tip",
+        "source_pixel_xy": [
+          157,
+          469
+        ],
+        "point_index": null,
+        "candidate_count": 0
+      }
+    ],
+    "physical_accuracy_validated": false,
+    "scale_status": "Board-referenced metres from supplied 25 mm checker pitch; same observed D405 endpoints; anatomical and reference accuracy remain unvalidated.",
+    "status": "No existing source-supported endpoint within prescribed click disk.",
+    "reference_class": "photo_supported_approximate",
+    "reference_annotation_cm": 6.5,
+    "photo_reference_candidate_cm": 6.4,
+    "photo_reading_interval_cm": [
+      6.1,
+      6.7
+    ],
+    "signed_difference_from_operator_annotation_cm": null,
+    "included_in_physical_accuracy_statistics": false,
+    "comparison_status": "No homologous whole-organ comparison: Body-to-awn transition is a source-visible candidate; exact distal glume boundary has pixel-scale ambiguity. This is an ear, never a leaf.",
+    "historical_chord_cm": null,
+    "endpoint_selection_policy": "Exact preserved camera=0/source-point ID and frozen source-image click; no closest-geometry rematching or manual-value tuning.",
+    "chord_m": null,
+    "chord_cm": null
+  },
+  {
+    "id": "P3.O03.blade_chord",
+    "plant": 3,
+    "frame": 824869,
+    "base": [
+      594,
+      424
+    ],
+    "tip": [
+      590,
+      326
+    ],
+    "radius": 4,
+    "secondary": [
+      618150,
+      1055904
+    ],
+    "scope": "Oval blade lowest visible basal-lamina junction to terminal margin straight chord candidate.",
+    "manual_dimension_id": "P3.O03.length",
+    "comparison": "conditional_candidate",
+    "limitation": "Basal small-lobe/petiole convention remains tentative. The operator length is not independently photo-readable; this explicitly conditional comparison does not establish the measurement definition or physical accuracy.",
+    "endpoints": [
+      {
+        "role": "base",
+        "source_pixel_xy": [
+          594,
+          424
+        ],
+        "fused_point_index": 1221511,
+        "camera_id": 0,
+        "original_point_index": 5799835,
+        "source_reprojection_pixel_xy": [
+          594.2204964846065,
+          424.12699211786963
+        ],
+        "source_click_distance_px": 0.25445175913099527,
+        "candidate_count": 158,
+        "candidate_index_key": "P3_O03_blade_chord_base_fused_indices",
+        "historical_fused_point_index": 1221511,
+        "reference_xyz_m": [
+          0.8164120481904412,
+          0.029322928006840044,
+          0.4832533766793679
+        ],
+        "current_cleaned_plant_id": 3,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 158,
+          "exact_d405_remap_count": 158,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "0": 1,
+            "3": 157
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      },
+      {
+        "role": "tip",
+        "source_pixel_xy": [
+          590,
+          326
+        ],
+        "fused_point_index": 944608,
+        "camera_id": 0,
+        "original_point_index": 4949838,
+        "source_reprojection_pixel_xy": [
+          589.774822916392,
+          325.7844029666501
+        ],
+        "source_click_distance_px": 0.3117479747672268,
+        "candidate_count": 79,
+        "candidate_index_key": "P3_O03_blade_chord_tip_fused_indices",
+        "historical_fused_point_index": 944608,
+        "reference_xyz_m": [
+          0.8149696207270227,
+          -0.04269829867662673,
+          0.45630591477310734
+        ],
+        "current_cleaned_plant_id": 3,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 79,
+          "exact_d405_remap_count": 79,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "3": 79
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      }
+    ],
+    "physical_accuracy_validated": false,
+    "scale_status": "Board-referenced metres from supplied 25 mm checker pitch; same observed D405 endpoints; anatomical and reference accuracy remain unvalidated.",
+    "sensitivity_interpretation": "Full min/max of all endpoint-pair distances within independently clicked 4px source disks; not a confidence interval or calibrated physical uncertainty.",
+    "projections": [
+      {
+        "frame": 824869,
+        "endpoint_pixels_xy": [
+          [
+            594.2204964846065,
+            424.12699211786963
+          ],
+          [
+            589.774822916392,
+            325.7844029666501
+          ]
+        ],
+        "stereo_votes": [
+          6,
+          6
+        ],
+        "point_minus_stereo_depth_m": [
+          0.0015356273755697918,
+          -0.0008860669886167836
+        ]
+      },
+      {
+        "frame": 618150,
+        "endpoint_pixels_xy": [
+          [
+            877.9358204034024,
+            417.80515002887194
+          ],
+          [
+            890.0954695770749,
+            319.8849959153212
+          ]
+        ],
+        "stereo_votes": [
+          5,
+          3
+        ],
+        "point_minus_stereo_depth_m": [
+          0.0015786814260652002,
+          0.0006736741484160683
+        ]
+      },
+      {
+        "frame": 1055904,
+        "endpoint_pixels_xy": [
+          [
+            277.52184229262235,
+            430.3617561020619
+          ],
+          [
+            254.85076744370457,
+            333.502146547338
+          ]
+        ],
+        "stereo_votes": [
+          2,
+          1
+        ],
+        "point_minus_stereo_depth_m": [
+          -0.007043646527783662,
+          0.009028825708123557
+        ]
+      }
+    ],
+    "reference_class": "operator_annotation_only",
+    "reference_annotation_cm": 7.5,
+    "photo_reference_candidate_cm": null,
+    "photo_reading_interval_cm": null,
+    "signed_difference_from_operator_annotation_cm": 0.19110095705933094,
+    "included_in_physical_accuracy_statistics": false,
+    "comparison_status": "Provisional operator-reported chord comparison only; physical scale and basal convention unresolved.",
+    "endpoint_review_note": "Magnified source review located the lowest visible basal lamina at [594,424] and apex at [590,326]. Initial interior clicks [594,416] and [590,331] were rejected as inside the blade. Endpoints were set by source anatomy, without moving geometry or targeting a reference value.",
+    "historical_chord_cm": 7.475255446013435,
+    "endpoint_selection_policy": "Exact preserved camera=0/source-point ID and frozen source-image click; no closest-geometry rematching or manual-value tuning.",
+    "chord_m": 0.07691100957059331,
+    "chord_cm": 7.691100957059331,
+    "endpoint_pixel_disk_sensitivity_m": [
+      0.06900337417864764,
+      0.08662411669867037
+    ],
+    "current_cleaned_endpoint_pool_sensitivity_m": [
+      0.06900337417864764,
+      0.08652943037308904
+    ],
+    "sensitivity_scope": "Exact remapped historical D405 source-disk pool in full fusion; cleanup membership counts are explicit. Separate cleaned-only range supplied. One old P5 L515 candidate is not remappable and excluded."
+  },
+  {
+    "id": "P5.O04.terminal_lamina_chord",
+    "plant": 5,
+    "frame": 1445026,
+    "base": [
+      534,
+      463
+    ],
+    "tip": [
+      546,
+      580
+    ],
+    "radius": 4,
+    "secondary": [
+      1030829,
+      1639585
+    ],
+    "scope": "Visible terminal lamina portion only; basal lobes/petiole-side origin are not included.",
+    "manual_dimension_id": "P5.O04.length",
+    "comparison": "not_homologous_partial_extent",
+    "limitation": "Ruler image includes basal lobes down toward a small low lobe at its zero. This raw terminal-lamina origin cannot be substituted for that ruler origin; no residual is meaningful.",
+    "endpoints": [
+      {
+        "role": "base",
+        "source_pixel_xy": [
+          534,
+          463
+        ],
+        "fused_point_index": 135290,
+        "camera_id": 0,
+        "original_point_index": 890216,
+        "source_reprojection_pixel_xy": [
+          533.7722866405313,
+          463.045137147898
+        ],
+        "source_click_distance_px": 0.23214378346378053,
+        "candidate_count": 181,
+        "candidate_index_key": "P5_O04_terminal_lamina_chord_base_fused_indices",
+        "historical_fused_point_index": 135290,
+        "reference_xyz_m": [
+          1.3966973603258022,
+          0.05908763444556713,
+          0.5807997494688142
+        ],
+        "current_cleaned_plant_id": 5,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 181,
+          "exact_d405_remap_count": 181,
+          "old_l515_not_remappable_count": 0,
+          "current_cleanup_plant_counts": {
+            "5": 181
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      },
+      {
+        "role": "tip",
+        "source_pixel_xy": [
+          546,
+          580
+        ],
+        "fused_point_index": 657710,
+        "camera_id": 0,
+        "original_point_index": 3532313,
+        "source_reprojection_pixel_xy": [
+          546.1605846238848,
+          580.1984966689186
+        ],
+        "source_click_distance_px": 0.25532009125798183,
+        "candidate_count": 74,
+        "candidate_index_key": "P5_O04_terminal_lamina_chord_tip_fused_indices",
+        "historical_fused_point_index": 657710,
+        "reference_xyz_m": [
+          1.4213903523315623,
+          0.13118152003060018,
+          0.4817226544222042
+        ],
+        "current_cleaned_plant_id": 5,
+        "current_cleanup_reason": 1,
+        "current_candidate_pool_audit": {
+          "historical_count": 74,
+          "exact_d405_remap_count": 73,
+          "old_l515_not_remappable_count": 1,
+          "current_cleanup_plant_counts": {
+            "5": 73
+          },
+          "policy": "No reuse of old L515 vertex IDs in the rebuilt L515 cloud; unmappable historical points excluded from current candidate sensitivity."
+        }
+      }
+    ],
+    "physical_accuracy_validated": false,
+    "scale_status": "Board-referenced metres from supplied 25 mm checker pitch; same observed D405 endpoints; anatomical and reference accuracy remain unvalidated.",
+    "sensitivity_interpretation": "Full min/max of all endpoint-pair distances within independently clicked 4px source disks; not a confidence interval or calibrated physical uncertainty.",
+    "projections": [
+      {
+        "frame": 1445026,
+        "endpoint_pixels_xy": [
+          [
+            533.7722866405313,
+            463.045137147898
+          ],
+          [
+            546.1605846238848,
+            580.1984966689186
+          ]
+        ],
+        "stereo_votes": [
+          6,
+          6
+        ],
+        "point_minus_stereo_depth_m": [
+          -0.0038083046860518627,
+          -2.9990920776773735e-05
+        ]
+      },
+      {
+        "frame": 1030829,
+        "endpoint_pixels_xy": [
+          [
+            1006.8805101349528,
+            451.519794401576
+          ],
+          [
+            1115.6429421861499,
+            565.7405594924082
+          ]
+        ],
+        "stereo_votes": [
+          3,
+          1
+        ],
+        "point_minus_stereo_depth_m": [
+          0.0025133988058941197,
+          -0.0012170547115370645
+        ]
+      },
+      {
+        "frame": 1639585,
+        "endpoint_pixels_xy": [
+          [
+            312.0334017817556,
+            467.75873173120505
+          ],
+          [
+            278.8241932666374,
+            585.1989516314815
+          ]
+        ],
+        "stereo_votes": [
+          2,
+          2
+        ],
+        "point_minus_stereo_depth_m": [
+          -0.0031958195327410855,
+          -0.004656599033251157
+        ]
+      }
+    ],
+    "reference_class": "photo_supported_approximate",
+    "reference_annotation_cm": 12.9,
+    "photo_reference_candidate_cm": 12.9,
+    "photo_reading_interval_cm": [
+      12.6,
+      13.2
+    ],
+    "signed_difference_from_operator_annotation_cm": null,
+    "included_in_physical_accuracy_statistics": false,
+    "comparison_status": "No homologous whole-organ comparison: Ruler image includes basal lobes down toward a small low lobe at its zero. This raw terminal-lamina origin cannot be substituted for that ruler origin; no residual is meaningful.",
+    "historical_chord_cm": 12.148629537473008,
+    "endpoint_selection_policy": "Exact preserved camera=0/source-point ID and frozen source-image click; no closest-geometry rematching or manual-value tuning.",
+    "chord_m": 0.12499417168740054,
+    "chord_cm": 12.499417168740054,
+    "endpoint_pixel_disk_sensitivity_m": [
+      0.11147601961937932,
+      0.1415880206317833
+    ],
+    "current_cleaned_endpoint_pool_sensitivity_m": [
+      0.11147601961937932,
+      0.1415880206317833
+    ],
+    "sensitivity_scope": "Exact remapped historical D405 source-disk pool in full fusion; cleanup membership counts are explicit. Separate cleaned-only range supplied. One old P5 L515 candidate is not remappable and excluded."
+  }
+]

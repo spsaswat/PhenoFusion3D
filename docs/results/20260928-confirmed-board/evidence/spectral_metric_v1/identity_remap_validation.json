@@ -1,0 +1,153 @@
+{
+  "status": "new_metric_context_with_exact_source_identity_spectral_remap",
+  "script_sha256": "9436de9bcc39dc2d0b3e4e782af7697addac51d56d6a4f07382f868601893eda",
+  "prior_results_preserved": true,
+  "all_prior_spectral_arrays_exact": true,
+  "unique_source_locations": 3,
+  "associations": 6,
+  "remappings": [
+    {
+      "id": "red_upper_2",
+      "source_camera_id": 0,
+      "original_D405_full_scene_point_index": 6706132,
+      "old_P5_row": 66518,
+      "new_P5_row": 65318
+    },
+    {
+      "id": "red_upper_6",
+      "source_camera_id": 0,
+      "original_D405_full_scene_point_index": 6770251,
+      "old_P5_row": 72896,
+      "new_P5_row": 71560
+    },
+    {
+      "id": "green_lower_0",
+      "source_camera_id": 0,
+      "original_D405_full_scene_point_index": 669320,
+      "old_P5_row": 6213,
+      "new_P5_row": 6128
+    },
+    {
+      "id": "fx17_track_red_upper_2",
+      "source_camera_id": 0,
+      "original_D405_full_scene_point_index": 6706132,
+      "old_P5_row": 66518,
+      "new_P5_row": 65318
+    },
+    {
+      "id": "fx17_track_red_upper_6",
+      "source_camera_id": 0,
+      "original_D405_full_scene_point_index": 6770251,
+      "old_P5_row": 72896,
+      "new_P5_row": 71560
+    },
+    {
+      "id": "fx17_track_green_lower_0",
+      "source_camera_id": 0,
+      "original_D405_full_scene_point_index": 669320,
+      "old_P5_row": 6213,
+      "new_P5_row": 6128
+    }
+  ],
+  "geometry_source": "generated\\research_confirmed_board_20261007\\cleanup_v1\\result",
+  "geometry_source_summary_sha256": "0f8fe280b3c54b1980c09158f4feba8c38801f45eb4d939a7a242c38f1dade8b",
+  "geometry_context_points": 430060,
+  "per_plant_counts": {
+    "P1": 21444,
+    "P2": 72786,
+    "P3": 112943,
+    "P4": 68239,
+    "P5": 154648
+  },
+  "board_dimensions_resolved": true,
+  "dense_spectral_projection": false,
+  "height_diagnostic_decision": "failed held-out prediction; not applied",
+  "scientific_result": "generated\\research_confirmed_board_20261007\\spectral_metric_v1\\result",
+  "scientific_result_summary_sha256": "21f91cd71a65ab35a840761ae76e76b6d8e2e2754a467c819a1b84bfa9ec2d88",
+  "full_camera_space_sample_files_byte_identical_before_ui_adaptation": 25,
+  "final_camera_space_sensor_files_byte_identical": 20,
+  "final_camera_space_sensor_hashes": [
+    {
+      "path": "samples/sensors/fx10/browser_data.js",
+      "sha256": "c756a3ae6b24c01796a2f9e458f6fe5ba96637e36671fd1b4b06605e0ebc1166"
+    },
+    {
+      "path": "samples/sensors/fx10/input_config.json",
+      "sha256": "2d3ecd286764928ce0c230dd5181595d09579923737eb38d59b1824dfe2c7665"
+    },
+    {
+      "path": "samples/sensors/fx10/measured_spectra.metadata.json",
+      "sha256": "acdc6eee8fcc51849a903df32d7f7d2c1c14357391f0cf8dfcf2ad6284635206"
+    },
+    {
+      "path": "samples/sensors/fx10/measured_spectra.npz",
+      "sha256": "a824a2f8a7f5fbc43eb9f86f5fe4e7314d93b89e39b96cbffcfe954ab479f9b6"
+    },
+    {
+      "path": "samples/sensors/fx10/patch_index_summary.csv",
+      "sha256": "8d65ccc85d4560f64721727603943c2b95b171a1876d8e613b19b88f728a4ac8"
+    },
+    {
+      "path": "samples/sensors/fx10/patch_spectral_summary.csv",
+      "sha256": "d7575729680ef802d37a310324c2447bb41e0fdd6ee6bae167406a957d8754f2"
+    },
+    {
+      "path": "samples/sensors/fx10/reference_profiles.npz",
+      "sha256": "31637fe6c09a25633035fb07b8501174c8c2461a196129c6729b292f38cb3f06"
+    },
+    {
+      "path": "samples/sensors/fx10/reviewed_patch_mask.npz",
+      "sha256": "43f6661fab762e7a344a819b4eba4c6ba46caa14bab1a155c54f864168548629"
+    },
+    {
+      "path": "samples/sensors/fx10/sample_bands.csv.gz",
+      "sha256": "a07402ee0fdbfe093a8e39e550fd25a493fca3498895a7ccb02e74750b3ea6d3"
+    },
+    {
+      "path": "samples/sensors/fx10/sample_indices.csv.gz",
+      "sha256": "ada4cb01c7de7735f96a3d1df22e782ceb402b2f7ea6b9e317e7c6a228b672ae"
+    },
+    {
+      "path": "samples/sensors/fx10/summary.json",
+      "sha256": "7d6271611d1cebd8ba63bde9f0006763f2216574a458eb07b437748e5d868d65"
+    },
+    {
+      "path": "samples/sensors/fx17/browser_data.js",
+      "sha256": "2167cfa9c369a4315167d1e43fec33c738acd914c6f8cc1b2217e2e2498e3e2b"
+    },
+    {
+      "path": "samples/sensors/fx17/input_config.json",
+      "sha256": "8643be0183997c59b6219a61414547893e033e1a37faece5d13bfbcb5e1b024d"
+    },
+    {
+      "path": "samples/sensors/fx17/measured_spectra.metadata.json",
+      "sha256": "c21d2a12ca7343c160ca9d1133e483b388a27c6f01eb9aa40129ecd50a0fcd0c"
+    },
+    {
+      "path": "samples/sensors/fx17/measured_spectra.npz",
+      "sha256": "b44115f387ae0c15f1d094bcdda877b240c4aa6f6472e5a3597cf8f2f224da7f"
+    },
+    {
+      "path": "samples/sensors/fx17/patch_spectral_summary.csv",
+      "sha256": "14249dbb8b367c67d82683bc252ff7b65acaef5b6f73137f7e21f8bc7aa44acb"
+    },
+    {
+      "path": "samples/sensors/fx17/reference_profiles.npz",
+      "sha256": "466c87b9a48dd876c48a622780fec3d7931a81d9196a0bc2144ae293253c5ed5"
+    },
+    {
+      "path": "samples/sensors/fx17/reviewed_patch_mask.npz",
+      "sha256": "6a40454ee3f78086e54b6eab84d13484da4d08830a5638ac56b77bc231815cfb"
+    },
+    {
+      "path": "samples/sensors/fx17/sample_bands.csv.gz",
+      "sha256": "8b80ab35b895207b6a4a20caa4923d4733fe8a255cb296900352ddccaa130054"
+    },
+    {
+      "path": "samples/sensors/fx17/summary.json",
+      "sha256": "f1e30633c294aaa12331cd483271692c8ce1c8b4b33ca5d7db0ae2b752449d6c"
+    }
+  ],
+  "fx17_signal_ratio": "Additional separately derived strict-flag descriptor; original NPZ/CSV/browser numeric payloads remain unchanged.",
+  "builder_final_sha256": "e9b3a9c218a412461112931154cb050be75c47aeda2d62c1bb3a39e071cde42a"
+}

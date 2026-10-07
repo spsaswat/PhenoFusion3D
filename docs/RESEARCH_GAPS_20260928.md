@@ -1,10 +1,10 @@
 # Research gaps: 28 September 2026 five-plant recordings
 
-Status recorded 7 October 2026. The user explicitly cannot supply the physical ChArUco size or recording units yet and requested that processing continue with these gaps recorded. No guessed value is accepted as measured calibration.
+Updated 8 October 2026 after Saswat confirmed the board dimensions. The nominal square pitch is resolved; independent physical accuracy and the remaining gaps below are not. See [the confirmed-board results archive](results/20260928-confirmed-board/README.md).
 
 | Gap | Current evidence | Consequence | Work that can continue |
 |---|---|---|---|
-| Printed ChArUco square pitch | Actual recorded targets are ChArUco. Conditional image/motion estimates exist; remembered 127/76 measurement is unresolved. | Absolute lengths, areas and registration tolerances retain conditional scale. | Source matching, observed geometry, conditional descriptors, calibration diagnostics. |
+| Printed ChArUco square pitch: nominal dimensions resolved | Saswat confirmed 25 mm squares, 18 mm markers, 7 x 10 layout and DICT_4X4_50. Print tolerance remains unknown. | Metric recheck replaces earlier conditional scale; this alone does not certify physical accuracy. | Use the separately saved confirmed-board results and retain old outputs as historical. |
 | Recording depth and gantry units | Export/session metadata did not preserve independent unit verification. Current D405/L515 conventions have internal consistency evidence. | Internal agreement is not independent physical accuracy. No scale fitting to validation measurements. | Preserve current coordinates and document conventions; recompute derived measurements when independent units become available. |
 | True plant base and tip / organ identity | Cleanup excludes approximate basal bands; some leaves and tips are incomplete or overlap. | Bounding-box height cannot silently become stem-base-to-tip height. Only explicitly matched organs are comparable. | Review original source views and fused point IDs; retain unmatched dimensions and reasons instead of inventing measurements. |
 | Manual reference definitions | Some ruler endpoints/junctions are unreadable; P1 width annotation conflicts with photographed section; P4 organ type unresolved. | Operator annotations and approximate photo intervals are different evidence classes. Some leaf comparisons remain ineligible. | Preserve original annotations and separately report photo readings and definition-compatible matches. |

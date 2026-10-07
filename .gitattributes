@@ -1,2 +1,5 @@
 # Preserve the imported scientific snapshot byte-for-byte on Windows and Linux.
 /processing/hyperspectral/legacy/** -text
+
+# Preserve archived research evidence and its SHA256 identities.
+/docs/results/20260928-confirmed-board/evidence/** -text

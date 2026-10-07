@@ -1,0 +1,163 @@
+{
+  "status": "pass",
+  "files": 26,
+  "scope": "Source-byte preservation only; no physical laboratory hardware test performed.",
+  "checks": [
+    {
+      "path": "main.py",
+      "expected_sha256": "9f3b051f5b784732c4124fb84db4aa62b5566677e816cc1cdc7f000d7a382afc",
+      "actual_sha256": "9f3b051f5b784732c4124fb84db4aa62b5566677e816cc1cdc7f000d7a382afc",
+      "unchanged": true
+    },
+    {
+      "path": "app/main_window.py",
+      "expected_sha256": "040c856575c96c6e09c314f73b95188cd31521ad6a887519eac987c9141669a1",
+      "actual_sha256": "040c856575c96c6e09c314f73b95188cd31521ad6a887519eac987c9141669a1",
+      "unchanged": true
+    },
+    {
+      "path": "app/controller.py",
+      "expected_sha256": "6dc964d58bc9f332d547676953939581bfa470668bbc2c3598f9ae1501eddf1b",
+      "actual_sha256": "6dc964d58bc9f332d547676953939581bfa470668bbc2c3598f9ae1501eddf1b",
+      "unchanged": true
+    },
+    {
+      "path": "app/capture_worker.py",
+      "expected_sha256": "8b9b4dcbc9ce6c3d7a5139f56c3de9a1851c48eb58732624ba307d4558a9da12",
+      "actual_sha256": "8b9b4dcbc9ce6c3d7a5139f56c3de9a1851c48eb58732624ba307d4558a9da12",
+      "unchanged": true
+    },
+    {
+      "path": "app/panels/capture_panel.py",
+      "expected_sha256": "f06408603428d4f73b4d5d9acad378ea1e5226a51e5758f8b19b3f4c51672d41",
+      "actual_sha256": "f06408603428d4f73b4d5d9acad378ea1e5226a51e5758f8b19b3f4c51672d41",
+      "unchanged": true
+    },
+    {
+      "path": "app/panels/gantry_panel.py",
+      "expected_sha256": "782eb3bc0c9081990f82771ac81304ca36581517474886110eaedad487968145",
+      "actual_sha256": "782eb3bc0c9081990f82771ac81304ca36581517474886110eaedad487968145",
+      "unchanged": true
+    },
+    {
+      "path": "processing/reconstructor.py",
+      "expected_sha256": "077bf48dfb5745114d327e00541b65d383743f00da85c8b60cef3d3b5ee600d9",
+      "actual_sha256": "077bf48dfb5745114d327e00541b65d383743f00da85c8b60cef3d3b5ee600d9",
+      "unchanged": true
+    },
+    {
+      "path": "processing/icp.py",
+      "expected_sha256": "b44b9c8d559f9abb0f6679b63468b5f84b7248715f5d2eee2c81bfe84103755d",
+      "actual_sha256": "b44b9c8d559f9abb0f6679b63468b5f84b7248715f5d2eee2c81bfe84103755d",
+      "unchanged": true
+    },
+    {
+      "path": "setup.sh",
+      "expected_sha256": "f5a1a0d31d825dbb91fe71a907d497a76ef9ec87b985249b0ef84f550c1e30b0",
+      "actual_sha256": "f5a1a0d31d825dbb91fe71a907d497a76ef9ec87b985249b0ef84f550c1e30b0",
+      "unchanged": true
+    },
+    {
+      "path": "requirements.txt",
+      "expected_sha256": "b57524e871cf764869874d78d4f7f6fda73961adcf3249ee0cd097679cfbb57f",
+      "actual_sha256": "b57524e871cf764869874d78d4f7f6fda73961adcf3249ee0cd097679cfbb57f",
+      "unchanged": true
+    },
+    {
+      "path": "capture/__init__.py",
+      "expected_sha256": "9ee0dd1bfae4c8ef77379b3520e656d36ba0710d3a7b4ec64263519dc4ad9a29",
+      "actual_sha256": "9ee0dd1bfae4c8ef77379b3520e656d36ba0710d3a7b4ec64263519dc4ad9a29",
+      "unchanged": true
+    },
+    {
+      "path": "capture/base.py",
+      "expected_sha256": "56a241f59f80ab23c984d725edd7def790e6405eca03a262aaa9c49bb93184a2",
+      "actual_sha256": "56a241f59f80ab23c984d725edd7def790e6405eca03a262aaa9c49bb93184a2",
+      "unchanged": true
+    },
+    {
+      "path": "capture/gantry.py",
+      "expected_sha256": "d25c45ff238014a9eead4eecba37ffd651456640ed6b3b96cfe74041c95b5fde",
+      "actual_sha256": "d25c45ff238014a9eead4eecba37ffd651456640ed6b3b96cfe74041c95b5fde",
+      "unchanged": true
+    },
+    {
+      "path": "capture/realsense_capture.py",
+      "expected_sha256": "899891601a569c1d921a5c9aed56e3d0fcaf9ce33e2baef8893390419e14eae2",
+      "actual_sha256": "899891601a569c1d921a5c9aed56e3d0fcaf9ce33e2baef8893390419e14eae2",
+      "unchanged": true
+    },
+    {
+      "path": "capture/realsense_runtime.py",
+      "expected_sha256": "b6419299ee14e56920e4023c90d18fdb0ff63c7f7b4c99b85dafe3d8fc45f0c4",
+      "actual_sha256": "b6419299ee14e56920e4023c90d18fdb0ff63c7f7b4c99b85dafe3d8fc45f0c4",
+      "unchanged": true
+    },
+    {
+      "path": "capture/ros_agent.py",
+      "expected_sha256": "824cdb7ed1f6f70b4d1444edaec3d32693329ae3c03d7d20ffe8bd47ec0bdb8d",
+      "actual_sha256": "824cdb7ed1f6f70b4d1444edaec3d32693329ae3c03d7d20ffe8bd47ec0bdb8d",
+      "unchanged": true
+    },
+    {
+      "path": "capture/ros_capture.py",
+      "expected_sha256": "b19b722f22f6ebefe03fd2bc6ce0a540e2eadcfe9c38b00ea3d49614dcbc23ff",
+      "actual_sha256": "b19b722f22f6ebefe03fd2bc6ce0a540e2eadcfe9c38b00ea3d49614dcbc23ff",
+      "unchanged": true
+    },
+    {
+      "path": "capture/ros_client.py",
+      "expected_sha256": "ef7ed633ecf59719984e61f6f885a9e5b75820af9e6fa2ed92e9be8a48fdd842",
+      "actual_sha256": "ef7ed633ecf59719984e61f6f885a9e5b75820af9e6fa2ed92e9be8a48fdd842",
+      "unchanged": true
+    },
+    {
+      "path": "capture/ros_runtime.py",
+      "expected_sha256": "a22b757fe033b7a40039772bc14e98e79c2d320352320f7767ae0a8dd90da120",
+      "actual_sha256": "a22b757fe033b7a40039772bc14e98e79c2d320352320f7767ae0a8dd90da120",
+      "unchanged": true
+    },
+    {
+      "path": "install/build_appimage.sh",
+      "expected_sha256": "6596844b7919aff2e528245b5daab712c33ec4f7074ee2583e217a217a26b668",
+      "actual_sha256": "6596844b7919aff2e528245b5daab712c33ec4f7074ee2583e217a217a26b668",
+      "unchanged": true
+    },
+    {
+      "path": "install/install_linux.sh",
+      "expected_sha256": "4dc7a44e384799e885420e6743c206be6ed9606743b38bf70ff5201dac1fe603",
+      "actual_sha256": "4dc7a44e384799e885420e6743c206be6ed9606743b38bf70ff5201dac1fe603",
+      "unchanged": true
+    },
+    {
+      "path": "install/install_windows.ps1",
+      "expected_sha256": "4e63a3724cd717c77bab8f551c2df5f215ad3df65899922757304aa53a6e0aaf",
+      "actual_sha256": "4e63a3724cd717c77bab8f551c2df5f215ad3df65899922757304aa53a6e0aaf",
+      "unchanged": true
+    },
+    {
+      "path": "install/README.md",
+      "expected_sha256": "ffa8f8615903b3b2435d14b0607392985677a9b9ee9db21e1e8af288c49c8510",
+      "actual_sha256": "ffa8f8615903b3b2435d14b0607392985677a9b9ee9db21e1e8af288c49c8510",
+      "unchanged": true
+    },
+    {
+      "path": "install/appimage/entrypoint.sh",
+      "expected_sha256": "bab3e17c4513fc5a5361587e6a0bc3235a9ff0731a1d695629a48cb5baaf5bb0",
+      "actual_sha256": "bab3e17c4513fc5a5361587e6a0bc3235a9ff0731a1d695629a48cb5baaf5bb0",
+      "unchanged": true
+    },
+    {
+      "path": "install/appimage/phenofusion3d.desktop",
+      "expected_sha256": "d4be5035152c349399d6c70285423aa690561bd96bd1427bc56be3d065f5648c",
+      "actual_sha256": "d4be5035152c349399d6c70285423aa690561bd96bd1427bc56be3d065f5648c",
+      "unchanged": true
+    },
+    {
+      "path": "install/appimage/requirements.txt",
+      "expected_sha256": "b8b07df63a0b81b001fb8882de9bfc24f193f479d592da3c00b777eb222e122e",
+      "actual_sha256": "b8b07df63a0b81b001fb8882de9bfc24f193f479d592da3c00b777eb222e122e",
+      "unchanged": true
+    }
+  ]
+}

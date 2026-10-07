@@ -1,0 +1,261 @@
+{
+  "status": "metric_board_pose_and_gantry_scale_recomputed",
+  "dimension_source": "board_confirmation.json",
+  "physical_square_m": 0.025,
+  "physical_marker_m": 0.018,
+  "marker_ratio": 0.72,
+  "corner_observations": 57,
+  "corners": 3067,
+  "intrinsics_changed": false,
+  "selected_K": [
+    [
+      645.772216796875,
+      0.0,
+      634.3516235351562
+    ],
+    [
+      0.0,
+      645.1732177734375,
+      360.0220947265625
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "selected_distortion": [
+    -0.0542781837284565,
+    0.05645398050546646,
+    0.000695822003763169,
+    0.0007303903112187982,
+    -0.01802046038210392
+  ],
+  "pose_method": "Refit solvePnP with actual 25mm square object coordinates, original refined image corners and retained factory intrinsics.",
+  "calibration_reprojection_px": {
+    "n": 3067,
+    "rms": 0.2204020810704392,
+    "median": 0.17243732733935563,
+    "p95": 0.4032055906574078,
+    "max": 0.7466708707419357
+  },
+  "max_reprojection_change_from_unit_square_pose_px": 7.71824943512911e-07,
+  "metric_motion_vector_m_per_previous_filename_unit": [
+    1.0286010000319723,
+    -0.023728785042311795,
+    8.772656119138134e-05
+  ],
+  "metres_per_previous_filename_unit": 1.0288746669066682,
+  "linear_length_change_percent": 2.887466690666818,
+  "area_change_percent": 5.858308020230729,
+  "volume_change_percent": 8.914931403618386,
+  "motion_direction": [
+    0.999734013399787,
+    -0.023062852848396834,
+    8.52645749896175e-05
+  ],
+  "old_motion_direction": [
+    0.9997348331044563,
+    -0.023026089132789876,
+    0.00025039339762189853
+  ],
+  "angle_to_old_motion_deg": 0.009692944144619794,
+  "joint_translation_residual_m": {
+    "n": 57,
+    "rms": 0.0011624960861387485,
+    "median": 0.0008416342204717588,
+    "p95": 0.002117029440907878,
+    "max": 0.003323600895456969
+  },
+  "per_sheet": [
+    {
+      "sheet": "left_sheet",
+      "observations": 16,
+      "metres_per_previous_filename_unit": 1.0278532950095984,
+      "change_percent": 2.7853295009598433,
+      "residual_m": {
+        "n": 16,
+        "rms": 0.0006615309240093463,
+        "median": 0.0006033133077429074,
+        "p95": 0.001002951384898986,
+        "max": 0.0011053788867529198
+      }
+    },
+    {
+      "sheet": "middle_sheet",
+      "observations": 21,
+      "metres_per_previous_filename_unit": 1.0281888254234544,
+      "change_percent": 2.8188825423454356,
+      "residual_m": {
+        "n": 21,
+        "rms": 0.0013349556741793285,
+        "median": 0.000947816142435918,
+        "p95": 0.00210763449232202,
+        "max": 0.003249911327789784
+      }
+    },
+    {
+      "sheet": "right_sheet",
+      "observations": 20,
+      "metres_per_previous_filename_unit": 1.0300037650497684,
+      "change_percent": 3.0003765049768427,
+      "residual_m": {
+        "n": 20,
+        "rms": 0.0010920213507790723,
+        "median": 0.0009281229919762502,
+        "p95": 0.0018263943585402913,
+        "max": 0.0019069666480352517
+      }
+    }
+  ],
+  "whole_frame_holdouts": [
+    {
+      "fold": 0,
+      "train_observations": 43,
+      "held_observations": 14,
+      "factor": 1.0289321713728903,
+      "held_pose_translation_residual_m": {
+        "n": 14,
+        "rms": 0.0011831944538566968,
+        "median": 0.0008955460222743186,
+        "p95": 0.0019163828897133472,
+        "max": 0.002000175739570012
+      }
+    },
+    {
+      "fold": 1,
+      "train_observations": 43,
+      "held_observations": 14,
+      "factor": 1.0288070524846704,
+      "held_pose_translation_residual_m": {
+        "n": 14,
+        "rms": 0.000893601016627722,
+        "median": 0.000710626709196965,
+        "p95": 0.0013261430725300713,
+        "max": 0.0017132411411559742
+      }
+    },
+    {
+      "fold": 2,
+      "train_observations": 43,
+      "held_observations": 14,
+      "factor": 1.0288420345617781,
+      "held_pose_translation_residual_m": {
+        "n": 14,
+        "rms": 0.0015026688125223144,
+        "median": 0.0008497924205175184,
+        "p95": 0.0030040256696469148,
+        "max": 0.0033960764343043386
+      }
+    },
+    {
+      "fold": 3,
+      "train_observations": 42,
+      "held_observations": 15,
+      "factor": 1.0289192218608452,
+      "held_pose_translation_residual_m": {
+        "n": 15,
+        "rms": 0.0012861290035948445,
+        "median": 0.001120590569968425,
+        "p95": 0.0022714318080504356,
+        "max": 0.002343127559247616
+      }
+    }
+  ],
+  "board_models": [
+    {
+      "sheet": "left_sheet",
+      "R_board_to_reference": [
+        [
+          -0.9996013558853554,
+          -0.028108410793997833,
+          -0.0026545347607463787
+        ],
+        [
+          0.0280668431841513,
+          -0.9994997561390324,
+          0.014577029590833018
+        ],
+        [
+          -0.0030629439819239855,
+          0.014496714132920878,
+          0.9998902258015693
+        ]
+      ],
+      "t_board_to_reference_m": [
+        0.4597828261567101,
+        0.22631247034926927,
+        0.8969299419081609
+      ],
+      "reference": "calibration camera at filename coordinate zero under fixed-mount shared-linear-motion fit",
+      "uncertainty": "Approximate fit; small orientation variation, paper warp and mount/pose error are not removed. Not yet transferred to plant bundle reference."
+    },
+    {
+      "sheet": "middle_sheet",
+      "R_board_to_reference": [
+        [
+          0.6766473721620496,
+          0.7363005875315558,
+          -0.003127066817125099
+        ],
+        [
+          -0.7361486691203962,
+          0.6765836921790691,
+          0.017878602563079493
+        ],
+        [
+          0.015279747984259757,
+          -0.009795523366560225,
+          0.9998352749445847
+        ]
+      ],
+      "t_board_to_reference_m": [
+        0.718496876589119,
+        0.06500988200236112,
+        0.8987233269440928
+      ],
+      "reference": "calibration camera at filename coordinate zero under fixed-mount shared-linear-motion fit",
+      "uncertainty": "Approximate fit; small orientation variation, paper warp and mount/pose error are not removed. Not yet transferred to plant bundle reference."
+    },
+    {
+      "sheet": "right_sheet",
+      "R_board_to_reference": [
+        [
+          0.9999149237595095,
+          0.012945496046471766,
+          -0.0015998047146407784
+        ],
+        [
+          -0.01292377874864488,
+          0.9998331163222647,
+          0.012911833648426586
+        ],
+        [
+          0.0017666878247947486,
+          -0.012890059635988884,
+          0.9999153590063062
+        ]
+      ],
+      "t_board_to_reference_m": [
+        1.282283777346229,
+        -0.039332243325556134,
+        0.9004094852227762
+      ],
+      "reference": "calibration camera at filename coordinate zero under fixed-mount shared-linear-motion fit",
+      "uncertainty": "Approximate fit; small orientation variation, paper warp and mount/pose error are not removed. Not yet transferred to plant bundle reference."
+    }
+  ],
+  "model": "Shared linear camera motion with a separate intercept for each physical sheet, robust translation residual weighting.",
+  "method_boundary": "Board pose/trajectory residuals are model consistency diagnostics. Print dimensions are supplied, not independently remeasured here; uncertainty unavailable. Same-rig transfer to the plant scan is user-confirmed but model-dependent.",
+  "old_filename_unit_interpretation": "Previously frame_id/1e6 was treated as metres. Here its physical displacement is estimated from known-size board poses.",
+  "use_for_reconstruction": "Establishes D405 RGB geometry scale. Do not apply this factor blindly to L515 sensor depth or fused geometry; evaluate sensor units and refit cross-camera registration separately.",
+  "no_new_surfaces": true,
+  "manual_traits_used": false,
+  "plant_reconstruction_updated": false,
+  "source_hashes": {
+    "generated\\research_20260928_readiness_20261007\\checkerboard_calibration\\corner_observations.json": "1de34a68409edb474edb9fdb6a0aae2e04a2019c5517e63b1616ce0b386359c9",
+    "generated\\research_20260928_readiness_20261007\\checkerboard_calibration\\calibration_experiment.json": "3545bf345a4a609882f1b856954b005142d4a7a96966af589dc827c5d83e0f23",
+    "generated\\research_20260928_processing_20261007\\calibration_transfer.json": "bd325cb89f1285d0aabb87cea82eb27601cc67759cbf50dc47ace8ffb2072a65",
+    "generated\\research_confirmed_board_20261007\\calibrate_d405_metric.py": "4c70ab02aa297e538cb0d76a3c6b4abccd5f870314f450a4c68e15c878c14c1d"
+  }
+}

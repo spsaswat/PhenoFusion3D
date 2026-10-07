@@ -1,0 +1,94 @@
+{
+  "status": "pass",
+  "tested_at_utc": "2026-10-07T13:16:08.133Z",
+  "browser": "Chrome extension browser 1; existing viewport unchanged",
+  "base_url": "http://127.0.0.1:8877/research_confirmed_board_20261007/website/spectral/",
+  "checks": [
+    "Real WebGL rendered all 430060 metric context points; P5 selection rendered 154,648",
+    "P1 selection explicitly reported zero spectral associations and no selected spectrum",
+    "FX10 green vertex 6128 source line 1827, column 412 displayed NDVI Q 0.7160221934318542,descriptor flags 0",
+    "FX10 band 223 at 1003.81 nm green Q0 1.073446273803711; red remained missing with band flag 1",
+    "FX17 green Q ratio 4.8306622675896245 and Q0 ratio 4.06867485395179,descriptor flags 0; red line 1509, column 587 remained missing with descriptor flags 21",
+    "Clicking an empty 3D canvas location cleared the spectrum; clicking visible green marker restored exact FX17 line 1718, column 235,vertex 6128",
+    "Both sensors offered R1-R5 filtering with exact saved counts; original sample ID jump updated the region",
+    "Actual measured-source dot click selected FX17 sample 3, line 248, column 484, ratio Q 3.254557,flags 0",
+    "3D source link navigated to FX17 sample 2,line 1718, column 235,band 223 at 1720.23 nm with raw DN 3120 and retained both ratio values",
+    "FX17 offers its one separately derived signal ratio and does not offer unavailable FX10 indices"
+  ],
+  "region_results": [
+    {
+      "sensor": "fx10",
+      "region": "R1",
+      "scale": "346 saved samples in R1 (3D identity unverified) \u00c2\u00b7 Display range 4448.000 to 5392.000 \u00c2\u00b7 346 finite samples."
+    },
+    {
+      "sensor": "fx10",
+      "region": "R2",
+      "scale": "1390 saved samples in R2 (3D identity unverified) \u00c2\u00b7 Display range 4528.000 to 5216.000 \u00c2\u00b7 1390 finite samples."
+    },
+    {
+      "sensor": "fx10",
+      "region": "R3",
+      "scale": "1916 saved samples in R3 (3D identity unverified) \u00c2\u00b7 Display range 4384.000 to 5424.000 \u00c2\u00b7 1916 finite samples."
+    },
+    {
+      "sensor": "fx10",
+      "region": "R4",
+      "scale": "792 saved samples in R4 (3D identity unverified) \u00c2\u00b7 Display range 4736.000 to 5472.000 \u00c2\u00b7 792 finite samples."
+    },
+    {
+      "sensor": "fx10",
+      "region": "R5",
+      "scale": "3538 saved samples in R5 (3D identity unverified) \u00c2\u00b7 Display range 4720.000 to 5632.000 \u00c2\u00b7 3538 finite samples."
+    },
+    {
+      "sensor": "fx17",
+      "region": "R1",
+      "scale": "131 saved samples in R1 (3D identity unverified) \u00c2\u00b7 Display range 2912.000 to 5088.000 \u00c2\u00b7 131 finite samples."
+    },
+    {
+      "sensor": "fx17",
+      "region": "R2",
+      "scale": "806 saved samples in R2 (3D identity unverified) \u00c2\u00b7 Display range 3296.000 to 6816.000 \u00c2\u00b7 806 finite samples."
+    },
+    {
+      "sensor": "fx17",
+      "region": "R3",
+      "scale": "1317 saved samples in R3 (3D identity unverified) \u00c2\u00b7 Display range 2560.000 to 4496.000 \u00c2\u00b7 1317 finite samples."
+    },
+    {
+      "sensor": "fx17",
+      "region": "R4",
+      "scale": "528 saved samples in R4 (3D identity unverified) \u00c2\u00b7 Display range 2976.000 to 5536.000 \u00c2\u00b7 528 finite samples."
+    },
+    {
+      "sensor": "fx17",
+      "region": "R5",
+      "scale": "2579 saved samples in R5 (3D identity unverified) \u00c2\u00b7 Display range 3296.000 to 5120.000 \u00c2\u00b7 2579 finite samples."
+    }
+  ],
+  "console": {
+    "fusion": [],
+    "full_samples": [],
+    "sparse_inspector": []
+  },
+  "screenshots": [
+    "fusion_fx17_green.jpg",
+    "samples_fx17_ratio.jpg",
+    "exact_fx17_source.jpg"
+  ],
+  "assets_modified": false,
+  "scientific_scope": "UI and data presentation validation only; no new physical accuracy or biological validity claims.",
+  "browser_values_independently_crosschecked_against_saved_arrays": true,
+  "screenshot_sha256": {
+    "fusion_fx17_green.jpg": "a90facf167f0057fb3bdef096cf3003d8fac63f3f06e2370e8026c4a779d8284",
+    "samples_fx17_ratio.jpg": "d6bc9164f4518e5ad6b7dafff1b181dc6ef9ce361d202fe63dfd396add2252bf",
+    "exact_fx17_source.jpg": "d235a0e863bf7e563a10e0732b95dafefa62eeb75247d83b6c27564a297f62f5"
+  },
+  "tested_html_sha256": {
+    "fusion/index.html": "eea72eac19062bc821ab106f9e8c4a61e953176ae596ba0e55acce3c49f35407",
+    "samples/index.html": "c5a84cf72e3f7920ffc0e382318b611bf1c47e4ae9aaaefa5517a4bbdda08842",
+    "fusion/spectra/index.html": "cfbcca53f322c8f0e00c4ff609861fa882b6329220ff0af07ecc3a24254a7253"
+  },
+  "test_tabs_closed": true
+}

@@ -1,0 +1,144 @@
+{
+  "snapshot_date": "2026-10-08",
+  "website_commit": "cd1c30bc315398aaf21b5afd70b2b4bf1528a9e7",
+  "files": [
+    {
+      "path": "evidence/README.md",
+      "source": "generated/research_confirmed_board_20261007/README.md",
+      "bytes": 4592,
+      "sha256": "9cb768e3b0c45789bd535ce1579048b140d3172d1fbc03b8312e870e494f8016"
+    },
+    {
+      "path": "evidence/board_confirmation.json",
+      "source": "generated/research_confirmed_board_20261007/board_confirmation.json",
+      "bytes": 797,
+      "sha256": "55abeaa4321131141a2ebfa8998aca8a07e55f273c1ca160a7a84d6bf8256e5f"
+    },
+    {
+      "path": "evidence/d405_metric_calibration.json",
+      "source": "generated/research_confirmed_board_20261007/d405_metric_calibration.json",
+      "bytes": 8743,
+      "sha256": "4875f09593b49966f1f191296de8b055a68b61f8626f6cd1a3eda269b8d0c3cf"
+    },
+    {
+      "path": "evidence/final_verification.json",
+      "source": "generated/research_confirmed_board_20261007/final_verification.json",
+      "bytes": 2138,
+      "sha256": "54a9faf428c7937a10fd6a52cef448a1d9684eae91c634ad62ed187ed1daac52"
+    },
+    {
+      "path": "evidence/geometry_asset_validation.json",
+      "source": "generated/research_confirmed_board_20261007/geometry_asset_validation.json",
+      "bytes": 7626,
+      "sha256": "a28d5f6e1867369f0de1e5c0fbfbddd6043b9a03a3a2638b9b6654f18d2fe8b0"
+    },
+    {
+      "path": "evidence/RECHECK_STATUS.json",
+      "source": "generated/research_confirmed_board_20261007/RECHECK_STATUS.json",
+      "bytes": 1627,
+      "sha256": "7a14d8ffe80c60b13276847fb15dd38f65e679436f4fbd3d2895384f2dded275"
+    },
+    {
+      "path": "evidence/website_commit_receipt.json",
+      "source": "generated/research_confirmed_board_20261007/website_commit_receipt.json",
+      "bytes": 225,
+      "sha256": "8dd700cb23bcdb026aed8353bc160b37b5a6bf3b97bece82e8c454b70c36eb81"
+    },
+    {
+      "path": "evidence/website_link_validation.json",
+      "source": "generated/research_confirmed_board_20261007/website_link_validation.json",
+      "bytes": 161,
+      "sha256": "a4adbf01429b4de6976fef05bff8e81b3823c5abce7a2105c4f85aafb70cc2bf"
+    },
+    {
+      "path": "evidence/cross_camera/selection.json",
+      "source": "generated/research_confirmed_board_20261007/cross_camera/selection.json",
+      "bytes": 9710,
+      "sha256": "dcbc466509081f014dfa8b0f51f8fbbd512408677843c44f4bb824f9572b671a"
+    },
+    {
+      "path": "evidence/cross_camera/matched_soil_metric_comparison.json",
+      "source": "generated/research_confirmed_board_20261007/cross_camera/matched_soil_metric_comparison.json",
+      "bytes": 340899,
+      "sha256": "aa35186cf7c83b4a8c13516764d1c03eaadd00d68dbae4b7c5f8ae91951a8f6d"
+    },
+    {
+      "path": "evidence/l515/metric_calibration.json",
+      "source": "generated/research_confirmed_board_20261007/l515/metric_calibration.json",
+      "bytes": 14000,
+      "sha256": "6796eb61645738a90fde69eb13e5dc867c33a7e264f0c114121e541ade397c9c"
+    },
+    {
+      "path": "evidence/l515/replay_validation_native.json",
+      "source": "generated/research_confirmed_board_20261007/l515/replay_validation_native.json",
+      "bytes": 33541,
+      "sha256": "62630693e8b994d80df819d3722c71e3fa30f6055ca9f1864c83ae6116f6ed4f"
+    },
+    {
+      "path": "evidence/l515/replay_validation_board_gain.json",
+      "source": "generated/research_confirmed_board_20261007/l515/replay_validation_board_gain.json",
+      "bytes": 33545,
+      "sha256": "f9ee540a26a4b47d3c8ed6f42af6d06ae4f1efb594fc5bd79a27e4fbd47e7d3c"
+    },
+    {
+      "path": "evidence/d405_metric/summary.json",
+      "source": "generated/research_confirmed_board_20261007/d405_metric/summary.json",
+      "bytes": 3236,
+      "sha256": "c19d34912a5bb7a06e78f87a352a60bb552579d0f450a53312c2080ef045f0d2"
+    },
+    {
+      "path": "evidence/fusion_v1/summary.json",
+      "source": "generated/research_confirmed_board_20261007/fusion_v1/summary.json",
+      "bytes": 29890,
+      "sha256": "2a223df08679c0eb92c69dd4032943e3c8ba283a628815182409570eb7d1c547"
+    },
+    {
+      "path": "evidence/cleanup_v1/result/summary.json",
+      "source": "generated/research_confirmed_board_20261007/cleanup_v1/result/summary.json",
+      "bytes": 7327,
+      "sha256": "0f8fe280b3c54b1980c09158f4feba8c38801f45eb4d939a7a242c38f1dade8b"
+    },
+    {
+      "path": "evidence/traits_metric/before_vs_after.json",
+      "source": "generated/research_confirmed_board_20261007/traits_metric/before_vs_after.json",
+      "bytes": 4719,
+      "sha256": "5823c4f8264894d18da280a09c51e78e63b3e1d97e9512f6e2395bc268d89b92"
+    },
+    {
+      "path": "evidence/traits_metric/provisional_chords.json",
+      "source": "generated/research_confirmed_board_20261007/traits_metric/provisional_chords.json",
+      "bytes": 24817,
+      "sha256": "8abec22cbaa0e18e8e6c6bf10801a6143f801159ce0abc3829608b6c4a7650c7"
+    },
+    {
+      "path": "evidence/website/traits/verification.json",
+      "source": "generated/research_confirmed_board_20261007/website/traits/verification.json",
+      "bytes": 595,
+      "sha256": "353085f0ee59abcb8b6295eebbbc3955fcff2b0ab55d70d7ed54345600b4f926"
+    },
+    {
+      "path": "evidence/spectral_metric_v1/identity_remap_validation.json",
+      "source": "generated/research_confirmed_board_20261007/spectral_metric_v1/identity_remap_validation.json",
+      "bytes": 5787,
+      "sha256": "f8c9938e38a26d5a507e0d8ee2c3c70255cd50be2d4d02ee728231c75aed05dd"
+    },
+    {
+      "path": "evidence/spectral_metric_v1/final_site_validation.json",
+      "source": "generated/research_confirmed_board_20261007/spectral_metric_v1/final_site_validation.json",
+      "bytes": 1853,
+      "sha256": "410f34770e6915024b4838e4a9aeb1968681b90fabed469f1013dc6b9296100d"
+    },
+    {
+      "path": "evidence/spectral_metric_v1/browser_validation/validation.json",
+      "source": "generated/research_confirmed_board_20261007/spectral_metric_v1/browser_validation/validation.json",
+      "bytes": 4712,
+      "sha256": "0b2389401acba54971953cc9462929682dbbd9c23b807d05bd452b09dacdfcc3"
+    },
+    {
+      "path": "evidence/website/evidence/protected_source_verification.json",
+      "source": "generated/research_confirmed_board_20261007/website/evidence/protected_source_verification.json",
+      "bytes": 7096,
+      "sha256": "2d7bf28f724d5ae1080a7db7d6544fb2c06853f82c893e9c608defdb477d9170"
+    }
+  ]
+}

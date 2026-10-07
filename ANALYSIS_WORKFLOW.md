@@ -1,7 +1,7 @@
 # Offline reconstruction and trait validation
 
 Open the normal application with `python main.py` or the existing lab launcher,
-then choose **Analysis → Offline reconstruction, traits and hyperspectral fusion...**. Capture,
+then choose **Analysis â†’ Offline reconstruction, traits and hyperspectral fusion...**. Capture,
 gantry movement, the original reconstruction button and the lab launcher retain
 their existing implementation. Analysis runs in a separate local Python process;
 no API, model service, token, internet connection or Codex session is required.
@@ -61,7 +61,7 @@ The new RGB route currently supports overlapping horizontal stereo baselines.
 It is not a universal arbitrary-camera-motion reconstruction system. For another
 capture geometry, supply measured camera-to-reference poses using a JSON object
 with `reference` and `frames`, each frame containing `frame`, `accepted` and a
-rigid 4×4 `transform`. IDs must match image filenames. Invalid, reversing or
+rigid 4Ã—4 `transform`. IDs must match image filenames. Invalid, reversing or
 ambiguous motion is reported instead of being silently treated as a linear pass.
 
 Automatic foreground selection is a heuristic for overhead plant recordings.
@@ -129,7 +129,7 @@ cancelled. The existing camera/gantry safety and shutdown code is unchanged.
 
 ## Hyperspectral analysis and measured-spectrum fusion
 
-The fifth tab, **Hyperspectral / fusion · experimental**, adds the copied
+The fifth tab, **Hyperspectral / fusion Â· experimental**, adds the copied
 28 August 2026 spectral analysis and RGB-D / ICP mapping workflow. It includes
 three automatic modes, the original manual spectral workspace, and an in-software
 HTML result viewer. The automatic recipe is restricted to the historical dataset;
@@ -149,6 +149,20 @@ workspace build. Source clouds and linked report dependencies must remain availa
 
 See [the Research workspace guide](docs/RESEARCH_WORKSPACE.md) for the schema,
 point-review procedure, command-line equivalents and calibration boundaries.
+
+## Spectral review and sparse 3D fusion
+
+The seventh tab, **Spectral review / 3D fusion**, inspects compatible saved FX10
+and/or FX17 extraction results and builds sparse associations from an explicit
+reviewed setup. It provides band/descriptor inspection, exact source spectra,
+CSV/NPZ downloads and a 3D viewer. Only the declared measured pixels are assigned
+to existing cloud vertices; unassigned geometry receives no spectral values.
+The final confirmed-board September result has six provisional FX10/FX17
+associations at three Plant 5 vertices, not independently validated dense
+whole-plant fusion. Inputs, reference
+limitations, command-line use and outputs are documented in
+[SPECTRAL_FUSION_WORKFLOW.md](SPECTRAL_FUSION_WORKFLOW.md). The same capture-priority
+and cancellation controls apply to this separate offline process.
 
 ## Lab acceptance
 

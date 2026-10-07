@@ -1,0 +1,52 @@
+{
+  "status": "D405_RGB_geometry_metric_reexpression_from_confirmed_25mm_board",
+  "scale_factor": 1.0288746669066682,
+  "export_files": [
+    {
+      "file": "full_scene_reference.ply",
+      "points": 8265080,
+      "source": "generated\\research_20260928_improvement_20261007\\short_dense_v3\\result\\plant_rgb_icp.ply",
+      "source_sha256": "9f832f84560d4cb8af9d2c1cefa8d789b1da6f97e79bc5d035fcd5475e175338",
+      "sha256": "c44d00f53535928dd806211a609b6fdaa52956683d7f1ad51dc7d0cb82de33d5",
+      "every_coordinate_verified": true,
+      "colour_and_order_unchanged": true
+    },
+    {
+      "file": "inspection_region_reference.ply",
+      "points": 1719001,
+      "source": "generated\\research_d405_l515_fusion_20261007\\v1\\d405_review_reference.ply",
+      "source_sha256": "dfadbd5949fb359d1a24ba4e77abed43afd9f0b85f0996b95f29c783cacb4eb7",
+      "sha256": "2a2929aba132d1c92ce934de8473082f791fb45f3a69cf0bf009ed52ff3d22c5",
+      "every_coordinate_verified": true,
+      "colour_and_order_unchanged": true
+    }
+  ],
+  "physical_length_change_percent": 2.887466690666818,
+  "old_conditional_voxel_m": 0.001,
+  "actual_inherited_voxel_m": 0.0010288746669066683,
+  "actual_inherited_truncation_m": 0.005144373334533341,
+  "actual_inherited_pair_tolerance_m": 0.010288746669066682,
+  "actual_inherited_visibility_tolerance_m": 0.006173248001440009,
+  "reprojection_invariance": {
+    "comparisons": 128000,
+    "max_pixel_change": 1.8198773652309366e-12
+  },
+  "anchors": 64,
+  "new_points": 0,
+  "surface_topology_changed": false,
+  "new_stereo_or_icp_run": false,
+  "note": "Known board dimensions determine the metric gauge of an otherwise identical monocular RGB reconstruction. Existing observations, disparity solutions, point identities and support remain unchanged. Values formerly labelled metres were conditional filename units. Original thresholds are re-expressed here, not silently claimed to have been rerun at 1mm.",
+  "caveats": [
+    "Print size is operator-confirmed without stated measurement uncertainty.",
+    "D405 factory intrinsics retained; board pose/model residuals remain.",
+    "Fixed rig and identical scan settings supplied by user; calibration-to-plant scale transfer remains a model assumption.",
+    "L515 sensor depth requires its own scale evaluation; the old mixed cloud is not rescaled by this operation."
+  ],
+  "source_hashes": {
+    "generated\\research_confirmed_board_20261007\\d405_metric_calibration.json": "4875f09593b49966f1f191296de8b055a68b61f8626f6cd1a3eda269b8d0c3cf",
+    "generated\\research_20260928_improvement_20261007\\short_dense_v3\\bundle\\poses.json": "0fe0988eb8eb27460018747328aa7747e32828573397e7aba5ef790d48b84949",
+    "generated\\research_20260928_improvement_20261007\\short_dense_v3\\result\\icp_diagnostics.json": "420fc50e1808d285d1835802f361a29372421e122a02ee0e52222c2fb0d38f77",
+    "generated\\research_20260928_improvement_20261007\\short_dense_v3\\result\\point_evidence.npz": "0c014620b9bffc0a9efb89c8d2493c6f8cf3e2ae23bcf2dd9c19663252ea1355",
+    "generated\\research_confirmed_board_20261007\\reexpress_d405_metric.py": "b45c1e428a0ee19b0df663e688f3915f56d92d1116989aedc86e5f71f8ebd554"
+  }
+}

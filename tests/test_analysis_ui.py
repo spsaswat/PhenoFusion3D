@@ -21,7 +21,7 @@ def window():
 
 def test_new_dialog_preserves_main_capture_and_gantry_controls(window):
     app,w=window
-    assert w.analysis_dialog.tabs.count()==6
+    assert w.analysis_dialog.tabs.count()==7
     assert w.capture_panel is not None and w.gantry_panel is not None
     assert any(a.text()=='File' for a in w.menuBar().actions())
     assert any(a.text()=='Analysis' for a in w.menuBar().actions())
@@ -187,6 +187,91 @@ def test_capture_cancels_workspace_and_does_not_offer_partial_report(window,tmp_
     app,w=window;d=w.analysis_dialog
     d.output_path=tmp_path;d.active_module='processing.research_workspace'
     (tmp_path/'result').mkdir();(tmp_path/'result/index.html').write_text('<html>Partial</html>')
+    d.process.start(__import__('sys').executable,['-c','import time; time.sleep(30)'])
+    assert d.process.waitForStarted(3000)
+    w.controller.capture_started.emit()
+    assert d.process.waitForFinished(3000)
+    app.processEvents()
+    assert d.cancelled and d.result_path is None
+    assert not d.open_result.isEnabled()
+    assert json.loads((tmp_path/'run_status.json').read_text())['status']=='cancelled'
+
+
+def test_spectral_review_accepts_explicit_sensor_results_and_rejects_empty_selection(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    assert d.tabs.tabText(6)=='Spectral review / 3D fusion'
+    d.fusion_fx10.clear();d.fusion_fx17.clear();d.fusion_output.setText(str(tmp_path))
+    with pytest.raises(ValueError,match='at least one extracted-result'):d.build_spectral_review()
+    calls=[];monkeypatch.setattr(d,'launch',lambda *args:calls.append(args))
+    fx10=tmp_path/'FX10 result';fx17=tmp_path/'FX17 result'
+    d.fusion_fx10.setText(str(fx10));d.build_spectral_review()
+    module,args,out=calls.pop()
+    assert module=='processing.research_workspace.spectral_viewer'
+    assert args==['--sensor',f'fx10={fx10}','--output',out]
+    assert out.parent==tmp_path
+    d.fusion_fx17.setText(str(fx17));d.build_spectral_review()
+    module,args,other_out=calls.pop()
+    assert args==['--sensor',f'fx10={fx10}','--sensor',f'fx17={fx17}','--output',other_out]
+    assert other_out!=out
+    d.fusion_output.clear()
+    with pytest.raises(ValueError,match='results parent'):d.build_spectral_review()
+
+
+def test_sparse_fusion_template_and_build_require_reviewed_setup(window,tmp_path,monkeypatch):
+    app,w=window;d=w.analysis_dialog
+    d.fusion_output.setText(str(tmp_path));d.fusion_config.clear()
+    with pytest.raises(ValueError,match='reviewed 3D fusion setup'):d.build_spectral_fusion()
+    calls=[];monkeypatch.setattr(d,'launch',lambda *args:calls.append(args))
+    d.fusion_template()
+    module,args,out=calls.pop()
+    assert module=='processing.research_workspace.spectral_fusion'
+    assert args==['template','--output',out] and out.parent==tmp_path
+    config=tmp_path/'reviewed source matches.json';d.fusion_config.setText(str(config))
+    d.build_spectral_fusion()
+    module,args,out=calls.pop()
+    assert module=='processing.research_workspace.spectral_fusion'
+    assert args==['build','--config',str(config),'--output',out]
+    d.fusion_output.clear()
+    with pytest.raises(ValueError,match='results parent'):d.fusion_template()
+
+
+@pytest.mark.parametrize('action', ['build_spectral_review','fusion_template','build_spectral_fusion'])
+def test_spectral_actions_refuse_active_capture_without_writing(window,tmp_path,monkeypatch,action):
+    app,w=window;d=w.analysis_dialog
+    class Busy:
+        def isRunning(self):return True
+    w.controller.capture_worker=Busy()
+    d.fusion_fx10.setText(str(tmp_path/'FX10'));d.fusion_config.setText(str(tmp_path/'setup.json'))
+    d.fusion_output.setText(str(tmp_path))
+    messages=[];monkeypatch.setattr(QMessageBox,'information',lambda *args:messages.append(args))
+    try:
+        getattr(d,action)()
+        assert d.process.state()==QProcess.NotRunning
+        assert not list(tmp_path.iterdir())
+        assert messages and 'Processing busy' in messages[0]
+    finally:w.controller.capture_worker=None
+
+
+@pytest.mark.parametrize('module', ['processing.research_workspace.spectral_viewer','processing.research_workspace.spectral_fusion'])
+def test_spectral_direct_reports_use_guarded_research_viewer(window,tmp_path,monkeypatch,module):
+    app,w=window;d=w.analysis_dialog
+    report=tmp_path/'index.html';report.write_text('<html>Provisional sparse measurements</html>')
+    (tmp_path/'preflight.json').write_text('{}')
+    template=tmp_path/'spectral_fusion_template.json';template.write_text('{}')
+    d.output_path=tmp_path;d.active_module=module
+    d.finished(0,QProcess.NormalExit)
+    assert d.result_path==report and d.open_result.isEnabled()
+    assert d.fusion_report.text()==str(report)
+    if module.endswith('.spectral_fusion'):assert d.fusion_config.text()==str(template)
+    calls=[];monkeypatch.setattr(d,'show_hyperspectral_report',lambda path,**kw:calls.append((path,kw)))
+    d.open_latest()
+    assert calls==[(report,{'research':True})]
+
+
+def test_capture_cancels_sparse_fusion_and_does_not_offer_partial_report(window,tmp_path):
+    app,w=window;d=w.analysis_dialog
+    d.output_path=tmp_path;d.active_module='processing.research_workspace.spectral_fusion'
+    (tmp_path/'index.html').write_text('<html>Partial sparse fusion</html>')
     d.process.start(__import__('sys').executable,['-c','import time; time.sleep(30)'])
     assert d.process.waitForStarted(3000)
     w.controller.capture_started.emit()

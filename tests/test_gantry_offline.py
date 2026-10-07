@@ -279,6 +279,12 @@ def test_connection_failure_is_nonblocking_and_retryable(qapp, monkeypatch):
     assert time.monotonic() - started < 0.25
 
     _wait_for_start(controller, qapp)
+    # The worker clears its thread sentinel before emitting this queued Qt
+    # signal. Wait for delivery as well as startup completion.
+    deadline = time.monotonic() + 3.0
+    while not any("rospy" in error.lower() for error in errors) and time.monotonic() < deadline:
+        qapp.processEvents()
+        time.sleep(0.01)
     assert any("rospy" in error.lower() for error in errors), errors
     assert controller._start_attempted is False
     controller.shutdown()

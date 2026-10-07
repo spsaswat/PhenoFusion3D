@@ -1,0 +1,252 @@
+{
+  "status": "known_25mm_board_metric_trajectory_and_depth_rechecked",
+  "physical_square_m": 0.025,
+  "physical_marker_m": 0.018,
+  "marker_square_ratio": 0.72,
+  "dictionary": "DICT_4X4_50",
+  "grid_squares": [
+    7,
+    10
+  ],
+  "dimension_source": "../board_confirmation.json",
+  "dimension_provenance": "User supplied Saswat statement; actual printed dimensions reported, no measurement uncertainty supplied.",
+  "observations": 61,
+  "unique_frames": 40,
+  "corners": 3285,
+  "K": [
+    [
+      898.4381103515625,
+      0.0,
+      655.9896240234375
+    ],
+    [
+      0.0,
+      898.5916137695312,
+      355.45782470703125
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "dist": [
+    0.14393945038318634,
+    -0.482932984828949,
+    -0.0023646382614970207,
+    -0.0005440952372737229,
+    0.4404349625110626
+  ],
+  "intrinsics_changed": false,
+  "pose_method": "Original refined intersections with 25mm square object coordinates. Original unit-square poses are metrically equivalent; solvePnP refits verify negligible pixel change.",
+  "calibration_reprojection_px": {
+    "n": 3285,
+    "median": 0.10498716830588246,
+    "rms": 0.13603523279197463,
+    "p10": 0.04208094803404965,
+    "p90": 0.1996869661271932,
+    "min": 0.00430896238946658,
+    "max": 1.3524351068725202
+  },
+  "max_refit_projection_change_px": 1.442333314116695e-06,
+  "metres_per_previous_filename_unit": 1.0296675588864626,
+  "linear_length_change_percent": 2.9667558886462553,
+  "metric_motion_vector_m_per_previous_filename_unit": [
+    1.0275175506958876,
+    -0.051484459573942154,
+    -0.042098874777241946
+  ],
+  "motion_direction": [
+    0.9979119394682104,
+    -0.05000105046489004,
+    -0.04088589022147101
+  ],
+  "angle_to_old_direction_deg": 0.008387259470500784,
+  "joint_translation_residual_m": {
+    "n": 61,
+    "median": 0.0009928997461247334,
+    "rms": 0.0012952810380579122,
+    "p10": 0.00036477455614154303,
+    "p90": 0.0018698734942599819,
+    "min": 0.0001952607083542452,
+    "max": 0.0035096249725523167
+  },
+  "per_sheet": [
+    {
+      "sheet": "left_sheet",
+      "observations": 18,
+      "metres_per_previous_filename_unit": 1.0284795793912536,
+      "translation_residual_m": {
+        "n": 18,
+        "median": 0.0011723969373682855,
+        "rms": 0.001453864761751629,
+        "p10": 0.0005140564074255588,
+        "p90": 0.0020330266271088057,
+        "min": 0.0004713459457835919,
+        "max": 0.003137382768449583
+      }
+    },
+    {
+      "sheet": "middle_sheet",
+      "observations": 22,
+      "metres_per_previous_filename_unit": 1.0296295421724306,
+      "translation_residual_m": {
+        "n": 22,
+        "median": 0.000975234699480672,
+        "rms": 0.0012610912661534938,
+        "p10": 0.00027430804286991537,
+        "p90": 0.0021211479844404388,
+        "min": 0.00022758904932380434,
+        "max": 0.0025274363288870436
+      }
+    },
+    {
+      "sheet": "right_sheet",
+      "observations": 21,
+      "metres_per_previous_filename_unit": 1.0302576079463013,
+      "translation_residual_m": {
+        "n": 21,
+        "median": 0.0008056469197525555,
+        "rms": 0.00107427542682862,
+        "p10": 0.00041256699338611534,
+        "p90": 0.0016453337922032471,
+        "min": 8.779063069518444e-05,
+        "max": 0.0018395037337034165
+      }
+    }
+  ],
+  "whole_frame_holdouts": [
+    {
+      "fold": 0,
+      "train_observations": 45,
+      "held_observations": 16,
+      "factor": 1.0299234746415185,
+      "held_translation_residual_m": {
+        "n": 16,
+        "median": 0.0008357708495435246,
+        "rms": 0.0014143673872249684,
+        "p10": 0.00026374647322561324,
+        "p90": 0.0018687201278914278,
+        "min": 0.00018796942076856391,
+        "max": 0.0037805404502037052
+      }
+    },
+    {
+      "fold": 1,
+      "train_observations": 45,
+      "held_observations": 16,
+      "factor": 1.029552316346506,
+      "held_translation_residual_m": {
+        "n": 16,
+        "median": 0.0009332661844658914,
+        "rms": 0.0013682747534103413,
+        "p10": 0.0005229102807652547,
+        "p90": 0.001978832207146509,
+        "min": 0.0003678511447980233,
+        "max": 0.003057740417002153
+      }
+    },
+    {
+      "fold": 2,
+      "train_observations": 47,
+      "held_observations": 14,
+      "factor": 1.0295973072892137,
+      "held_translation_residual_m": {
+        "n": 14,
+        "median": 0.0009278341886737024,
+        "rms": 0.0012206150531169726,
+        "p10": 0.0005578997518056164,
+        "p90": 0.00166270638416524,
+        "min": 0.000505868994577333,
+        "max": 0.002655315540475941
+      }
+    },
+    {
+      "fold": 3,
+      "train_observations": 46,
+      "held_observations": 15,
+      "factor": 1.0296043575743514,
+      "held_translation_residual_m": {
+        "n": 15,
+        "median": 0.0011523610526135923,
+        "rms": 0.001306354066153739,
+        "p10": 0.00046085631550330896,
+        "p90": 0.0018954055984681283,
+        "min": 0.00034239603608834663,
+        "max": 0.00219359324808188
+      }
+    }
+  ],
+  "recorded_sensor_depth_unit_m_per_count": null,
+  "retained_sensor_unit_candidate_m_per_count": 0.00025,
+  "actual_size_board_effective_depth_unit_m_per_count": 0.0002533640570741938,
+  "board_frame_unit_medians": {
+    "n": 61,
+    "median": 0.0002533640570741938,
+    "rms": 0.0002533466258571847,
+    "p10": 0.0002526660324059151,
+    "p90": 0.000253934527629146,
+    "min": 0.0002521833071816508,
+    "max": 0.0002544081217375512
+  },
+  "board_gain_over_retained_native_candidate": 1.0134562282967752,
+  "board_gain_percent": 1.3456228296775175,
+  "current_reconstruction_decision": "Rerun raw L515 sensor-depth ICP/TSDF at unchanged .00025 m/count with RGB camera translations multiplied by this independently board-derived metric factor. Do not scale the old sensor cloud or mixed fusion.",
+  "depth_gain_decision": "The actual-size board effective gain remains diagnostic: native sensor setting was not recorded and limited-depth board data cannot distinguish multiplicative unit error from axial bias, alignment or model error. No fitted gain/offset selected from the board.",
+  "reconstruction_thresholds": "Retain physical .002 m voxel, .010 m truncation and .008 m support tolerance; recompute ICP/TSDF/support since trajectory and measured rays no longer share a global scale.",
+  "no_manual_traits_used": true,
+  "source_hashes": {
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_0.png": "74c0ea5a1738e20ad192e20bc7435ef15585b20d38f0600b31b309eab9e42f55",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1011740.png": "db7e5c5f443804b1d530b3d81e06a367796124c2681ca3acf9dd2d252db36e55",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1053537.png": "f48d13c141a067d1fbdd99757a97d95d16ad1b9b64eec6ed9ff99cca7bbe7e87",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1094581.png": "1b0e547d5afc25e6cdfd79cf01b92c989eaec5229b7103b0be79dba3c162d7c3",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1136378.png": "aeecb7e8beab30f7e148b2e92f066cf1a0871f6e74c35022103f209aeded3f3f",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1178181.png": "0f330e35e79b0a35002ec523a5457f84c5712b53b5770cc032105d565635e451",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1219983.png": "62c0b2f79ca4198b4638732b87b35a80439bd82153c0e23e8e7fe5b09adec62e",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1263302.png": "34aa198488ebbc559df7feea16d5c4d966f13aaa9e401f71074a5d81a231b40b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_128621.png": "d0287bb52bf8ed9a749e94fc17eaafa0ca8185d6dd828f1ec4fc17978178f064",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1305095.png": "f35ded9b06c2b0c00f38e885bec7e33bd564e229ebfe082ca95eaffd42dde33b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1346902.png": "1a50082529ed0e0677aa0bbd06d7c17466ee1b4c93626b72d6cecf829ac9f845",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1388701.png": "df90f867a54db61af430af21b3e5d785fd428c599123c1195a15e3996b0d6e2b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1430497.png": "e11bdd39efa6eac49303315e5048004b279031fdba0b6e6f7a96dd13c3584a5b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1472299.png": "c7c5806738992d04105bd09dae8810ae6265490af02df477d4e8ffe8428cb9f3",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1514099.png": "1031c44f6554177544973ab31df8bb20b6eb68d6622c62b6f77fc59b4e2272b9",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1555900.png": "395e3d684532e1739ab600f5a143f58892db61a6ad4bc0c706d245bcdde2e991",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1597697.png": "b7b88b8687b07fc2e2d8a5da5e9ad6d8f6e02949479010d2f494d74cadee0a50",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_1639496.png": "658d78d1e12c85d8fc87a7417284d572616a4a2ddc8ae238d158ca7ce881e4a7",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_170424.png": "a107e7a1c7491f50afa3de7c3bd76616046b3b0bd3c4944c5593548c84b38f31",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_212221.png": "c2bfb5ca8519fc5679bbf96854fcee5ae879ebf6ede6bc467fe230e2477b28e2",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_254019.png": "4c9869ef0b97284bf37c2a8572345c4f72feb621dab10fde1089e4e85e459e0a",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_295820.png": "7298bf9f2ed7d70d7f6ec0a503d88bffe1fccdc8079e40b9ba920f8e6e664ea6",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_337618.png": "f2fa8056b32226afc178a7eeac5ccbb77d42db65bfd65fd43f03493e1bc8a70a",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_379422.png": "01f34e88d2aaef5f46be0e5b900cc00adbd0a58b5426629be9fb8b6cc05508ec",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_421982.png": "bd264eeaa73358bbedf8150978e83d3665369454bc83f96586c790a8f0b7211c",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_44262.png": "2c3aa7bf116b6075acc5ec76f3a1314106bd26634d7664c120b10628834a5b3f",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_463780.png": "1c99830057da7cf999d5ecc620cb78ee113b89443ff0bc1fec1a978c2f2a4e76",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_504062.png": "375da33b267fb78b1a1c0a2fbbfdd040b5e757ca6e07ea8b2e34b7f523f5de2b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_552704.png": "b9693deb3d2a2119ba3cc926636870ef72c21d316966b8f9b149a359f3ec9acf",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_593739.png": "22a517c49f865a98db33af3a6c6613f4e7a08f3f796b3c7c909deb7795abd1ea",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_635544.png": "84b8e4689cb70cf28ea7893454a4e88d632f3cc5625e4350e23ddb478575281f",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_677341.png": "c82067c14563eb703db7365945a88e7a72910e273308d1d7373d20759c3d603b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_719141.png": "d8e5335348da07eb75247ac65350d63ad62ba28e695b20374a5728dfbeeafa4d",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_760938.png": "7c78df3d4cbc704da97859e206be2508d3cfc0878243f9f74a4de52ed1eb7a0b",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_802739.png": "a5f8e64fda0ca1acf705a80c78ba89c6235a348fa863d5aee87c7a799438a561",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_844542.png": "7f54032c7e783cb9632a4a91961f79116110ce041c29fe7364238935518cb80f",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_86826.png": "af518a236b057265583b35ce02f26c074c892c147c771ab8570bc0673c10ea1a",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_886341.png": "bdcef1eb4fb4080e8dcc3c0f844afa7b4214e7eba61dfb4401e487b09de2a398",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_928142.png": "4804e755d9092a8e9309c4face779a274d39d1773eec2af8bd57a283f942d742",
+    "data\\main\\test_plant_10-7\\test_plant_20260928144647_L515\\depth_969941.png": "15986820435ef924f9a234d350681c4d5bbfcd7cea6501d33ff35ba46b3a6bb1",
+    "generated\\research_confirmed_board_20261007\\board_confirmation.json": "55abeaa4321131141a2ebfa8998aca8a07e55f273c1ca160a7a84d6bf8256e5f",
+    "generated\\research_confirmed_board_20261007\\l515\\recompute_metric_calibration.py": "21994c51c57fd4df8103ec327d27101d63b8dd8d064a9a7d9f91fe4db0661749",
+    "generated\\research_l515_20261007\\calibration\\calibration_transfer.json": "20e2f4d9650029d46e597fec4cd69762e08e332a3032e0441b862ea8f517835c",
+    "generated\\research_l515_20261007\\calibration\\corner_observations.json": "886cf4fd463e5d22a6c8ff42d8037f2dd50151ec0fbc8862d925b42f0e3d42a2",
+    "generated\\research_l515_20261007\\calibration\\depth_unit_diagnostics.json": "951a7409d026ec620f67e4b37e82019f0b195d695be8cdbbc181e2a0352b920b"
+  },
+  "remaining_limits": [
+    "Supplied print dimensions lack tolerance or independent print-scale measurement.",
+    "Fixed factory model and aligned-depth interpretation remain assumptions.",
+    "Board observations have limited depth and plane-normal diversity.",
+    "Frame/landmark holdouts are correlated internal checks, not external physical truth.",
+    "New sensor reconstruction changes point identities; old cleanup/spectral vertex IDs cannot be transferred by index."
+  ]
+}

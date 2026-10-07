@@ -1,0 +1,180 @@
+{
+  "status": "selected_board_gain_empirical_research_candidate_for_new_fusion",
+  "chosen_variant": "boardgain",
+  "selected_variant": "boardgain",
+  "l515_run": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1",
+  "l515_source": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\l515_supported_reference.ply",
+  "l515_source_path": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\l515_supported_reference.ply",
+  "l515_source_sha256": "bc055bdd2520fac10afa93dd647fd18d1782a1b7c17a303ed6271c6b6a9309a8",
+  "l515_point_evidence": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\point_evidence.npz",
+  "l515_icp_poses": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\icp_diagnostics.json",
+  "d405_source": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\d405_metric\\full_scene_reference.ply",
+  "T_D405_reference_from_L515_reference": [
+    [
+      0.9984021746353853,
+      -0.025697509995679938,
+      -0.05032629196906035,
+      0.05939723028067006
+    ],
+    [
+      0.023850439182474974,
+      0.9990319108321752,
+      -0.0369648169184553,
+      -0.031232808108405216
+    ],
+    [
+      0.051227475383198814,
+      0.03570544943049711,
+      0.9980485292042814,
+      -0.04991749489119261
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "calibration_board_square_m": 0.025,
+  "empirical_depth_conversion_m_per_count": 0.0002533640570741938,
+  "confirmed_device_depth_unit": false,
+  "rigid_only_cross_camera_alignment": true,
+  "plant_scale_fitted": false,
+  "manual_traits_used": false,
+  "selection_reason": "Both variants pass the inherited bounded rigid surface gates. The board-only depth-gain variant improves heldout-pot and all-foliage median/P90 proximity, and all fixed-soil median/P90/RMS/max correspondence distances relative to the newly metric native baseline. Separate plant-scan RGB landmark depth diagnostics also improve. Select it as a better-supported empirical candidate while retaining both complete results.",
+  "surface_alignment_file": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\boardgain\\alignment.json",
+  "fixed_soil_evidence_file": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\matched_soil_metric_comparison.json",
+  "comparisons": {
+    "heldout_P2_P4.equal_direction_mean_median_mm": {
+      "native": 3.22232818344747,
+      "boardgain": 2.5788511611561606,
+      "boardgain_improves": true
+    },
+    "heldout_P2_P4.equal_direction_mean_p90_mm": {
+      "native": 11.856788702649437,
+      "boardgain": 10.092717625958876,
+      "boardgain_improves": true
+    },
+    "all_foliage_heldout.equal_direction_mean_median_mm": {
+      "native": 5.031384596729672,
+      "boardgain": 4.269261475090172,
+      "boardgain_improves": true
+    },
+    "all_foliage_heldout.equal_direction_mean_p90_mm": {
+      "native": 54.43374766604718,
+      "boardgain": 52.380019659021634,
+      "boardgain_improves": true
+    },
+    "fixed_soil.median_mm": {
+      "native": 11.160264907230065,
+      "boardgain": 6.288733722716679,
+      "boardgain_improves": true
+    },
+    "fixed_soil.p90_mm": {
+      "native": 15.45172204423303,
+      "boardgain": 10.326476665822296,
+      "boardgain_improves": true
+    },
+    "fixed_soil.rms_mm": {
+      "native": 12.061112859265688,
+      "boardgain": 8.482485396914507,
+      "boardgain_improves": true
+    },
+    "fixed_soil.max_mm": {
+      "native": 30.375185297747187,
+      "boardgain": 26.037482703926443,
+      "boardgain_improves": true
+    }
+  },
+  "fixed_soil_selected": {
+    "count": 62,
+    "median_mm": 6.288733722716679,
+    "p90_mm": 10.326476665822296,
+    "p95_mm": 14.740453526109713,
+    "max_mm": 26.037482703926443,
+    "rms_mm": 8.482485396914507,
+    "within_3mm": 9,
+    "within_5mm": 25,
+    "within_10mm": 55
+  },
+  "fixed_soil_selected_per_plant": {
+    "P2": {
+      "board_seed": {
+        "count": 17,
+        "median_mm": 8.019094340950792,
+        "p90_mm": 9.033549436762788,
+        "p95_mm": 10.70264650531811,
+        "max_mm": 17.22669053052786,
+        "rms_mm": 8.730606353819669,
+        "within_3mm": 0,
+        "within_5mm": 0,
+        "within_10mm": 16
+      },
+      "pot_rigid": {
+        "count": 17,
+        "median_mm": 3.3306400290085763,
+        "p90_mm": 4.553661807431327,
+        "p95_mm": 5.782234066094057,
+        "max_mm": 10.392919762449813,
+        "rms_mm": 3.9590355293246855,
+        "within_3mm": 8,
+        "within_5mm": 16,
+        "within_10mm": 16
+      }
+    },
+    "P4": {
+      "board_seed": {
+        "count": 45,
+        "median_mm": 16.830024389217996,
+        "p90_mm": 22.35114123084206,
+        "p95_mm": 29.622500283032476,
+        "max_mm": 35.3353395421135,
+        "rms_mm": 18.171380311306375,
+        "within_3mm": 0,
+        "within_5mm": 0,
+        "within_10mm": 0
+      },
+      "pot_rigid": {
+        "count": 45,
+        "median_mm": 7.430461268536615,
+        "p90_mm": 12.82147607024454,
+        "p95_mm": 20.072203887322097,
+        "max_mm": 26.037482703926443,
+        "rms_mm": 9.654706702568637,
+        "within_3mm": 1,
+        "within_5mm": 9,
+        "within_10mm": 39
+      }
+    }
+  },
+  "selection_data_reused": true,
+  "final_untouched_independent_test": false,
+  "physical_accuracy_validated": false,
+  "fusion_conditions": [
+    "Keep the predeclared physical duplicate/support/conflict thresholds; do not relax them to force overlap.",
+    "D405 stereo depths and poses use its independently board-derived factor; L515 uses the new depth conversion and new final ICP poses.",
+    "Camera-source provenance must identify new per-camera point IDs; old L515 point IDs cannot be reused.",
+    "Recompute source-reviewed cleanup membership against the new fused geometry.",
+    "Treat L515-only additions and uncertain overlap separately."
+  ],
+  "limits": [
+    "Held-out regions/soil observations were excluded from rigid fitting but used here for variant selection. They are not a final untouched validation dataset.",
+    "The rigid transform is an empirical alignment of reconstructed surfaces, not a certified physical sensor extrinsic.",
+    "The board-based depth gain is supported on this dataset, not a universal device calibration.",
+    "P4 soil median remains7.43mm and maximum26.04mm; foliage proximity P90 remains52.38mm, affected by occlusion and incomplete coverage.",
+    "Historical conditional-scale scores are not directly comparable to the new physically anchored quantities. The old soil median3.411mm does not imply better physical truth.",
+    "No gap-free360-degree completeness or biological trait accuracy is established."
+  ],
+  "source_hashes": {
+    "generated\\research_confirmed_board_20261007\\cross_camera\\native\\alignment.json": "66d4eaf4d11d53c7c2510aadb53736bc4618a01937fadd7767d6bb5ac45ec8c7",
+    "generated\\research_confirmed_board_20261007\\cross_camera\\boardgain\\alignment.json": "3afebe5a323f0535baa78a38a87b0042bd86a0d97c4f04fda1a36f043917af81",
+    "generated\\research_confirmed_board_20261007\\cross_camera\\matched_soil_metric_comparison.json": "aa35186cf7c83b4a8c13516764d1c03eaadd00d68dbae4b7c5f8ae91951a8f6d",
+    "generated\\research_confirmed_board_20261007\\l515\\metric_calibration.json": "6796eb61645738a90fde69eb13e5dc867c33a7e264f0c114121e541ade397c9c",
+    "generated\\research_confirmed_board_20261007\\l515\\metric_landmark_depth_diagnostics.json": "df1bd12401d123a4c3a88660e719afc54da08657592e1ae42d76547c6a8020f5",
+    "generated\\research_confirmed_board_20261007\\l515\\replay_validation_native.json": "62630693e8b994d80df819d3722c71e3fa30f6055ca9f1864c83ae6116f6ed4f",
+    "generated\\research_confirmed_board_20261007\\l515\\replay_validation_board_gain.json": "f9ee540a26a4b47d3c8ed6f42af6d06ae4f1efb594fc5bd79a27e4fbd47e7d3c",
+    "generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\l515_supported_reference.ply": "bc055bdd2520fac10afa93dd647fd18d1782a1b7c17a303ed6271c6b6a9309a8",
+    "generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\icp_diagnostics.json": "ccda61ef74c2081c4e8d6283b10e4531387e332c5a3c1d13959c1e03dd96ab22",
+    "generated\\research_confirmed_board_20261007\\cross_camera\\select_metric_candidate.py": "7be8ffc07371eca4d87adafa706b0b5df2ff309594b9d80be70443a33e0cd8b7"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "status": "pass_with_parent_report_copy_pending",
+  "numeric_sensor_files_exact": 20,
+  "original_scientific_values_changed": false,
+  "geometry_points": 430060,
+  "associations": 6,
+  "unique_locations": 3,
+  "inline_javascript_syntax": [
+    "fusion/index.html",
+    "fusion/spectra/index.html",
+    "samples/index.html"
+  ],
+  "existing_local_links": 51,
+  "pending_parent_owned_report_links": [
+    {
+      "page": "geometry-diagnostics/index.html",
+      "href": "../../evidence/confirmed-board/hsi_geometry/index.html",
+      "exists": false
+    },
+    {
+      "page": "geometry-diagnostics/index.html",
+      "href": "../../evidence/confirmed-board/hsi_geometry/scan_transfer_v1/index.html",
+      "exists": false
+    },
+    {
+      "page": "geometry-diagnostics/index.html",
+      "href": "../../evidence/confirmed-board/hsi_geometry/height_model_diagnostic/index.html",
+      "exists": false
+    },
+    {
+      "page": "index.html",
+      "href": "diagnostics/index.html",
+      "exists": false
+    }
+  ],
+  "runtime_validation": {
+    "status": "pass",
+    "method": "Node VM and minimal DOM/canvas stubs; not browser or WebGL rendering validation",
+    "checks": [
+      "Camera-space region filter counts, sensor separation, original sample ID jump, descriptor labelling, empty-pixel message",
+      "Strict FX17 ratio displayed at exact green source pixel and marker; red missing value and flags remain explicit",
+      "All-five and individual context counts, RGB default, no-association P2 state, exact FX17 marker hit, empty-context clearing persists across mode change, hidden-overlay picking disabled"
+    ]
+  },
+  "browser_visual_test": "Parent handles browser and WebGL validation separately",
+  "script_sha256": "6372df0a903a4aee009f94b9f944153d9607ac0379762e8dc054fc3cd4e60364"
+}

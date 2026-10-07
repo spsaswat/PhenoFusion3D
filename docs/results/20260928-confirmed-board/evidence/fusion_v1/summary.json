@@ -1,0 +1,211 @@
+{
+  "status": "board_referenced_metric_fusion_empirical_rigid_alignment",
+  "l515_variant": "boardgain",
+  "coordinate_units": "metres referenced to supplied 25mm checker pitch; empirical cross-camera alignment",
+  "d405_scale_factor": 1.0288746669066682,
+  "old_stereo_depth_scaled_at_read": true,
+  "physical_thresholds_unchanged_from_frozen_config": true,
+  "spatial_region_scaled_from_frozen_config": true,
+  "source_point_id_policy": "camera_id 0 indexes d405_metric/full_scene_reference.ply; camera_id 1 indexes the selected NEW L515 supported reconstruction, never old L515 vertex IDs",
+  "source_clouds": {
+    "0": {
+      "path": "generated\\research_confirmed_board_20261007\\d405_metric\\full_scene_reference.ply",
+      "sha256": "c44d00f53535928dd806211a609b6fdaa52956683d7f1ad51dc7d0cb82de33d5"
+    },
+    "1": {
+      "path": "generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\l515_supported_reference.ply",
+      "sha256": "bc055bdd2520fac10afa93dd647fd18d1782a1b7c17a303ed6271c6b6a9309a8"
+    }
+  },
+  "selection_config": "generated\\research_confirmed_board_20261007\\cross_camera\\selection.json",
+  "soil_validation_evidence": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\matched_soil_metric_comparison.json",
+  "d405_points": 1719001,
+  "l515_review_points": 199811,
+  "l515_added_points": 21672,
+  "fused_points": 1740673,
+  "duplicates_suppressed": 139922,
+  "all_l515_contradicted": 24786,
+  "all_l515_uncertain_overlap": 29060,
+  "nonduplicate_excluded": 38217,
+  "decision_codes": {
+    "0": "near duplicate suppressed",
+    "1": "nonduplicate free-space contradiction",
+    "2": "nonduplicate uncertain overlap",
+    "3": "added with at least two D405 stereo-view votes",
+    "4": "added L515-only complementary candidate"
+  },
+  "decision_counts": {
+    "0": 139922,
+    "1": 16861,
+    "2": 21356,
+    "3": 14220,
+    "4": 7452
+  },
+  "T_D405_reference_from_L515_reference": [
+    [
+      0.9984021746353853,
+      -0.025697509995679938,
+      -0.05032629196906035,
+      0.05939723028067006
+    ],
+    [
+      0.023850439182474974,
+      0.9990319108321752,
+      -0.0369648169184553,
+      -0.031232808108405216
+    ],
+    [
+      0.051227475383198814,
+      0.03570544943049711,
+      0.9980485292042814,
+      -0.04991749489119261
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "upright_R": [
+    [
+      0.9997320091584629,
+      -0.022989551247924105,
+      0.002718528536188047
+    ],
+    [
+      -0.023027275267776585,
+      -0.9996256969203645,
+      0.014771954854300693
+    ],
+    [
+      0.0023779103694299077,
+      -0.014830596410614249,
+      -0.9998871931134934
+    ]
+  ],
+  "bounds_min_upright": [
+    0.0,
+    -0.4115498667626673,
+    -0.8128109868562678
+  ],
+  "bounds_max_upright": [
+    1.8519744004320027,
+    0.4115498667626673,
+    -0.10288746669066683
+  ],
+  "method": "Observed-point union; preserve D405, suppress near-duplicates, add supported L515 surfaces after cross-view conflict/overlap checks.",
+  "duplicate_distance_m": 0.004,
+  "uncertain_overlap_distance_m": 0.012,
+  "cross_view_agreement_m": 0.008,
+  "free_space_margin_m": 0.016,
+  "nearest_distance_quantiles_m": [
+    1.6855434162083736e-05,
+    0.000583832340915061,
+    0.0023124957871506254,
+    0.008990595941410938,
+    0.520174615284032
+  ],
+  "geometry_averaged_between_cameras": false,
+  "shape_completion": false,
+  "manual_traits_used": false,
+  "source_hashes": {
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\d405_metric\\full_scene_reference.ply": "c44d00f53535928dd806211a609b6fdaa52956683d7f1ad51dc7d0cb82de33d5",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\l515_supported_reference.ply": "bc055bdd2520fac10afa93dd647fd18d1782a1b7c17a303ed6271c6b6a9309a8",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\selection.json": "dcbc466509081f014dfa8b0f51f8fbbd512408677843c44f4bb824f9572b671a",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\fuse_metric_cameras.py": "9f2cf8ee5c8c82353b5b802ec80a4e4eb97255c959f8a3a939b38ffdcd120962",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_l515_20261007\\reconstruct_sensor.py": "6083a104873ef3ffbb872a5fc2dcaa3af7c70096e410ff2442bd368373a16aa4",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\profile.json": "101f44a9b1329cae37431151bedeeedbf01c84a1e09bc6e91002ed2834910db9",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\d405_metric\\icp_diagnostics_reexpressed.json": "6aec0da7727ed3a3bd386597f51f4f2398db44fba6b94dcd7e53058ce1b6be6c",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\point_evidence.npz": "5a689f0a914ccf813c30b71250d3058ccedb8b1132c8fe929c849eae0ecca77d",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_processing_20261007\\calibration_transfer.json": "bd325cb89f1285d0aabb87cea82eb27601cc67759cbf50dc47ace8ffb2072a65",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\boardgain\\alignment.json": "3afebe5a323f0535baa78a38a87b0042bd86a0d97c4f04fda1a36f043917af81",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\matched_soil_metric_comparison.json": "aa35186cf7c83b4a8c13516764d1c03eaadd00d68dbae4b7c5f8ae91951a8f6d",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_l515_20261007\\fusion_v1_config.json": "c06931ed294929e28e0e6b61bd7fb9556fb2b0fda26017a7119ffe1fc40e8253",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\d405_metric_calibration.json": "4875f09593b49966f1f191296de8b055a68b61f8626f6cd1a3eda269b8d0c3cf",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\d405_metric\\summary.json": "c19d34912a5bb7a06e78f87a352a60bb552579d0f450a53312c2080ef045f0d2",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\profile.json": "be2df519cd6d6eec4675823fbb5090ba7a34daf2d55366ee039581554f4cb954",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\l515_metric_boardgain_v1\\result\\summary.json": "0c73295842c5b740cfb1f44d6584e80253bbf5547ff4a92b1df168266ddbbab2",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_0.npz": "72d48867244fe2fd20f9f1912fc9a6a61e8d2fc7f25172adad202f53d2cc9b9e",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_29908.npz": "072fcc25e04b1300050f42181a10fca1541c53771739070032e7e5294e1e96ad",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_58790.npz": "e7b3d11ba2e8886b506c63f222ff9fd62b06b9b461f0a8797332ae77f4348281",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_86916.npz": "abd8cf983c9df61faaa81785dc7d1f7f791c27991aab1ef53a80a59d6e28ec9c",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_115793.npz": "09bffe203c92f1df5de39da15c087384f45367a5ef37e32214be9e14a56ca5f5",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_143152.npz": "c5c54c91860e9050a6c37cadc97e1a6250bed6fe6d2c8338efa3d71843cca855",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_170514.npz": "2e6eaab73d71d129f683d1c6593e829e016da8524ba777221ebcd86ba83bec25",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_197108.npz": "c9daf75a3b8000b1762dc0c4799993df97f6ecdb313e40daf7756a174c369407",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_222952.npz": "6ddeb96fd66ed5cbf29a8da25fabd2fce6530ce196bc3b335fa9421500bc9cc9",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_249551.npz": "8f91a6c2a258d101d96cb3402f94b0f40855c8358294bb1eb1679429e69a4858",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_275384.npz": "972357938ac0628153c140bb9e7a475e19abd553369acd24508d574729cc8fd4",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_302754.npz": "f42e4f1ef39c31f981216eab06736d9954259553ed54a585eeee5d9d4983aa51",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_328592.npz": "2c8e2be328c73641e5d0a96b856ddfeafcd34654de1b2bca66fde49f7bc7d7e2",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_355184.npz": "ca0f666af677b269ba67cca1edca20676d282201507b97ebdc091400f88ae53d",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_381031.npz": "3e1ef5d9263ff9439f4e823692a3b1c4e6521759cd7f1b2f97bc89070be911b9",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_407630.npz": "8438cad029b90da091bb2538e338f59c9c8ae96fde68536941e8c7d9bd2986cd",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_433466.npz": "3c12c8e3ae42dfda2dcd5a0a73a78643d7243407e5e46adf47e3193dfb57ecb1",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_459309.npz": "4c36ea35133b892e0de1430d9ddf67697115133e361c0c43d23310ac55dc106e",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_487431.npz": "2ecb0838e49210ed246f8714b9674505acc90872c83ed550078aa00d0a472bb2",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_512509.npz": "13603462f1019437d7d66f46b5ee58a56e2cc8e19803b5b9870f398bc421fb22",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_539871.npz": "3fe473b1872fc42856fee6e3c646a67d4697bcc8b32378178b2e9518cc88fc3f",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_565708.npz": "4e9d6354ad12e49aebb8660ae881c5755a71640cc5dae1274a5b9485f853c2d7",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_591548.npz": "5eac20bee6718f5c8cf0db110a4b7f89c6f5b943e4420a3e65c12f4924556e05",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_618150.npz": "5221951dd441cbcb29d1357f00e738e509db539cf766748ab5a4c1625bf04051",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_643232.npz": "71c7c24ac9fbb1c8255577af0e78acaff0dfb5597205bb447980d4e4688726d2",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_670589.npz": "660f737f40c794b93920b0e0753bcc4501cca7da7b47e05352249e9643f14e5c",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_696431.npz": "e0b3e6b112efb86494d97cb85bde0156cb059837eb29622b7252691b0ac1c549",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_721510.npz": "b38358e94fc518bd48afd98ad12ad59881f906c7916ae772a8c2f89b53b93711",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_747348.npz": "f1b64f09001aa79921857e4427e4d9106b5e0728e0965f88ae28d5f7a9fc1418",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_773192.npz": "aa8349f66a1739a67cc17507f40f67aa5cf735c96615df43f754ed197d395c91",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_799028.npz": "55013cdf139d3331258c0311d40f2f7f65e31246dd8ce894cc5fe1e4b68c08c9",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_824869.npz": "800c54dfeec84f31d449af23f9fcd0530a8e4ed67811b641284e5fae9bc2e920",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_851470.npz": "4937ac32baf9aec55b0035c44016b617aadd9132a255cc3db7d5ec081a7db3e2",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_877311.npz": "e6c4aecf656db5d7b2d2718f63b1173460040b70cb179c395c7096a30a98a5de",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_902387.npz": "6929d7dd6c663918489acc7fa4a99aac9ec03b978e51c02b3bdab582aca443cf",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_927469.npz": "e4333449673613c015ecf4c633103fa603c85e984482b2bb1810edee736b48d6",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_952549.npz": "53276baf6c234c0fce9defdb6270a29ee1b7ba4f4d981a5b44d7624135ad8e5f",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_977624.npz": "ba0d0afa28f9b1383da60b1fd2b188c99c32410de1f44f4f284bf5a23e47cd8c",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1003470.npz": "3c689effab18ebf68526066cf6a63ebc24b79ad862f0fa49e11b5c7e3df77b0b",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1030829.npz": "49a7659d660c5ec89844be775b9821c645d43b60de0258791f96cc063ee82331",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1055904.npz": "6f390f935b5e9227b07b3d11146fc0b081b654b06d26600d6feb67d93b5c2eff",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1081749.npz": "6724625c9583d269cea3cbb5d8183853d5c35f7b725b1197d1b6c6505d330036",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1107591.npz": "2f15d31a09621d58a61aaf9b76840412b659e7acd4dd4f065237571975e68677",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1133422.npz": "0e8ae9687de0169e689425af72e55f1f6395d767a227bee439ad5ceea2891f23",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1160788.npz": "437d2b9cbf8dc951e00f319b68f95c5c18199271265f13af7c208720d5952764",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1187389.npz": "24cf135423da435f10ae3653a4c6a9774d37a9941f12b41a38a63a1572a06e5d",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1215512.npz": "e76d29e2620ae0c50f1dab28f59bc756ae38076f8a36cd7ee778d7afc751c8f4",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1240590.npz": "644b51e695a113c9d4f88d405a76f0fc54e80ff3b1dc480ce9f93acb4c999673",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1267191.npz": "c99e9b7ce825a71e1e8267899eee98b797ee045a2fb8e6c561935ab0a06ac089",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1293028.npz": "4ded4c828793b6ab238ad07977a1220aed673787e94fff8be3c25fcb869bad34",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1318110.npz": "614925f9e4d9cc53a6b104565678445b00f238d34118798ec100ffe17edab357",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1343952.npz": "d4e89272163a1d9fe92a4c0813a3e626dcc08305deb0fc57cf434387438c2112",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1369024.npz": "35b609fed14c4da13921d750550e8524601f36821202d8b689d89fce06712dbf",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1396388.npz": "e56eb685b48bbc886f27e8ee2ee2cb25604e2cfe9b5ed93e2d74ea51eeb88a5e",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1420709.npz": "3a381947d15569922e112a74c5ec79a393677efd2ca1ba210d9767fd4c94e75a",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1445026.npz": "16aa167fd6d7aadb7df9aa73230320491e8b6f1c5d8d2d74194ba297d45eed8e",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1469347.npz": "4faa3d32a716a122b28ad4d12405505748fb9aa723ead3bf4985c2f8ed069ad7",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1493670.npz": "6be700db367b76ecffa3ae3316c8ce0227a595fa423b269ef7009e6778cb9baa",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1517985.npz": "8478f7459930e3b55e016c9d14bf7bb118b1ac637643fd9f3b19183e2fd4d1d7",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1542304.npz": "786b37c7aab83a725185cb06fb0a05f2d41a77b2f100215e5a28fc3130789390",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1567391.npz": "2121cb31fd47fe3505474d3a4fbee280c2b397057d14f15cd45effadb67ade14",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1591708.npz": "400292e89ac4a77606c5e6b591ee7aeb3b7687b113ef135b2d8718f0cb74795c",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1615265.npz": "c199d61325a3b26f5b752164c9d0460b39ba53221dc57372cc61414f35f99d63",
+    "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_20260928_improvement_20261007\\short_dense_v3\\rgb\\depth_1639585.npz": "e5949931c4de7708d3028c1f7703cfdf40a45eaa72ff1de6637c8f1ecb33b657"
+  },
+  "alignment_evidence": "C:\\Personal\\My_DEGREE's\\Master_of_Computing_(Advanced)\\Australian_National_University\\Technical Team Project - COMP8715\\PhenoFusion3D\\generated\\research_confirmed_board_20261007\\cross_camera\\boardgain\\alignment.json",
+  "limits": [
+    "Held-out regions/soil observations were excluded from rigid fitting but used here for variant selection. They are not a final untouched validation dataset.",
+    "The rigid transform is an empirical alignment of reconstructed surfaces, not a certified physical sensor extrinsic.",
+    "The board-based depth gain is supported on this dataset, not a universal device calibration.",
+    "P4 soil median remains7.43mm and maximum26.04mm; foliage proximity P90 remains52.38mm, affected by occlusion and incomplete coverage.",
+    "Historical conditional-scale scores are not directly comparable to the new physically anchored quantities. The old soil median3.411mm does not imply better physical truth.",
+    "No gap-free360-degree completeness or biological trait accuracy is established.",
+    "25mm checker pitch is operator-confirmed; print-size uncertainty is unavailable.",
+    "Cross-camera alignment is empirical and not a certified physical rig extrinsic.",
+    "D405 metric scale transfers under the stated fixed-rig acquisition assumptions.",
+    "L515 board-gain trial is an empirical range correction, not confirmation of device units.",
+    "Fusion region includes pots and is not an organ/trait segmentation.",
+    "Added points are measured by L515; lack of a D405 contradiction is not independent confirmation.",
+    "Distance and view checks do not prove physical accuracy or complete hidden-surface coverage."
+  ],
+  "written_union_exact_coordinate_and_source_order_check": true
+}
