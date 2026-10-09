@@ -1,0 +1,47 @@
+{
+  "status": "completed_recheck_and_local_website_with_explicit_scientific_gaps",
+  "review_date": "2026-10-08",
+  "website_route": "/results/final-sprint-20260928/",
+  "preview_url": "http://127.0.0.1:8879/results/final-sprint-20260928/",
+  "production_build": "passed: Next.js 14.2.35 static export, lint and TypeScript",
+  "exported_html_pages": 13,
+  "local_references_checked": 414,
+  "broken_exported_links": 0,
+  "geometry_models_browser_loaded": 24,
+  "manual_rows_browser_expanded": 47,
+  "broken_trait_images_browser": 0,
+  "geometry_console_warnings_or_errors": [],
+  "mobile_check": {
+    "viewport_width": 390,
+    "viewport_height": 844,
+    "document_width": 375,
+    "horizontal_page_overflow": false,
+    "all_five_plants_fit_canvas": true,
+    "framing_respects_camera_aspect": true,
+    "viewport_override_reset": true
+  },
+  "spectral_browser_receipt": "spectral_metric_v1/browser_validation/validation.json",
+  "scientific_numeric_source_checks": [
+    "independent_numeric_audit/audit.json",
+    "l515/replay_validation_native.json",
+    "l515/replay_validation_board_gain.json",
+    "cross_camera/matched_soil_metric_comparison.json",
+    "geometry_asset_validation.json",
+    "website/traits/verification.json",
+    "spectral_metric_v1/identity_remap_validation.json",
+    "spectral_metric_v1/fx17_ratio_viewer_validation.json"
+  ],
+  "protected_lab_source_files_unchanged": 26,
+  "physical_lab_hardware_test_performed": false,
+  "earlier_research_results_preserved": true,
+  "scientific_limitations": [
+    "Known board pitch does not establish independent physical accuracy or complete surfaces.",
+    "Cross-camera checks informed candidate selection; no final untouched accuracy test.",
+    "No accepted anatomical/manual reference pairs for trait accuracy statistics.",
+    "Elevated spectral height model failed held-out prediction and was rejected for dense assignment.",
+    "Six provisional spectral observations cover three P5 vertices, not all plant surfaces.",
+    "White-panel reflectance and shutter-dark conditions remain unverified."
+  ],
+  "pushed": false,
+  "live_publication_verified": false
+}

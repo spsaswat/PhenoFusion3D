@@ -1,0 +1,12 @@
+{
+  "source": "Saswat email text supplied directly by the user in this conversation on 2026-10-07",
+  "square_length_m": 0.025,
+  "marker_length_m": 0.018,
+  "marker_square_ratio": 0.72,
+  "squares_x": 7,
+  "squares_y": 10,
+  "dictionary": "DICT_4X4_50",
+  "physical_size_previously_unknown": true,
+  "dimension_uncertainty_not_provided": true,
+  "exact_user_supplied_text": "The printed ChArUco board uses a square size of 25 mm \u00d7 25 mm. The embedded ArUco markers are 18 mm \u00d7 18 mm, and the board layout is 7 \u00d7 10 squares using the DICT_4X4_50 dictionary. In the calibration code, these dimensions are recorded in metres: square length 0.025 m; marker length 0.018 m. The values 127/76 may refer to pixel measurements from an image rather than physical dimensions."
+}

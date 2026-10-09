@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-08",
+  "status": "completed_bounded_exploration_partial_improvement",
+  "complete_five_plant_dense_fusion": false,
+  "every_possible_algorithm_exhausted": false,
+  "geometry_and_capture_control_code_preserved": true,
+  "new_partial_surface": {
+    "plant": "P5",
+    "regions": ["upper_green", "upper_red"],
+    "FX10_exact_native_spectra": 2338,
+    "FX17_exact_native_spectra": 862,
+    "bands_per_sensor": 224,
+    "unique_existing_geometry_vertices": 2338,
+    "geometry_points_in_context": 154648,
+    "independent_raw_DN_reread_exact": true,
+    "independent_Q_Q0_recalculation_exact": true,
+    "finite_Q_values_FX10": 0,
+    "finite_Q_values_FX17": 0,
+    "finite_Q0_values_FX10": 0,
+    "finite_Q0_values_FX17": 0,
+    "one_native_pixel_and_vertex_per_sensor": true,
+    "physical_mapping_accuracy_validated": false,
+    "spectra_interpolated": false,
+    "spectra_concatenated_across_sensors": false
+  },
+  "browser_checks": {
+    "direct_surface_renders": true,
+    "FX10_and_FX17_counts_match_exports": true,
+    "band_change_updates_value_and_wavelength": true,
+    "unsupported_normalized_values_stay_missing": true,
+    "source_spectrum_link_preserves_sensor_sample_and_band": true,
+    "focus_button_operates": true,
+    "built_main_page_defaults_to_partial_surface_tab": true,
+    "embedded_surface_both_sensors_operate": true,
+    "observed_console_errors": 0
+  },
+  "website": {
+    "build_passed": true,
+    "static_links_checked": 86,
+    "missing_static_links": 0,
+    "local_url": "http://127.0.0.1:8879/results/final-sprint-20260928/fusion-rescue-20261008/index.html",
+    "committed_this_turn": false,
+    "pushed_this_turn": false,
+    "published_this_turn": false
+  },
+  "scientific_scope": "Values and geometry identities were verified independently of packaging. The image-map checks use uncertain anatomical annotations; they do not establish per-point physical accuracy or dataset generalization. Demonstration region selection follows the validation evidence. Original results remain preserved."
+}

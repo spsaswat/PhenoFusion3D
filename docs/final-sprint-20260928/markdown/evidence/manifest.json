@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-08",
+  "snapshots": [
+    {
+      "snapshot": "input_inventory.md",
+      "source": "generated/new_data_audit_20261007/README.md",
+      "bytes": 2798,
+      "sha256": "fe428fbf97fdbc0d235cfa8e667d2cbce5c376836b9711553aa8419596d5c589"
+    },
+    {
+      "snapshot": "l515_replacement.md",
+      "source": "generated/l515_replacement_audit_20261007/README.md",
+      "bytes": 3543,
+      "sha256": "f8da7f741609eac403ea58c4efc0049be9d8d5ec9a97f1e0d1900f4a55366d2e"
+    },
+    {
+      "snapshot": "confirmed_board_findings.md",
+      "source": "docs/results/20260928-confirmed-board/evidence/README.md",
+      "bytes": 4592,
+      "sha256": "9cb768e3b0c45789bd535ce1579048b140d3172d1fbc03b8312e870e494f8016"
+    },
+    {
+      "snapshot": "board_confirmation.json",
+      "source": "docs/results/20260928-confirmed-board/evidence/board_confirmation.json",
+      "bytes": 797,
+      "sha256": "55abeaa4321131141a2ebfa8998aca8a07e55f273c1ca160a7a84d6bf8256e5f"
+    },
+    {
+      "snapshot": "confirmed_board_verification.json",
+      "source": "docs/results/20260928-confirmed-board/evidence/final_verification.json",
+      "bytes": 2138,
+      "sha256": "54a9faf428c7937a10fd6a52cef448a1d9684eae91c634ad62ed187ed1daac52"
+    },
+    {
+      "snapshot": "software_archive_notes.md",
+      "source": "docs/results/20260928-confirmed-board/README.md",
+      "bytes": 2312,
+      "sha256": "72d96e6ff3ce072b3a3ebee701135d79a6f5e86c42a855574754fe5ebad82b82"
+    },
+    {
+      "snapshot": "trait_findings.md",
+      "source": "generated/research_sprint_review_20261008/traits_audit/README.md",
+      "bytes": 4071,
+      "sha256": "0bba83da5848da426ef172de6b74e6c0ba303fa031a61e569b83ded001a832ba"
+    },
+    {
+      "snapshot": "conditional_comparisons.csv",
+      "source": "generated/research_sprint_review_20261008/traits_audit/conditional_comparisons.csv",
+      "bytes": 13673,
+      "sha256": "d8ea431c9747b1cd0e61371475effbf8c53aff20a6be524594909753c98eea8d"
+    },
+    {
+      "snapshot": "dimension_ledger_47.csv",
+      "source": "generated/research_sprint_review_20261008/traits_audit/dimension_ledger_47.csv",
+      "bytes": 44078,
+      "sha256": "4037b900196e2706bc77b76389e79a4d1b8d431838919ba5295be0bcfff19611"
+    },
+    {
+      "snapshot": "trait_verification.json",
+      "source": "generated/research_sprint_review_20261008/traits_audit/verification.json",
+      "bytes": 23839,
+      "sha256": "732ba1960a815c85899b66ec39f4ee9aa59fe523655272fd532d1ba14489c07b"
+    },
+    {
+      "snapshot": "fusion_rescue_report.md",
+      "source": "generated/research_fusion_rescue_20261008/REPORT.md",
+      "bytes": 15329,
+      "sha256": "fa16e870049c12534a42208b399950411d057c479a035c0fcff671c55b36bce3"
+    },
+    {
+      "snapshot": "fusion_rescue_verification.json",
+      "source": "generated/research_fusion_rescue_20261008/final_verification.json",
+      "bytes": 2051,
+      "sha256": "6065e28bf136d7855d1c94793b29fde537c927b1def8f73740f7dc1ef012056d"
+    },
+    {
+      "snapshot": "control_reassessment.json",
+      "source": "generated/research_fusion_rescue_20261008/control_audit/legacy_control_reassessment.json",
+      "bytes": 1885,
+      "sha256": "2dc1fc38362233ba9c404fa1ec39b13617c06ea804cd42980a310dd00d7acb47"
+    },
+    {
+      "snapshot": "control_verification.json",
+      "source": "generated/research_fusion_rescue_20261008/control_audit/verification.json",
+      "bytes": 890,
+      "sha256": "f8a95f61b4e19b49b5a9016f361b885f5756e46b776f6f8f8845c2f01bdc571e"
+    },
+    {
+      "snapshot": "website_link_validation.json",
+      "source": "generated/research_fusion_rescue_20261008/website_link_validation.json",
+      "bytes": 186,
+      "sha256": "dc202bb16b34cb0686279ff3525223414e3ee4cb5cc370658192c50b284f645e"
+    }
+  ],
+  "scope": "Exact compact snapshots, not standalone replay packages. Links inside preserved historical Markdown refer to original archives. Current interpretation is in the parent report; earlier receipts may predate the latest traits or rescue."
+}

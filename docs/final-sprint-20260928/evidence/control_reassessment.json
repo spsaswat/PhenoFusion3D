@@ -1,0 +1,28 @@
+{
+  "green_lower_4": {
+    "legacy_accepted": false,
+    "legacy_independent_holdout": false,
+    "legacy_recommended_for_sparse_exploratory_join": false,
+    "descriptor_configurations": 5,
+    "descriptor_channels": [
+      "grayscale"
+    ],
+    "minimum_Lowe_ratio": 0.7347083379834701,
+    "nearest_cloud_distance_old_units": 0.002692137278820909,
+    "nearest_cloud_reprojection_error_px": 2.2215777342201837,
+    "material_identity_review": "Same lower green leaf and plausible lateral-vein neighbourhood. Exact branch/centroid identity not uniquely resolved from broad repeated veins; wrong nearby branch or modality-dependent centroid remains plausible.",
+    "screening_decision": "Advisory uncertain control; cannot independently veto a candidate at3px.",
+    "coordinate_action": "No coordinates changed; no search toward model predictions."
+  },
+  "red_upper_6": {
+    "descriptor_configurations": 6,
+    "descriptor_channels": [
+      "red"
+    ],
+    "minimum_Lowe_ratio": 0.6954107286243919,
+    "material_identity_review": "Same red-leaf midrib/side-vein neighbourhood plausible. Descriptor crosses are offset to different sides of the broad midrib;3\u20134HSIpx and2\u20133RGBpx localization uncertainty plausible.",
+    "screening_decision": "Existing provisional association retained with uncertainty, not anatomical point ground truth."
+  },
+  "historical_screening_revision": "The previous7\u20138px screening discrepancy showed disagreement with selected feature controls, not a proven physical error of that size. One influential green4 control was already explicitly not accepted. This audit weakens a decisive-failure interpretation but does not prove the old map accurate or justify filling unobserved spectra.",
+  "scope": "All marks and scores retained; no model or landmark was modified after scoring to achieve acceptance."
+}

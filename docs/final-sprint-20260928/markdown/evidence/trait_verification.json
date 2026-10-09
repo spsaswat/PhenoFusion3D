@@ -1,0 +1,831 @@
+{
+  "manual_rows": 47,
+  "conditional_rows": 13,
+  "unique_dimensions": true,
+  "raw_sources_modified": false,
+  "hardware_or_app_files_modified": false,
+  "source_hashes": {
+    "generated\\research_confirmed_board_20261007\\traits_metric\\traits_review.json": "6d9b0fc75648338fc4f975b923e633030e9731877b3e75d9cfb7b379d510e3ad",
+    "generated\\research_confirmed_board_20261007\\traits_metric\\provisional_chords.json": "8abec22cbaa0e18e8e6c6bf10801a6143f801159ce0abc3829608b6c4a7650c7",
+    "generated\\research_confirmed_board_20261007\\traits_metric\\annotations.json": "d33778a0661cf6fe13a8c8b95412ebf6c199fbf936d74bc10fb4a08425cfed77",
+    "generated\\research_confirmed_board_20261007\\fusion_v1\\fused_review_reference.ply": "2a310d7eb85db8005437170e7207ec6326e5b2fa397546ccecd1af16c5c8ed72",
+    "generated\\research_confirmed_board_20261007\\fusion_v1\\fused_point_provenance.npz": "2aa1f32f7f21b2cb8a9ba1258f870d2a31ac74454226963d19565834aa6ee0c3",
+    "generated\\research_confirmed_board_20261007\\cleanup_v1\\result\\point_classification.npz": "3af085c90913f0e913bb480e79dbfc4862d6aca137cd3d3e6ba037399e9e951d",
+    "generated\\research_sprint_review_20261008\\traits_audit\\batch_frozen_endpoint_specs.json": "6ed62d4b2c6a70a2f4d12618d1ed6465642d94601ae3b7967ab2b05afac8f419",
+    "generated\\research_sprint_review_20261008\\traits_audit\\revision_frozen_endpoint_specs.json": "ea043fa14ce9229c6b9b934ab4c7972e693021959e6536ffb6bb29997cf647c2"
+  },
+  "exact_geometry_provenance_and_chord_checks": [
+    {
+      "id": "P3.O01.width",
+      "chord_recomputed_cm": 3.9358752315052756,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            -0.7624347036014334,
+            0.49935249922195
+          ],
+          "votes": [
+            2,
+            5
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            null,
+            7.528742404495969
+          ],
+          "votes": [
+            0,
+            3
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            1.4911449322824732,
+            null
+          ],
+          "votes": [
+            4,
+            0
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3.O02.length",
+      "chord_recomputed_cm": 9.12092539833513,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            null,
+            null
+          ],
+          "votes": [
+            0,
+            0
+          ],
+          "supported": [
+            false,
+            false
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            2.7462975171751447,
+            1.5117375219471096
+          ],
+          "votes": [
+            2,
+            2
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            5.86343403245182,
+            3.4831584501483492
+          ],
+          "votes": [
+            2,
+            5
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3.O02.width",
+      "chord_recomputed_cm": 9.265520307458768,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            -0.1830914747188439,
+            7.788908642887948
+          ],
+          "votes": [
+            4,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            86.65269211229342,
+            4.108953142861416
+          ],
+          "votes": [
+            5,
+            3
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            -4.393385255344606,
+            -303.08185656827203
+          ],
+          "votes": [
+            3,
+            2
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3.O03.length",
+      "chord_recomputed_cm": 7.691100957059331,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        3,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            1.535638590303312,
+            -0.886059814880269
+          ],
+          "votes": [
+            6,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            1.578704436019096,
+            0.6736796533551304
+          ],
+          "votes": [
+            5,
+            3
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            -7.043634574988689,
+            9.028824444765881
+          ],
+          "votes": [
+            2,
+            1
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3.O03.width",
+      "chord_recomputed_cm": 5.036529578582992,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        3,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            2.6787992794586324,
+            0.9255268178502418
+          ],
+          "votes": [
+            3,
+            4
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            -0.13059696627165662,
+            1.8869659625698754
+          ],
+          "votes": [
+            5,
+            3
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            -6.5624507074930065,
+            null
+          ],
+          "votes": [
+            2,
+            0
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3.O04.length",
+      "chord_recomputed_cm": 11.500610903923318,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        3
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            1.197094971672641,
+            1.4548441386263988
+          ],
+          "votes": [
+            5,
+            5
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            0.541676227421406,
+            -0.2880710755165383
+          ],
+          "votes": [
+            6,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            127.61089104281031,
+            7.308690386217953
+          ],
+          "votes": [
+            3,
+            3
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3.O04.width",
+      "chord_recomputed_cm": 7.081279655122308,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 824869,
+          "point_minus_stereo_mm": [
+            3.8930427530299294,
+            3.5845195678011477
+          ],
+          "votes": [
+            6,
+            3
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 618150,
+          "point_minus_stereo_mm": [
+            -4.499247635960546,
+            0.9450737013247945
+          ],
+          "votes": [
+            4,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1055904,
+          "point_minus_stereo_mm": [
+            158.89684259533465,
+            -12.944243040448612
+          ],
+          "votes": [
+            2,
+            3
+          ],
+          "supported": [
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5.O01.length",
+      "chord_recomputed_cm": 11.679115200213703,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 1445026,
+          "point_minus_stereo_mm": [
+            -3.9963790465730176,
+            1.0778050334172562
+          ],
+          "votes": [
+            3,
+            2
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1030829,
+          "point_minus_stereo_mm": [
+            -1.5824728295569246,
+            -9.707046039017397
+          ],
+          "votes": [
+            2,
+            1
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        },
+        {
+          "frame": 1639585,
+          "point_minus_stereo_mm": [
+            1.8543961811672283,
+            2.6831804195902587
+          ],
+          "votes": [
+            1,
+            2
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5.O01.width",
+      "chord_recomputed_cm": 9.758400367366564,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        3,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 1445026,
+          "point_minus_stereo_mm": [
+            1.620850796295481,
+            -1.4250773417116003
+          ],
+          "votes": [
+            6,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1030829,
+          "point_minus_stereo_mm": [
+            -2.5572875688767427,
+            -6.585125397910674
+          ],
+          "votes": [
+            5,
+            1
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        },
+        {
+          "frame": 1639585,
+          "point_minus_stereo_mm": [
+            -3.2149517622005463,
+            -1.964470434522858
+          ],
+          "votes": [
+            2,
+            3
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5.O02.length",
+      "chord_recomputed_cm": 6.4682762513886995,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 1445026,
+          "point_minus_stereo_mm": [
+            0.38736246814996544,
+            7.5816097511834935
+          ],
+          "votes": [
+            6,
+            5
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1030829,
+          "point_minus_stereo_mm": [
+            118.14618722642234,
+            4.58808623097029
+          ],
+          "votes": [
+            3,
+            2
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        },
+        {
+          "frame": 1639585,
+          "point_minus_stereo_mm": [
+            3.1051963194774768,
+            null
+          ],
+          "votes": [
+            2,
+            0
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5.O03.length",
+      "chord_recomputed_cm": 9.797323277103388,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 1445026,
+          "point_minus_stereo_mm": [
+            7.931177832359526,
+            1.304108782969382
+          ],
+          "votes": [
+            6,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1030829,
+          "point_minus_stereo_mm": [
+            9.456738435348555,
+            null
+          ],
+          "votes": [
+            2,
+            0
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        },
+        {
+          "frame": 1639585,
+          "point_minus_stereo_mm": [
+            15.151383037489197,
+            1.5347824672103938
+          ],
+          "votes": [
+            4,
+            6
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5.O03.width",
+      "chord_recomputed_cm": 11.571735824370721,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 1445026,
+          "point_minus_stereo_mm": [
+            1.3551377095830652,
+            1.3422026455022218
+          ],
+          "votes": [
+            5,
+            6
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1030829,
+          "point_minus_stereo_mm": [
+            null,
+            52.32715885276873
+          ],
+          "votes": [
+            0,
+            1
+          ],
+          "supported": [
+            false,
+            false
+          ]
+        },
+        {
+          "frame": 1639585,
+          "point_minus_stereo_mm": [
+            -2.2614413537378475,
+            -1.2526887716743929
+          ],
+          "votes": [
+            4,
+            4
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5.O05.length",
+      "chord_recomputed_cm": 11.97660275005639,
+      "original_vertex_identity_exact": true,
+      "current_cleaned_plant_identity_exact": true,
+      "endpoint_supporting_view_counts": [
+        2,
+        2
+      ],
+      "depth_checks": [
+        {
+          "frame": 1445026,
+          "point_minus_stereo_mm": [
+            0.18663778159999644,
+            3.5551363470833763
+          ],
+          "votes": [
+            6,
+            5
+          ],
+          "supported": [
+            true,
+            true
+          ]
+        },
+        {
+          "frame": 1030829,
+          "point_minus_stereo_mm": [
+            56.880950437187664,
+            0.9638440779439206
+          ],
+          "votes": [
+            5,
+            3
+          ],
+          "supported": [
+            false,
+            true
+          ]
+        },
+        {
+          "frame": 1639585,
+          "point_minus_stereo_mm": [
+            3.940671206607127,
+            null
+          ],
+          "votes": [
+            2,
+            0
+          ],
+          "supported": [
+            true,
+            false
+          ]
+        }
+      ]
+    }
+  ],
+  "all_accepted_endpoints_two_view_depth_supported": true,
+  "existing_result_and_manual_source_hashes_unchanged": true,
+  "unchanged_source_count": 65,
+  "checked_source_paths": [
+    "generated/research_confirmed_board_20261007/fusion_v1/fused_review_reference.ply",
+    "generated/research_confirmed_board_20261007/fusion_v1/fused_point_provenance.npz",
+    "generated/research_confirmed_board_20261007/cleanup_v1/result/point_classification.npz",
+    "generated/research_confirmed_board_20261007/cleanup_v1/result/summary.json",
+    "generated/research_confirmed_board_20261007/d405_metric/icp_diagnostics_reexpressed.json",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (2).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (3).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (4).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (5).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (6).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (7).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1/Media (8).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-1_measurements.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Leaf-1/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Leaf-1/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Leaf-2/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Leaf-2/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Media (2).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2/Media (3).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2_measurements_01.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-2_measurements_02.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-1/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-1/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-2/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-2/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-3/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-3/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-4/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-4/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-5/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-5/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-6/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Leaf-6/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Media (2).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3/Media (3).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3_measurements_01.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-3_measurements_02.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-1/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-1/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-2/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-2/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-3/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-3/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-4/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Leaf-4/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4/Media (2).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4_measurements_01.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-4_measurements_02.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-1/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-1/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-2/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-2/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-3/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-3/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-4/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-4/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-5/Media (1).jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5/leaf-5/Media.jpeg",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5_measurements_01.png",
+    "data/main/test_plant_10-7/manual_validation_5-plants_28-09/plant-5_measurements_02.png"
+  ],
+  "maximum_chord_recomputation_error_cm": 0.0
+}

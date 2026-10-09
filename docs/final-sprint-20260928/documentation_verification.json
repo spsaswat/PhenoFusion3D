@@ -1,0 +1,32 @@
+{
+  "scope": "Local static documentation preview only; no GitHub writes, commit, push or public deployment.",
+  "relative_links_checked": 52,
+  "local_http": [
+    {
+      "url": "http://127.0.0.1:8879/results/final-sprint-20260928/sprint-handover-20261008/index.html",
+      "status": 200,
+      "bytes": 25147
+    },
+    {
+      "url": "http://127.0.0.1:8879/results/final-sprint-20260928/sprint-handover-20261008/issues.html",
+      "status": 200,
+      "bytes": 81249
+    },
+    {
+      "url": "http://127.0.0.1:8879/results/final-sprint-20260928/sprint-handover-20261008/user-guide.html",
+      "status": 200,
+      "bytes": 31438
+    },
+    {
+      "url": "http://127.0.0.1:8879/results/final-sprint-20260928/sprint-handover-20261008/issue_plan.json",
+      "status": 200,
+      "bytes": 26756
+    },
+    {
+      "url": "http://127.0.0.1:8879/results/final-sprint-20260928/sprint-handover-20261008/USER_GUIDE.md",
+      "status": 200,
+      "bytes": 26261
+    }
+  ],
+  "source_files": 42
+}

@@ -1,0 +1,485 @@
+{
+  "draft_only": true,
+  "created_on_github": false,
+  "date": "2026-10-08",
+  "team_source": "README.md Authors and contributors",
+  "parent": {
+    "id": "FS00",
+    "title": "Deliver and evaluate the five-plant final sprint workflow",
+    "assignee": "Adithya Rama",
+    "additional_points": 0,
+    "rollup_points": 52
+  },
+  "estimate_policy": "Proposed relative scope estimates; not hours, committed capacity, actual effort or earned velocity. Team approval pending.",
+  "allocation": {
+    "Adithya Rama": 13,
+    "Howard Zhang": 13,
+    "Tanisha Sharma": 13,
+    "Tianyu Xu": 13
+  },
+  "issues": [
+    {
+      "id": "FS01",
+      "title": "Audit the five-plant recordings and preserve exact source identities",
+      "proposed_assignee": "Tanisha Sharma",
+      "reviewer": "Howard Zhang",
+      "story_points": 3,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:data",
+        "type:task"
+      ],
+      "dependencies": [],
+      "evidence_status": "Evidence ready for peer review",
+      "user_story": "As a lab operator, I want incomplete and mismatched recordings identified before processing so that reconstructed results use genuine paired observations.",
+      "description": "Inventory D405, L515, FX10 and FX17 calibration and plant inputs. Verify RGB/depth identifiers and decoding, spectral header dimensions and byte counts, and the relationship between calibration and plant recordings. Preserve the original archive and document the replacement export.",
+      "current_evidence": "The initial L515 plant archive had 89 exact pairs. The replacement has 1,278 plant pairs and 1,290 calibration pairs. Do not rename adjacent frames into artificial pairs.",
+      "acceptance_criteria": [
+        "Inventory lists each sensor, recording role, exact pairing and missing metadata.",
+        "Original and replacement L515 audits are distinguishable and the pairing gap is documented as resolved.",
+        "Raw files remain unchanged and source identifiers remain traceable.",
+        "Peer reviewer confirms the inventory and records any unresolved timing or unit assumptions."
+      ],
+      "evidence": [
+        "evidence/input_inventory.md",
+        "evidence/l515_replacement.md"
+      ],
+      "risk": "Folder naming and exact file pairing do not independently prove synchronization or device depth units."
+    },
+    {
+      "id": "FS02",
+      "title": "Recheck metric calibration using the confirmed ChArUco board",
+      "proposed_assignee": "Tianyu Xu",
+      "reviewer": "Adithya Rama",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:calibration",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS01"
+      ],
+      "evidence_status": "Metric results ready for peer review; physical accuracy remains unverified",
+      "user_story": "As a researcher, I want geometry expressed using the actual board dimensions so that reported distances have a documented metric basis.",
+      "description": "Record the confirmed 7 by 10 ChArUco layout, 25 mm squares, 18 mm markers and DICT_4X4_50. Recheck D405 scale, L515 motion and depth interpretations, and the shared hyperspectral table reference. Preserve earlier conditional outputs.",
+      "current_evidence": "D405 factor 1.0288746669 and L515 RGB travel factor 1.0296675589. The selected L515 depth conversion is empirical, not certified device metadata.",
+      "acceptance_criteria": [
+        "Board dimensions, metre units, dictionary and confirmation source are explicit.",
+        "Rechecked geometry, poses and derived dimensions retain original identities and earlier results.",
+        "RGB motion scale is distinguished from raw depth conversion.",
+        "Report distinguishes table-plane fitting residuals from elevated-leaf or independent physical accuracy.",
+        "Peer reviewer checks unit conversions and the recalculated outputs."
+      ],
+      "evidence": [
+        "evidence/board_confirmation.json",
+        "evidence/confirmed_board_findings.md"
+      ],
+      "risk": "Print tolerance and independent device-unit evidence remain open; a good plane fit does not validate plant-height spectral projection."
+    },
+    {
+      "id": "FS03",
+      "title": "Reconstruct and review the D405 five-plant observations",
+      "proposed_assignee": "Howard Zhang",
+      "reviewer": "Adithya Rama",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:reconstruction",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS01",
+        "FS02"
+      ],
+      "evidence_status": "Saved reconstruction ready for peer review",
+      "user_story": "As a researcher, I want to inspect reconstructed plants from multiple views so that alignment failures and unobserved surfaces are visible.",
+      "description": "Document the RGB multi-view stereo, scene-supported motion and ICP route, chosen outputs and source-supported views. Preserve separate trials. Inspect all five plants, including fine stems and difficult side views.",
+      "current_evidence": "The confirmed-board update re-expresses the existing D405 result at the metric scale; it does not rerun stereo or create new surfaces. Plant 5 has more continuous broad-leaf observations than the difficult thin structures.",
+      "acceptance_criteria": [
+        "Saved cloud, accepted camera poses and processing parameters are traceable.",
+        "P1-P5 can be inspected from front, side and top with unsupported areas visible.",
+        "Scale-only changes are distinguished from reconstruction changes.",
+        "No unobserved surface is presented as a measured gap-free reconstruction.",
+        "Peer reviewer records the selected result and its coverage limitations."
+      ],
+      "evidence": [
+        "evidence/confirmed_board_findings.md",
+        "evidence/confirmed_board_verification.json"
+      ],
+      "risk": "Occlusion and missing thin structures cannot be repaired simply by increasing point size or relaxing alignment filters."
+    },
+    {
+      "id": "FS04",
+      "title": "Reconstruct L515 and fuse supported observations with D405",
+      "proposed_assignee": "Adithya Rama",
+      "reviewer": "Howard Zhang",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:geometry-fusion",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS01",
+        "FS02",
+        "FS03"
+      ],
+      "evidence_status": "Selected fusion ready for peer review",
+      "user_story": "As a researcher, I want complementary camera observations in a common frame so that I can inspect additional measured surfaces and their source.",
+      "description": "Compare the recorded-depth L515 hypotheses, retain separate reconstructions, align L515 into the D405 reference and preserve per-point camera provenance. Document overlap, excluded conflicts and selection checks.",
+      "current_evidence": "Selected union: 1,719,001 D405 inspection points plus 21,672 L515 additions, totalling 1,740,673 points. Matched-soil median disagreement changed from 11.160 to 6.289 mm in the comparable metric candidate comparison.",
+      "acceptance_criteria": [
+        "Both L515 hypotheses and the selected rigid alignment are saved.",
+        "Fusion counts reconcile and retained points preserve camera and source indices.",
+        "Selection checks and unselected alternatives are reported without treating tuning data as untouched validation.",
+        "Geometric fusion is explained separately from spectral-to-surface association.",
+        "Reviewer verifies provenance and the basis for selecting the final candidate."
+      ],
+      "evidence": [
+        "evidence/confirmed_board_findings.md",
+        "evidence/confirmed_board_verification.json"
+      ],
+      "risk": "The selected P90 and maximum disagreement are 10.326 and 26.037 mm; candidate selection used the checking data."
+    },
+    {
+      "id": "FS05",
+      "title": "Separate plant tissue candidates and retain reversible cleanup evidence",
+      "proposed_assignee": "Howard Zhang",
+      "reviewer": "Tanisha Sharma",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:cleanup",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS04"
+      ],
+      "evidence_status": "Cleanup artifacts ready for peer review",
+      "user_story": "As a researcher, I want plant candidates separated from pots and background so that I can inspect traits while recovering any questionable exclusions.",
+      "description": "Review source-image tissue masks, extract P1-P5 and retain uncertain and scene-context partitions. Expose pre-cleanup and post-cleanup geometry and preserve original point indices.",
+      "current_evidence": "430,060 tissue-candidate points: P1 21,444; P2 72,786; P3 112,943; P4 68,239; P5 154,648.",
+      "acceptance_criteria": [
+        "Counts reconcile across the five saved specimen clouds.",
+        "Candidate, uncertain and context partitions remain recoverable.",
+        "Every retained point maps to its original recorded/reconstructed source.",
+        "Side-view inspections document missing tips, undersides and possible mask losses.",
+        "Reviewer confirms that cleanup is described as a candidate segmentation rather than complete anatomical truth."
+      ],
+      "evidence": [
+        "evidence/confirmed_board_findings.md",
+        "evidence/confirmed_board_verification.json"
+      ],
+      "risk": "Approximate masks and basal exclusions can remove true tissue; cleaned extent is not automatically stem-base-to-tip height."
+    },
+    {
+      "id": "FS06",
+      "title": "Compare manual traits with matched source-supported plant measurements",
+      "proposed_assignee": "Tanisha Sharma",
+      "reviewer": "Tianyu Xu",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:traits",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS02",
+        "FS05"
+      ],
+      "evidence_status": "Conditional comparisons ready for review; complete anatomical validation remains open",
+      "user_story": "As a researcher, I want matched measurements and explicit exclusions so that differences from ruler references can be interpreted fairly.",
+      "description": "Account for all 47 manual dimensions, match specimen and organ identity, review endpoint support and compute justified differences. Keep operator annotations distinct from approximate photo readings and natural-pose chords distinct from flattened leaf measurements.",
+      "current_evidence": "13 conditional comparisons across eight P3/P5 organs: seven lengths and six widths. Five vertical-span diagnostics are descriptive and are not validated plant-height errors.",
+      "acceptance_criteria": [
+        "The 47-dimension ledger contains a comparison or a specific unresolved reason for each dimension.",
+        "The 13 comparisons include operator value, 3D value, units, signed difference and source identities.",
+        "Endpoint choices are justified from images rather than chosen to match manual values.",
+        "P1 width conflict, P4 organ identity and unresolved base/tip pairs remain explicit.",
+        "Reviewer confirms eligible dimensions and retains poor agreements without an unsupported aggregate accuracy claim."
+      ],
+      "evidence": [
+        "evidence/trait_findings.md",
+        "evidence/conditional_comparisons.csv",
+        "evidence/dimension_ledger_47.csv",
+        "evidence/trait_verification.json"
+      ],
+      "risk": "Natural-pose chords, flattened ruler lengths and different width sections can measure different quantities."
+    },
+    {
+      "id": "FS07",
+      "title": "Extract and inspect both hyperspectral cameras with quality flags",
+      "proposed_assignee": "Tianyu Xu",
+      "reviewer": "Tanisha Sharma",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:spectra",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS01"
+      ],
+      "evidence_status": "Measured camera-space outputs ready for peer review",
+      "user_story": "As a spectral analyst, I want exact measured bands and reference-quality information so that unsupported normalization does not become a scientific claim.",
+      "description": "Verify FX10 and FX17 cubes, preserve native pixel identities, expose measured DN and the Q/Q0 sensitivity alternatives, and calculate only supported descriptors. Retain missing and clipped values with their flags.",
+      "current_evidence": "The broader inspector contains 7,982 FX10 and 5,361 FX17 selected samples, each with 224 bands. White reflectance and shutter-closed dark capture remain unconfirmed.",
+      "acceptance_criteria": [
+        "Both cameras retain native column, line, wavelength and sample identities.",
+        "Raw values are traceable to the original cubes and invalid normalized values remain unavailable.",
+        "Reference support, clipping and dark assumptions are visible in exports and the viewer.",
+        "FX10 descriptors and the FX17 SWIR diagnostic are distinguished; no red band is borrowed for FX17 NDVI.",
+        "Reviewer verifies selected spectra and the wording of radiometric limitations."
+      ],
+      "evidence": [
+        "evidence/confirmed_board_findings.md",
+        "evidence/fusion_rescue_verification.json"
+      ],
+      "risk": "Fixed exposure and an ordinary white board do not independently establish calibrated reflectance or physiological interpretation."
+    },
+    {
+      "id": "FS08",
+      "title": "Investigate dense spectral registration and preserve the partial surface result",
+      "proposed_assignee": "Adithya Rama",
+      "reviewer": "Tianyu Xu",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:spectral-fusion",
+        "type:spike"
+      ],
+      "dependencies": [
+        "FS03",
+        "FS05",
+        "FS07"
+      ],
+      "evidence_status": "Research investigation and partial candidate ready for review; full fusion unresolved",
+      "user_story": "As a researcher, I want spectra associated with supported 3D locations so that spatial patterns can be explored without invented coverage.",
+      "description": "Compare learned image matching, local multimodal warps, physical camera models and cross-sensor tracking. Freeze candidates before scoring proposed check coordinates, preserve failed trials and limit exports to supported geometry domains.",
+      "current_evidence": "72 learned configurations on P5, 24 frozen maps and 16 additional P1-P4 runs. The selected two-upper-leaf demonstration has 2,338 FX10 and 862 FX17 native spectra on unchanged P5 geometry. These patches support raw DN only.",
+      "acceptance_criteria": [
+        "Candidate definitions, selection rules and unsuccessful experiments remain available.",
+        "The partial viewer separates both cameras and traces each assignment to an exact native pixel and existing vertex.",
+        "No spectra are interpolated onto unobserved surfaces or spliced across cameras.",
+        "Local versus whole-plant coverage, post-hoc demonstration-region selection and unknown per-point error are explicit.",
+        "The investigation can close with a documented partial or negative result; complete validated fusion remains a separate unresolved product goal.",
+        "Peer reviewer signs off the evidence and links follow-up calibration work."
+      ],
+      "evidence": [
+        "evidence/fusion_rescue_report.md",
+        "evidence/fusion_rescue_verification.json"
+      ],
+      "risk": "Training fit, plausible colour overlap and geometry support do not establish the same physical material point across cameras."
+    },
+    {
+      "id": "FS09",
+      "title": "Audit correspondence controls and correct unsupported accuracy claims",
+      "proposed_assignee": "Tianyu Xu",
+      "reviewer": "Howard Zhang",
+      "story_points": 3,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:validation",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS02",
+        "FS06",
+        "FS08"
+      ],
+      "evidence_status": "Audit ready for peer review",
+      "user_story": "As a reviewer, I want checking landmarks and coordinate conventions audited so that a result is not accepted or rejected using unreliable truth labels.",
+      "description": "Check orientation, scale, native versus undistorted coordinates and exact source identities. Preserve uncertain landmark attempts and score frozen models without moving labels toward predictions. Record corrections to earlier interpretations.",
+      "current_evidence": "23 fresh/adaptive landmark attempts were retained. The old green_lower_4 control was already unaccepted and non-independent, so its discrepancy could not alone establish a definitive physical mapping failure.",
+      "acceptance_criteria": [
+        "Coordinate and point-identity checks are documented.",
+        "Model-fitting evidence is distinguished from withheld annotations and independently measured truth.",
+        "Uncertain and unsuccessful checks remain visible, including adaptive second-round selection.",
+        "The previous rejection wording is corrected while the old result remains preserved.",
+        "Reviewer checks that residuals are not advertised as per-point error bounds."
+      ],
+      "evidence": [
+        "evidence/control_reassessment.json",
+        "evidence/control_verification.json",
+        "evidence/fusion_rescue_report.md"
+      ],
+      "risk": "Subjective landmark radii are not statistical confidence intervals; repetitive veins can have uncertain identity."
+    },
+    {
+      "id": "FS10",
+      "title": "Publish an inspectable results journey with downloads and explicit gaps",
+      "proposed_assignee": "Tanisha Sharma",
+      "reviewer": "Adithya Rama",
+      "story_points": 5,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:website",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS05",
+        "FS06",
+        "FS07",
+        "FS08",
+        "FS09"
+      ],
+      "evidence_status": "Local build and browser evidence available; latest publication not verified",
+      "user_story": "As a tutor or collaborator, I want an accessible results page with provenance so that I can inspect outcomes and limitations without running the research pipeline.",
+      "description": "Present calibration, geometry stages, manual comparisons, both-camera spectra, partial surface fusion and the control reassessment. Keep the historical baseline available, link the complete sprint explanation and verify the final deployed route.",
+      "current_evidence": "The rescue build and browser checks passed, including both sensor layers and 86 static evidence/download links. Local success is distinct from GitHub Pages publication.",
+      "acceptance_criteria": [
+        "The main page leads to geometry, traits, spectra and the latest partial-fusion report.",
+        "Sensor switching, wavelength selection, exact-source inspection and unavailable-value display are checked.",
+        "Download and evidence links resolve in the local build.",
+        "A teammate checks readable desktop/mobile presentation and historical versus current wording.",
+        "After the owner-authorized push, verify the public route and record the deployed commit before closing publication."
+      ],
+      "evidence": [
+        "evidence/fusion_rescue_verification.json",
+        "evidence/website_link_validation.json"
+      ],
+      "risk": "A local build or fork push does not by itself prove the intended public Pages site contains the new results."
+    },
+    {
+      "id": "FS11",
+      "title": "Verify offline analysis integration and complete laboratory regression checks",
+      "proposed_assignee": "Howard Zhang",
+      "reviewer": "Tanisha Sharma",
+      "story_points": 3,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:lab-regression",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS01",
+        "FS03",
+        "FS04",
+        "FS06",
+        "FS07"
+      ],
+      "evidence_status": "Blocked for physical acceptance until the lab machine is available",
+      "user_story": "As a lab operator, I want the established camera and gantry workflow preserved while offline analysis is available so that analysis changes do not disrupt recording.",
+      "description": "Review the existing offline integration and protected-source receipts, then run a bounded physical acceptance session for application startup, camera selection, capture, gantry motion, stop/cancel and saved output. New research rescue scripts are not automatically production features.",
+      "current_evidence": "The saved archive records 26 protected files unchanged and a historical run of 101 targeted offline tests. This does not establish a new physical lab pass or arbitrary-dataset automation.",
+      "acceptance_criteria": [
+        "Record exact software revision, environment and protected-source comparison.",
+        "Confirm the lab operator can launch the app and select the intended RealSense device.",
+        "Check paired capture, intended gantry motion, stop/cancel and recovery on the actual rig.",
+        "Verify offline analysis cannot trigger unintended acquisition or gantry activity.",
+        "Attach a dated lab observation log, failures and reviewer sign-off; do not close using source hashes alone."
+      ],
+      "evidence": [
+        "evidence/confirmed_board_verification.json",
+        "evidence/software_archive_notes.md"
+      ],
+      "risk": "Requires lab access and the normal operating procedure. Physical execution remains unverified in the saved local work."
+    },
+    {
+      "id": "FS12",
+      "title": "Prepare the final sprint narrative demo and research handover",
+      "proposed_assignee": "Adithya Rama",
+      "reviewer": "Tianyu Xu",
+      "story_points": 3,
+      "priority": "P1",
+      "labels": [
+        "sprint:final",
+        "area:handover",
+        "type:task"
+      ],
+      "dependencies": [
+        "FS09",
+        "FS10",
+        "FS11"
+      ],
+      "evidence_status": "Draft prepared; team review and final handover remain",
+      "user_story": "As a tutor or incoming developer, I want the user journey, decisions and evidence explained together so that I understand both the outcome and the next steps.",
+      "description": "Use the complete sprint report to present the objective, evolving workflow, problems, fixes, findings, limitations and lessons. Update the earlier slide deck to reflect the partial fusion and control correction. Confirm each member's actual contribution before final reflection.",
+      "current_evidence": "The complete explanation, end-to-end software user guide, parent/sub-issue drafts and evidence snapshots are now prepared. The earlier presentation predates the rescue interpretation and needs reconciliation.",
+      "acceptance_criteria": [
+        "Walkthrough covers calibration through geometry, traits and both-camera spectral inspection.",
+        "Stories and journeys link to demonstrated outputs or explicit gaps.",
+        "Presentation reflects 13 conditional trait comparisons and the new partial surface without claiming full fusion.",
+        "Each team member confirms their contribution and adds an evidence-based reflection.",
+        "Record public-site and lab status honestly, and hand unresolved items to the follow-up backlog.",
+        "Complete peer review and tutor/team handover."
+      ],
+      "evidence": [
+        "README.md",
+        "USER_GUIDE.md",
+        "evidence/fusion_rescue_report.md",
+        "evidence/trait_findings.md"
+      ],
+      "risk": "FS11 can remain blocked, but the handover must carry that gap explicitly; it cannot assert complete lab acceptance."
+    }
+  ],
+  "followup_backlog_not_in_52_points": [
+    {
+      "id": "FU01",
+      "title": "Capture elevated cross-camera calibration targets and independent checks",
+      "owner": "Tianyu Xu",
+      "points": 8,
+      "linked": [
+        "FS02",
+        "FS08",
+        "FS09"
+      ],
+      "acceptance": "Targets span foliage heights and scan positions; lens/rig and line timing are recorded; fitting and independent check targets are distinct; report spatial errors before promoting dense mapping."
+    },
+    {
+      "id": "FU02",
+      "title": "Record characterized white references and confirmed dark data",
+      "owner": "Tianyu Xu",
+      "points": 5,
+      "linked": [
+        "FS07",
+        "FS08"
+      ],
+      "acceptance": "White reference covers relevant detector columns at fixed documented exposure; panel reflectance and shutter-dark procedure are known; normalization quality is re-evaluated without filling unsupported values."
+    },
+    {
+      "id": "FU03",
+      "title": "Acquire stable overlapping views for missing plant surfaces",
+      "owner": "Howard Zhang",
+      "points": 5,
+      "linked": [
+        "FS03",
+        "FS05"
+      ],
+      "acceptance": "Record side, oblique and lower foliage coverage with stable plants; inspect quality during capture; compare newly observed surfaces while preserving original data."
+    },
+    {
+      "id": "FU04",
+      "title": "Test offline reconstruction and fusion on an independent dataset",
+      "owner": "Adithya Rama",
+      "points": 8,
+      "linked": [
+        "FS08",
+        "FS11"
+      ],
+      "acceptance": "Use a fresh capture with preset configuration; record manual interventions, failures, reproducibility and held-out spatial/trait checks; define a supported operating domain rather than universal perfection."
+    },
+    {
+      "id": "FU05",
+      "title": "Repeat matched manual traits under a consistent anatomical protocol",
+      "owner": "Tanisha Sharma",
+      "points": 3,
+      "linked": [
+        "FS06"
+      ],
+      "acceptance": "Resolve P1 units and P4 organ type, tag individual organs, define stem base/highest tip and lamina/width sections, and record repeated measurements under the chosen pose protocol."
+    }
+  ]
+}

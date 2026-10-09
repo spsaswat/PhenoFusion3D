@@ -1,0 +1,528 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PhenoFusion3D final sprint issue drafts</title><style>*{box-sizing:border-box}body{margin:0;background:#f1f6f7;color:#183342;font:16px/1.65 system-ui,sans-serif}header{background:#103d4c;color:white;padding:25px max(22px,calc((100vw - 1120px)/2))}header a{color:#cdf3ed;margin-right:24px}main{max-width:1164px;margin:auto;padding:28px 22px 70px}h1{font-size:clamp(28px,4vw,42px);line-height:1.18}h2{font-size:25px;margin:45px 0 15px;border-bottom:1px solid #ccdadf;padding-bottom:10px}h3{font-size:20px;margin-top:28px}a{color:#006777;overflow-wrap:anywhere}p,li{max-width:105ch}li{margin:8px 0}.table{overflow-x:auto;margin:22px 0}table{border-collapse:collapse;background:white;width:100%;min-width:680px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d8e3e7;padding:12px;font-size:14px}th{background:#e1edef}code{background:#e3edf0;font-size:.9em;overflow-wrap:anywhere}article{background:white;border:1px solid #d4e1e6;border-radius:12px;padding:24px;margin:24px 0}article h1{font-size:26px}article h2{font-size:20px;margin-top:24px}.notice{padding:18px;background:#fff3d9;border-left:4px solid #bc9132}.copy{padding:10px 18px;background:#086574;color:white;border:0;border-radius:6px;font:inherit;cursor:pointer}.meta{font-size:13px;color:#536f7d}.nav{display:flex;flex-wrap:wrap;gap:14px}.nav a{margin:0}button:focus,a:focus{outline:3px solid #eaad37;outline-offset:3px}@media(max-width:600px){main{padding:20px 15px}article{padding:16px}header{padding:18px}}</style></head><body><header><nav class="nav"><a href="user-guide.html">Software user guide</a><a href="index.html">Complete sprint explanation</a><a href="issues.html">Parent and sub-issues</a><a href="README.md">Download report</a><a href="ISSUES.md">Download all issue drafts</a></nav></header><main><h1>Final sprint GitHub issue drafts</h1>
+<p>One parent and twelve sub-issues for Adithya Rama, Howard Zhang, Tanisha Sharma and Tianyu Xu. Names come from the current repository contributor list. Assignments are proposed review/handover ownership, not attribution of earlier work. GitHub handles, actual issue numbers and sprint dates have not been invented.</p>
+<p>The 52 points use a proposed 3/5-point relative scale and are balanced at 13 per person. They are not hours or a reconstruction of previously committed velocity. Agree these estimates with the team. Future follow-ups are excluded. The parent has zero additional points.</p>
+<p>All checkboxes start unchecked so that saved evidence is reviewed before the team closes issues. A research spike can finish with a documented partial or negative result while the wider product goal remains open.</p>
+<p>Create the parent first, then the children; replace PARENT_URL and FS dependency references with actual issue links. Use the existing project fields and milestone. These drafts have not been posted or assigned on GitHub.</p>
+<h2>Allocation</h2>
+<div class="table"><table>
+<tr><th>Owner</th><th>Sub-issues</th><th>Points</th></tr>
+<tr><td>Adithya Rama</td><td>FS04, FS08, FS12</td><td>13</td></tr>
+<tr><td>Howard Zhang</td><td>FS03, FS05, FS11</td><td>13</td></tr>
+<tr><td>Tanisha Sharma</td><td>FS01, FS06, FS10</td><td>13</td></tr>
+<tr><td>Tianyu Xu</td><td>FS02, FS07, FS09</td><td>13</td></tr>
+</table></div>
+<h2>Issue summary</h2>
+<div class="table"><table>
+<tr><th>ID</th><th>Title</th><th>Owner</th><th>Reviewer</th><th>SP</th><th>Evidence status</th></tr>
+<tr><td><a href="issues/FS01.md">FS01</a></td><td>Audit the five-plant recordings and preserve exact source identities</td><td>Tanisha Sharma</td><td>Howard Zhang</td><td>3</td><td>Evidence ready for peer review</td></tr>
+<tr><td><a href="issues/FS02.md">FS02</a></td><td>Recheck metric calibration using the confirmed ChArUco board</td><td>Tianyu Xu</td><td>Adithya Rama</td><td>5</td><td>Metric results ready for peer review; physical accuracy remains unverified</td></tr>
+<tr><td><a href="issues/FS03.md">FS03</a></td><td>Reconstruct and review the D405 five-plant observations</td><td>Howard Zhang</td><td>Adithya Rama</td><td>5</td><td>Saved reconstruction ready for peer review</td></tr>
+<tr><td><a href="issues/FS04.md">FS04</a></td><td>Reconstruct L515 and fuse supported observations with D405</td><td>Adithya Rama</td><td>Howard Zhang</td><td>5</td><td>Selected fusion ready for peer review</td></tr>
+<tr><td><a href="issues/FS05.md">FS05</a></td><td>Separate plant tissue candidates and retain reversible cleanup evidence</td><td>Howard Zhang</td><td>Tanisha Sharma</td><td>5</td><td>Cleanup artifacts ready for peer review</td></tr>
+<tr><td><a href="issues/FS06.md">FS06</a></td><td>Compare manual traits with matched source-supported plant measurements</td><td>Tanisha Sharma</td><td>Tianyu Xu</td><td>5</td><td>Conditional comparisons ready for review; complete anatomical validation remains open</td></tr>
+<tr><td><a href="issues/FS07.md">FS07</a></td><td>Extract and inspect both hyperspectral cameras with quality flags</td><td>Tianyu Xu</td><td>Tanisha Sharma</td><td>5</td><td>Measured camera-space outputs ready for peer review</td></tr>
+<tr><td><a href="issues/FS08.md">FS08</a></td><td>Investigate dense spectral registration and preserve the partial surface result</td><td>Adithya Rama</td><td>Tianyu Xu</td><td>5</td><td>Research investigation and partial candidate ready for review; full fusion unresolved</td></tr>
+<tr><td><a href="issues/FS09.md">FS09</a></td><td>Audit correspondence controls and correct unsupported accuracy claims</td><td>Tianyu Xu</td><td>Howard Zhang</td><td>3</td><td>Audit ready for peer review</td></tr>
+<tr><td><a href="issues/FS10.md">FS10</a></td><td>Publish an inspectable results journey with downloads and explicit gaps</td><td>Tanisha Sharma</td><td>Adithya Rama</td><td>5</td><td>Local build and browser evidence available; latest publication not verified</td></tr>
+<tr><td><a href="issues/FS11.md">FS11</a></td><td>Verify offline analysis integration and complete laboratory regression checks</td><td>Howard Zhang</td><td>Tanisha Sharma</td><td>3</td><td>Blocked for physical acceptance until the lab machine is available</td></tr>
+<tr><td><a href="issues/FS12.md">FS12</a></td><td>Prepare the final sprint narrative demo and research handover</td><td>Adithya Rama</td><td>Tianyu Xu</td><td>3</td><td>Draft prepared; team review and final handover remain</td></tr>
+</table></div><p class="notice">Full copy-ready parent and child bodies follow. All names and estimates are proposed. These are not posted GitHub issues.</p><article id="FS00"><button class="copy" data-copy="FS00">Copy FS00 issue body</button><h1>Deliver and evaluate the five-plant final sprint workflow</h1>
+<p><strong>Planning ID:</strong> FS00</p>
+<p><strong>Proposed assignee:</strong> Adithya Rama, coordinating with all four team members.</p>
+<p><strong>Milestone:</strong> Final Sprint, use the team&#x27;s existing milestone and dates.</p>
+<p><strong>Labels:</strong> type:epic, sprint:final, priority:P1</p>
+<p><strong>Estimate:</strong> 0 additional points; 52 points roll up from the twelve sub-issues. Do not add the parent total to the child total.</p>
+<h2>User story</h2>
+<p>As a plant-phenotyping researcher and project reviewer, I want a traceable workflow from recorded calibration data to inspectable geometry, trait comparisons and measured spectra so that I can assess the results and understand their limitations.</p>
+<h2>Description</h2>
+<p>Deliver the final sprint research and software handover for the 28 September five-plant recordings. Cover input integrity, confirmed-board calibration, D405 and L515 reconstruction, geometric fusion, reversible cleanup, conditional manual comparisons, both-camera spectral inspection and bounded spectral fusion experiments. Preserve laboratory capture and gantry behaviour and report local, laboratory and deployed verification separately.</p>
+<p>The latest result includes 13 conditional same-organ trait comparisons and an exploratory partial spectral surface with 2,338 FX10 and 862 FX17 observations on two upper P5 leaves. Complete physical validation and full five-plant spectral mapping remain unresolved. This epic does not require inventing missing measurements to appear complete.</p>
+<h2>Sub-issues</h2>
+<ul>
+<li>☐ FS01 — Audit the five-plant recordings and preserve exact source identities — Tanisha Sharma — 3 SP</li>
+<li>☐ FS02 — Recheck metric calibration using the confirmed ChArUco board — Tianyu Xu — 5 SP</li>
+<li>☐ FS03 — Reconstruct and review the D405 five-plant observations — Howard Zhang — 5 SP</li>
+<li>☐ FS04 — Reconstruct L515 and fuse supported observations with D405 — Adithya Rama — 5 SP</li>
+<li>☐ FS05 — Separate plant tissue candidates and retain reversible cleanup evidence — Howard Zhang — 5 SP</li>
+<li>☐ FS06 — Compare manual traits with matched source-supported plant measurements — Tanisha Sharma — 5 SP</li>
+<li>☐ FS07 — Extract and inspect both hyperspectral cameras with quality flags — Tianyu Xu — 5 SP</li>
+<li>☐ FS08 — Investigate dense spectral registration and preserve the partial surface result — Adithya Rama — 5 SP</li>
+<li>☐ FS09 — Audit correspondence controls and correct unsupported accuracy claims — Tianyu Xu — 3 SP</li>
+<li>☐ FS10 — Publish an inspectable results journey with downloads and explicit gaps — Tanisha Sharma — 5 SP</li>
+<li>☐ FS11 — Verify offline analysis integration and complete laboratory regression checks — Howard Zhang — 3 SP</li>
+<li>☐ FS12 — Prepare the final sprint narrative demo and research handover — Adithya Rama — 3 SP</li>
+</ul>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Every sub-issue has an owner, reviewer, evidence and an accurate status.</li>
+<li>☐ Saved calibration, reconstruction, cleanup, trait and spectral outputs can be inspected and traced to inputs.</li>
+<li>☐ The report distinguishes observed geometry, conditional traits, provisional spatial mapping and calibrated physical measurements.</li>
+<li>☐ Earlier outputs and changed interpretations remain available.</li>
+<li>☐ Latest results are publicly verified after an authorized deployment, or publication is explicitly carried as incomplete.</li>
+<li>☐ Actual lab regression results are attached, or the epic remains open for physical acceptance.</li>
+<li>☐ Final presentation, contribution statements and follow-up gaps are reviewed by the team.</li>
+</ul>
+<h2>Out of scope for claims of completion</h2>
+<p>Do not claim gap-free 360-degree coverage, calibrated reflectance, full-plant dense spectral correspondence, arbitrary-dataset generalization or successful physical hardware testing without supporting evidence. FU01-FU05 capture work requiring new observations or independent validation.</p>
+<h2>Evidence</h2>
+<ul>
+<li>Project report: <code>docs/final-sprint-20260928/README.md</code></li>
+<li>Issue pack: <code>docs/final-sprint-20260928/ISSUES.md</code></li>
+<li>Compact evidence snapshots: <code>docs/final-sprint-20260928/evidence/manifest.json</code></li>
+<li>Latest local study: http://127.0.0.1:8879/results/final-sprint-20260928/</li>
+</ul>
+<p>These are drafts, not already-created GitHub issues. FS identifiers are planning references, not repository issue numbers. Replace PARENT_URL and dependencies with the created issue links, and associate the children with the parent in the team&#x27;s tracker. Localhost links are only usable on the machine serving the files.</p></article><article id="FS01"><button class="copy" data-copy="FS01">Copy FS01 issue body</button><h1>Audit the five-plant recordings and preserve exact source identities</h1>
+<p><strong>Planning ID:</strong> FS01</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Tanisha Sharma</td></tr>
+<tr><td>Reviewer</td><td>Howard Zhang</td></tr>
+<tr><td>Story points</td><td>3</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:data, type:task</td></tr>
+<tr><td>Dependencies</td><td>None; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Evidence ready for peer review</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a lab operator, I want incomplete and mismatched recordings identified before processing so that reconstructed results use genuine paired observations.</p>
+<h2>Description</h2>
+<p>Inventory D405, L515, FX10 and FX17 calibration and plant inputs. Verify RGB/depth identifiers and decoding, spectral header dimensions and byte counts, and the relationship between calibration and plant recordings. Preserve the original archive and document the replacement export.</p>
+<h2>Current evidence</h2>
+<p>The initial L515 plant archive had 89 exact pairs. The replacement has 1,278 plant pairs and 1,290 calibration pairs. Do not rename adjacent frames into artificial pairs.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Inventory lists each sensor, recording role, exact pairing and missing metadata.</li>
+<li>☐ Original and replacement L515 audits are distinguishable and the pairing gap is documented as resolved.</li>
+<li>☐ Raw files remain unchanged and source identifiers remain traceable.</li>
+<li>☐ Peer reviewer confirms the inventory and records any unresolved timing or unit assumptions.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/input_inventory.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/l515_replacement.md</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Folder naming and exact file pairing do not independently prove synchronization or device depth units.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS02"><button class="copy" data-copy="FS02">Copy FS02 issue body</button><h1>Recheck metric calibration using the confirmed ChArUco board</h1>
+<p><strong>Planning ID:</strong> FS02</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Tianyu Xu</td></tr>
+<tr><td>Reviewer</td><td>Adithya Rama</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:calibration, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS01; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Metric results ready for peer review; physical accuracy remains unverified</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a researcher, I want geometry expressed using the actual board dimensions so that reported distances have a documented metric basis.</p>
+<h2>Description</h2>
+<p>Record the confirmed 7 by 10 ChArUco layout, 25 mm squares, 18 mm markers and DICT_4X4_50. Recheck D405 scale, L515 motion and depth interpretations, and the shared hyperspectral table reference. Preserve earlier conditional outputs.</p>
+<h2>Current evidence</h2>
+<p>D405 factor 1.0288746669 and L515 RGB travel factor 1.0296675589. The selected L515 depth conversion is empirical, not certified device metadata.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Board dimensions, metre units, dictionary and confirmation source are explicit.</li>
+<li>☐ Rechecked geometry, poses and derived dimensions retain original identities and earlier results.</li>
+<li>☐ RGB motion scale is distinguished from raw depth conversion.</li>
+<li>☐ Report distinguishes table-plane fitting residuals from elevated-leaf or independent physical accuracy.</li>
+<li>☐ Peer reviewer checks unit conversions and the recalculated outputs.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/board_confirmation.json</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_findings.md</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Print tolerance and independent device-unit evidence remain open; a good plane fit does not validate plant-height spectral projection.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS03"><button class="copy" data-copy="FS03">Copy FS03 issue body</button><h1>Reconstruct and review the D405 five-plant observations</h1>
+<p><strong>Planning ID:</strong> FS03</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Howard Zhang</td></tr>
+<tr><td>Reviewer</td><td>Adithya Rama</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:reconstruction, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS01, FS02; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Saved reconstruction ready for peer review</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a researcher, I want to inspect reconstructed plants from multiple views so that alignment failures and unobserved surfaces are visible.</p>
+<h2>Description</h2>
+<p>Document the RGB multi-view stereo, scene-supported motion and ICP route, chosen outputs and source-supported views. Preserve separate trials. Inspect all five plants, including fine stems and difficult side views.</p>
+<h2>Current evidence</h2>
+<p>The confirmed-board update re-expresses the existing D405 result at the metric scale; it does not rerun stereo or create new surfaces. Plant 5 has more continuous broad-leaf observations than the difficult thin structures.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Saved cloud, accepted camera poses and processing parameters are traceable.</li>
+<li>☐ P1-P5 can be inspected from front, side and top with unsupported areas visible.</li>
+<li>☐ Scale-only changes are distinguished from reconstruction changes.</li>
+<li>☐ No unobserved surface is presented as a measured gap-free reconstruction.</li>
+<li>☐ Peer reviewer records the selected result and its coverage limitations.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_findings.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_verification.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Occlusion and missing thin structures cannot be repaired simply by increasing point size or relaxing alignment filters.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS04"><button class="copy" data-copy="FS04">Copy FS04 issue body</button><h1>Reconstruct L515 and fuse supported observations with D405</h1>
+<p><strong>Planning ID:</strong> FS04</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Adithya Rama</td></tr>
+<tr><td>Reviewer</td><td>Howard Zhang</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:geometry-fusion, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS01, FS02, FS03; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Selected fusion ready for peer review</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a researcher, I want complementary camera observations in a common frame so that I can inspect additional measured surfaces and their source.</p>
+<h2>Description</h2>
+<p>Compare the recorded-depth L515 hypotheses, retain separate reconstructions, align L515 into the D405 reference and preserve per-point camera provenance. Document overlap, excluded conflicts and selection checks.</p>
+<h2>Current evidence</h2>
+<p>Selected union: 1,719,001 D405 inspection points plus 21,672 L515 additions, totalling 1,740,673 points. Matched-soil median disagreement changed from 11.160 to 6.289 mm in the comparable metric candidate comparison.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Both L515 hypotheses and the selected rigid alignment are saved.</li>
+<li>☐ Fusion counts reconcile and retained points preserve camera and source indices.</li>
+<li>☐ Selection checks and unselected alternatives are reported without treating tuning data as untouched validation.</li>
+<li>☐ Geometric fusion is explained separately from spectral-to-surface association.</li>
+<li>☐ Reviewer verifies provenance and the basis for selecting the final candidate.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_findings.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_verification.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>The selected P90 and maximum disagreement are 10.326 and 26.037 mm; candidate selection used the checking data.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS05"><button class="copy" data-copy="FS05">Copy FS05 issue body</button><h1>Separate plant tissue candidates and retain reversible cleanup evidence</h1>
+<p><strong>Planning ID:</strong> FS05</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Howard Zhang</td></tr>
+<tr><td>Reviewer</td><td>Tanisha Sharma</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:cleanup, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS04; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Cleanup artifacts ready for peer review</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a researcher, I want plant candidates separated from pots and background so that I can inspect traits while recovering any questionable exclusions.</p>
+<h2>Description</h2>
+<p>Review source-image tissue masks, extract P1-P5 and retain uncertain and scene-context partitions. Expose pre-cleanup and post-cleanup geometry and preserve original point indices.</p>
+<h2>Current evidence</h2>
+<p>430,060 tissue-candidate points: P1 21,444; P2 72,786; P3 112,943; P4 68,239; P5 154,648.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Counts reconcile across the five saved specimen clouds.</li>
+<li>☐ Candidate, uncertain and context partitions remain recoverable.</li>
+<li>☐ Every retained point maps to its original recorded/reconstructed source.</li>
+<li>☐ Side-view inspections document missing tips, undersides and possible mask losses.</li>
+<li>☐ Reviewer confirms that cleanup is described as a candidate segmentation rather than complete anatomical truth.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_findings.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_verification.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Approximate masks and basal exclusions can remove true tissue; cleaned extent is not automatically stem-base-to-tip height.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS06"><button class="copy" data-copy="FS06">Copy FS06 issue body</button><h1>Compare manual traits with matched source-supported plant measurements</h1>
+<p><strong>Planning ID:</strong> FS06</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Tanisha Sharma</td></tr>
+<tr><td>Reviewer</td><td>Tianyu Xu</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:traits, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS02, FS05; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Conditional comparisons ready for review; complete anatomical validation remains open</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a researcher, I want matched measurements and explicit exclusions so that differences from ruler references can be interpreted fairly.</p>
+<h2>Description</h2>
+<p>Account for all 47 manual dimensions, match specimen and organ identity, review endpoint support and compute justified differences. Keep operator annotations distinct from approximate photo readings and natural-pose chords distinct from flattened leaf measurements.</p>
+<h2>Current evidence</h2>
+<p>13 conditional comparisons across eight P3/P5 organs: seven lengths and six widths. Five vertical-span diagnostics are descriptive and are not validated plant-height errors.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ The 47-dimension ledger contains a comparison or a specific unresolved reason for each dimension.</li>
+<li>☐ The 13 comparisons include operator value, 3D value, units, signed difference and source identities.</li>
+<li>☐ Endpoint choices are justified from images rather than chosen to match manual values.</li>
+<li>☐ P1 width conflict, P4 organ identity and unresolved base/tip pairs remain explicit.</li>
+<li>☐ Reviewer confirms eligible dimensions and retains poor agreements without an unsupported aggregate accuracy claim.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/trait_findings.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/conditional_comparisons.csv</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/dimension_ledger_47.csv</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/trait_verification.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Natural-pose chords, flattened ruler lengths and different width sections can measure different quantities.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS07"><button class="copy" data-copy="FS07">Copy FS07 issue body</button><h1>Extract and inspect both hyperspectral cameras with quality flags</h1>
+<p><strong>Planning ID:</strong> FS07</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Tianyu Xu</td></tr>
+<tr><td>Reviewer</td><td>Tanisha Sharma</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:spectra, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS01; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Measured camera-space outputs ready for peer review</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a spectral analyst, I want exact measured bands and reference-quality information so that unsupported normalization does not become a scientific claim.</p>
+<h2>Description</h2>
+<p>Verify FX10 and FX17 cubes, preserve native pixel identities, expose measured DN and the Q/Q0 sensitivity alternatives, and calculate only supported descriptors. Retain missing and clipped values with their flags.</p>
+<h2>Current evidence</h2>
+<p>The broader inspector contains 7,982 FX10 and 5,361 FX17 selected samples, each with 224 bands. White reflectance and shutter-closed dark capture remain unconfirmed.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Both cameras retain native column, line, wavelength and sample identities.</li>
+<li>☐ Raw values are traceable to the original cubes and invalid normalized values remain unavailable.</li>
+<li>☐ Reference support, clipping and dark assumptions are visible in exports and the viewer.</li>
+<li>☐ FX10 descriptors and the FX17 SWIR diagnostic are distinguished; no red band is borrowed for FX17 NDVI.</li>
+<li>☐ Reviewer verifies selected spectra and the wording of radiometric limitations.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_findings.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/fusion_rescue_verification.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Fixed exposure and an ordinary white board do not independently establish calibrated reflectance or physiological interpretation.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS08"><button class="copy" data-copy="FS08">Copy FS08 issue body</button><h1>Investigate dense spectral registration and preserve the partial surface result</h1>
+<p><strong>Planning ID:</strong> FS08</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Adithya Rama</td></tr>
+<tr><td>Reviewer</td><td>Tianyu Xu</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:spectral-fusion, type:spike</td></tr>
+<tr><td>Dependencies</td><td>FS03, FS05, FS07; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Research investigation and partial candidate ready for review; full fusion unresolved</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a researcher, I want spectra associated with supported 3D locations so that spatial patterns can be explored without invented coverage.</p>
+<h2>Description</h2>
+<p>Compare learned image matching, local multimodal warps, physical camera models and cross-sensor tracking. Freeze candidates before scoring proposed check coordinates, preserve failed trials and limit exports to supported geometry domains.</p>
+<h2>Current evidence</h2>
+<p>72 learned configurations on P5, 24 frozen maps and 16 additional P1-P4 runs. The selected two-upper-leaf demonstration has 2,338 FX10 and 862 FX17 native spectra on unchanged P5 geometry. These patches support raw DN only.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Candidate definitions, selection rules and unsuccessful experiments remain available.</li>
+<li>☐ The partial viewer separates both cameras and traces each assignment to an exact native pixel and existing vertex.</li>
+<li>☐ No spectra are interpolated onto unobserved surfaces or spliced across cameras.</li>
+<li>☐ Local versus whole-plant coverage, post-hoc demonstration-region selection and unknown per-point error are explicit.</li>
+<li>☐ The investigation can close with a documented partial or negative result; complete validated fusion remains a separate unresolved product goal.</li>
+<li>☐ Peer reviewer signs off the evidence and links follow-up calibration work.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/fusion_rescue_report.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/fusion_rescue_verification.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Training fit, plausible colour overlap and geometry support do not establish the same physical material point across cameras.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS09"><button class="copy" data-copy="FS09">Copy FS09 issue body</button><h1>Audit correspondence controls and correct unsupported accuracy claims</h1>
+<p><strong>Planning ID:</strong> FS09</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Tianyu Xu</td></tr>
+<tr><td>Reviewer</td><td>Howard Zhang</td></tr>
+<tr><td>Story points</td><td>3</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:validation, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS02, FS06, FS08; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Audit ready for peer review</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a reviewer, I want checking landmarks and coordinate conventions audited so that a result is not accepted or rejected using unreliable truth labels.</p>
+<h2>Description</h2>
+<p>Check orientation, scale, native versus undistorted coordinates and exact source identities. Preserve uncertain landmark attempts and score frozen models without moving labels toward predictions. Record corrections to earlier interpretations.</p>
+<h2>Current evidence</h2>
+<p>23 fresh/adaptive landmark attempts were retained. The old green_lower_4 control was already unaccepted and non-independent, so its discrepancy could not alone establish a definitive physical mapping failure.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Coordinate and point-identity checks are documented.</li>
+<li>☐ Model-fitting evidence is distinguished from withheld annotations and independently measured truth.</li>
+<li>☐ Uncertain and unsuccessful checks remain visible, including adaptive second-round selection.</li>
+<li>☐ The previous rejection wording is corrected while the old result remains preserved.</li>
+<li>☐ Reviewer checks that residuals are not advertised as per-point error bounds.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/control_reassessment.json</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/control_verification.json</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/fusion_rescue_report.md</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Subjective landmark radii are not statistical confidence intervals; repetitive veins can have uncertain identity.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS10"><button class="copy" data-copy="FS10">Copy FS10 issue body</button><h1>Publish an inspectable results journey with downloads and explicit gaps</h1>
+<p><strong>Planning ID:</strong> FS10</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Tanisha Sharma</td></tr>
+<tr><td>Reviewer</td><td>Adithya Rama</td></tr>
+<tr><td>Story points</td><td>5</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:website, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS05, FS06, FS07, FS08, FS09; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Local build and browser evidence available; latest publication not verified</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a tutor or collaborator, I want an accessible results page with provenance so that I can inspect outcomes and limitations without running the research pipeline.</p>
+<h2>Description</h2>
+<p>Present calibration, geometry stages, manual comparisons, both-camera spectra, partial surface fusion and the control reassessment. Keep the historical baseline available, link the complete sprint explanation and verify the final deployed route.</p>
+<h2>Current evidence</h2>
+<p>The rescue build and browser checks passed, including both sensor layers and 86 static evidence/download links. Local success is distinct from GitHub Pages publication.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ The main page leads to geometry, traits, spectra and the latest partial-fusion report.</li>
+<li>☐ Sensor switching, wavelength selection, exact-source inspection and unavailable-value display are checked.</li>
+<li>☐ Download and evidence links resolve in the local build.</li>
+<li>☐ A teammate checks readable desktop/mobile presentation and historical versus current wording.</li>
+<li>☐ After the owner-authorized push, verify the public route and record the deployed commit before closing publication.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/fusion_rescue_verification.json</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/website_link_validation.json</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>A local build or fork push does not by itself prove the intended public Pages site contains the new results.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS11"><button class="copy" data-copy="FS11">Copy FS11 issue body</button><h1>Verify offline analysis integration and complete laboratory regression checks</h1>
+<p><strong>Planning ID:</strong> FS11</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Howard Zhang</td></tr>
+<tr><td>Reviewer</td><td>Tanisha Sharma</td></tr>
+<tr><td>Story points</td><td>3</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:lab-regression, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS01, FS03, FS04, FS06, FS07; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Blocked for physical acceptance until the lab machine is available</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a lab operator, I want the established camera and gantry workflow preserved while offline analysis is available so that analysis changes do not disrupt recording.</p>
+<h2>Description</h2>
+<p>Review the existing offline integration and protected-source receipts, then run a bounded physical acceptance session for application startup, camera selection, capture, gantry motion, stop/cancel and saved output. New research rescue scripts are not automatically production features.</p>
+<h2>Current evidence</h2>
+<p>The saved archive records 26 protected files unchanged and a historical run of 101 targeted offline tests. This does not establish a new physical lab pass or arbitrary-dataset automation.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Record exact software revision, environment and protected-source comparison.</li>
+<li>☐ Confirm the lab operator can launch the app and select the intended RealSense device.</li>
+<li>☐ Check paired capture, intended gantry motion, stop/cancel and recovery on the actual rig.</li>
+<li>☐ Verify offline analysis cannot trigger unintended acquisition or gantry activity.</li>
+<li>☐ Attach a dated lab observation log, failures and reviewer sign-off; do not close using source hashes alone.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/confirmed_board_verification.json</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/software_archive_notes.md</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>Requires lab access and the normal operating procedure. Physical execution remains unverified in the saved local work.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><article id="FS12"><button class="copy" data-copy="FS12">Copy FS12 issue body</button><h1>Prepare the final sprint narrative demo and research handover</h1>
+<p><strong>Planning ID:</strong> FS12</p>
+<p><strong>Parent:</strong> replace PARENT_URL after creating the parent issue.</p>
+<div class="table"><table>
+<tr><th>Field</th><th>Proposed value</th></tr>
+<tr><td>Assignee</td><td>Adithya Rama</td></tr>
+<tr><td>Reviewer</td><td>Tianyu Xu</td></tr>
+<tr><td>Story points</td><td>3</td></tr>
+<tr><td>Priority</td><td>P1</td></tr>
+<tr><td>Milestone</td><td>Final Sprint, use the existing team milestone</td></tr>
+<tr><td>Labels</td><td>sprint:final, area:handover, type:task</td></tr>
+<tr><td>Dependencies</td><td>FS09, FS10, FS11; replace with real issue links</td></tr>
+<tr><td>Evidence status</td><td>Draft prepared; team review and final handover remain</td></tr>
+</table></div>
+<h2>User story</h2>
+<p>As a tutor or incoming developer, I want the user journey, decisions and evidence explained together so that I understand both the outcome and the next steps.</p>
+<h2>Description</h2>
+<p>Use the complete sprint report to present the objective, evolving workflow, problems, fixes, findings, limitations and lessons. Update the earlier slide deck to reflect the partial fusion and control correction. Confirm each member&#x27;s actual contribution before final reflection.</p>
+<h2>Current evidence</h2>
+<p>The complete explanation, end-to-end software user guide, parent/sub-issue drafts and evidence snapshots are now prepared. The earlier presentation predates the rescue interpretation and needs reconciliation.</p>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>☐ Walkthrough covers calibration through geometry, traits and both-camera spectral inspection.</li>
+<li>☐ Stories and journeys link to demonstrated outputs or explicit gaps.</li>
+<li>☐ Presentation reflects 13 conditional trait comparisons and the new partial surface without claiming full fusion.</li>
+<li>☐ Each team member confirms their contribution and adds an evidence-based reflection.</li>
+<li>☐ Record public-site and lab status honestly, and hand unresolved items to the follow-up backlog.</li>
+<li>☐ Complete peer review and tutor/team handover.</li>
+</ul>
+<h2>Evidence</h2>
+<ul>
+<li>Project file: <code>docs/final-sprint-20260928/README.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/USER_GUIDE.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/fusion_rescue_report.md</code></li>
+<li>Project file: <code>docs/final-sprint-20260928/evidence/trait_findings.md</code></li>
+</ul>
+<h2>Risk and scope</h2>
+<p>FS11 can remain blocked, but the handover must carry that gap explicitly; it cannot assert complete lab acceptance.</p>
+<h2>Review note</h2>
+<p>This is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.</p></article><h2>Follow-up backlog outside the final sprint estimate</h2>
+<p>These are proposed future issues; do not count their points as delivered in this sprint.</p>
+<h3>FU01 Capture elevated cross-camera calibration targets and independent checks</h3>
+<p><strong>Proposed owner:</strong> Tianyu Xu · <strong>Estimate:</strong> 8 SP · <strong>Related:</strong> FS02, FS08, FS09</p>
+<p><strong>Acceptance:</strong> Targets span foliage heights and scan positions; lens/rig and line timing are recorded; fitting and independent check targets are distinct; report spatial errors before promoting dense mapping.</p>
+<h3>FU02 Record characterized white references and confirmed dark data</h3>
+<p><strong>Proposed owner:</strong> Tianyu Xu · <strong>Estimate:</strong> 5 SP · <strong>Related:</strong> FS07, FS08</p>
+<p><strong>Acceptance:</strong> White reference covers relevant detector columns at fixed documented exposure; panel reflectance and shutter-dark procedure are known; normalization quality is re-evaluated without filling unsupported values.</p>
+<h3>FU03 Acquire stable overlapping views for missing plant surfaces</h3>
+<p><strong>Proposed owner:</strong> Howard Zhang · <strong>Estimate:</strong> 5 SP · <strong>Related:</strong> FS03, FS05</p>
+<p><strong>Acceptance:</strong> Record side, oblique and lower foliage coverage with stable plants; inspect quality during capture; compare newly observed surfaces while preserving original data.</p>
+<h3>FU04 Test offline reconstruction and fusion on an independent dataset</h3>
+<p><strong>Proposed owner:</strong> Adithya Rama · <strong>Estimate:</strong> 8 SP · <strong>Related:</strong> FS08, FS11</p>
+<p><strong>Acceptance:</strong> Use a fresh capture with preset configuration; record manual interventions, failures, reproducibility and held-out spatial/trait checks; define a supported operating domain rather than universal perfection.</p>
+<h3>FU05 Repeat matched manual traits under a consistent anatomical protocol</h3>
+<p><strong>Proposed owner:</strong> Tanisha Sharma · <strong>Estimate:</strong> 3 SP · <strong>Related:</strong> FS06</p>
+<p><strong>Acceptance:</strong> Resolve P1 units and P4 organ type, tag individual organs, define stem base/highest tip and lamina/width sections, and record repeated measurements under the chosen pose protocol.</p></main><script>const bodies={"FS00": "# Deliver and evaluate the five-plant final sprint workflow\n\n**Planning ID:** FS00\n\n**Proposed assignee:** Adithya Rama, coordinating with all four team members.\n\n**Milestone:** Final Sprint, use the team's existing milestone and dates.\n\n**Labels:** type:epic, sprint:final, priority:P1\n\n**Estimate:** 0 additional points; 52 points roll up from the twelve sub-issues. Do not add the parent total to the child total.\n\n## User story\n\nAs a plant-phenotyping researcher and project reviewer, I want a traceable workflow from recorded calibration data to inspectable geometry, trait comparisons and measured spectra so that I can assess the results and understand their limitations.\n\n## Description\n\nDeliver the final sprint research and software handover for the 28 September five-plant recordings. Cover input integrity, confirmed-board calibration, D405 and L515 reconstruction, geometric fusion, reversible cleanup, conditional manual comparisons, both-camera spectral inspection and bounded spectral fusion experiments. Preserve laboratory capture and gantry behaviour and report local, laboratory and deployed verification separately.\n\nThe latest result includes 13 conditional same-organ trait comparisons and an exploratory partial spectral surface with 2,338 FX10 and 862 FX17 observations on two upper P5 leaves. Complete physical validation and full five-plant spectral mapping remain unresolved. This epic does not require inventing missing measurements to appear complete.\n\n## Sub-issues\n\n- [ ] FS01 \u2014 Audit the five-plant recordings and preserve exact source identities \u2014 Tanisha Sharma \u2014 3 SP\n- [ ] FS02 \u2014 Recheck metric calibration using the confirmed ChArUco board \u2014 Tianyu Xu \u2014 5 SP\n- [ ] FS03 \u2014 Reconstruct and review the D405 five-plant observations \u2014 Howard Zhang \u2014 5 SP\n- [ ] FS04 \u2014 Reconstruct L515 and fuse supported observations with D405 \u2014 Adithya Rama \u2014 5 SP\n- [ ] FS05 \u2014 Separate plant tissue candidates and retain reversible cleanup evidence \u2014 Howard Zhang \u2014 5 SP\n- [ ] FS06 \u2014 Compare manual traits with matched source-supported plant measurements \u2014 Tanisha Sharma \u2014 5 SP\n- [ ] FS07 \u2014 Extract and inspect both hyperspectral cameras with quality flags \u2014 Tianyu Xu \u2014 5 SP\n- [ ] FS08 \u2014 Investigate dense spectral registration and preserve the partial surface result \u2014 Adithya Rama \u2014 5 SP\n- [ ] FS09 \u2014 Audit correspondence controls and correct unsupported accuracy claims \u2014 Tianyu Xu \u2014 3 SP\n- [ ] FS10 \u2014 Publish an inspectable results journey with downloads and explicit gaps \u2014 Tanisha Sharma \u2014 5 SP\n- [ ] FS11 \u2014 Verify offline analysis integration and complete laboratory regression checks \u2014 Howard Zhang \u2014 3 SP\n- [ ] FS12 \u2014 Prepare the final sprint narrative demo and research handover \u2014 Adithya Rama \u2014 3 SP\n\n## Acceptance criteria\n\n- [ ] Every sub-issue has an owner, reviewer, evidence and an accurate status.\n- [ ] Saved calibration, reconstruction, cleanup, trait and spectral outputs can be inspected and traced to inputs.\n- [ ] The report distinguishes observed geometry, conditional traits, provisional spatial mapping and calibrated physical measurements.\n- [ ] Earlier outputs and changed interpretations remain available.\n- [ ] Latest results are publicly verified after an authorized deployment, or publication is explicitly carried as incomplete.\n- [ ] Actual lab regression results are attached, or the epic remains open for physical acceptance.\n- [ ] Final presentation, contribution statements and follow-up gaps are reviewed by the team.\n\n## Out of scope for claims of completion\n\nDo not claim gap-free 360-degree coverage, calibrated reflectance, full-plant dense spectral correspondence, arbitrary-dataset generalization or successful physical hardware testing without supporting evidence. FU01-FU05 capture work requiring new observations or independent validation.\n\n## Evidence\n\n- Project report: `docs/final-sprint-20260928/README.md`\n- Issue pack: `docs/final-sprint-20260928/ISSUES.md`\n- Compact evidence snapshots: `docs/final-sprint-20260928/evidence/manifest.json`\n- Latest local study: http://127.0.0.1:8879/results/final-sprint-20260928/\n\nThese are drafts, not already-created GitHub issues. FS identifiers are planning references, not repository issue numbers. Replace PARENT_URL and dependencies with the created issue links, and associate the children with the parent in the team's tracker. Localhost links are only usable on the machine serving the files.\n", "FS01": "# Audit the five-plant recordings and preserve exact source identities\n\n**Planning ID:** FS01\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Tanisha Sharma |\n| Reviewer | Howard Zhang |\n| Story points | 3 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:data, type:task |\n| Dependencies | None; replace with real issue links |\n| Evidence status | Evidence ready for peer review |\n\n## User story\n\nAs a lab operator, I want incomplete and mismatched recordings identified before processing so that reconstructed results use genuine paired observations.\n\n## Description\n\nInventory D405, L515, FX10 and FX17 calibration and plant inputs. Verify RGB/depth identifiers and decoding, spectral header dimensions and byte counts, and the relationship between calibration and plant recordings. Preserve the original archive and document the replacement export.\n\n## Current evidence\n\nThe initial L515 plant archive had 89 exact pairs. The replacement has 1,278 plant pairs and 1,290 calibration pairs. Do not rename adjacent frames into artificial pairs.\n\n## Acceptance criteria\n\n- [ ] Inventory lists each sensor, recording role, exact pairing and missing metadata.\n- [ ] Original and replacement L515 audits are distinguishable and the pairing gap is documented as resolved.\n- [ ] Raw files remain unchanged and source identifiers remain traceable.\n- [ ] Peer reviewer confirms the inventory and records any unresolved timing or unit assumptions.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/input_inventory.md`\n- Project file: `docs/final-sprint-20260928/evidence/l515_replacement.md`\n\n## Risk and scope\n\nFolder naming and exact file pairing do not independently prove synchronization or device depth units.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS02": "# Recheck metric calibration using the confirmed ChArUco board\n\n**Planning ID:** FS02\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Tianyu Xu |\n| Reviewer | Adithya Rama |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:calibration, type:task |\n| Dependencies | FS01; replace with real issue links |\n| Evidence status | Metric results ready for peer review; physical accuracy remains unverified |\n\n## User story\n\nAs a researcher, I want geometry expressed using the actual board dimensions so that reported distances have a documented metric basis.\n\n## Description\n\nRecord the confirmed 7 by 10 ChArUco layout, 25 mm squares, 18 mm markers and DICT_4X4_50. Recheck D405 scale, L515 motion and depth interpretations, and the shared hyperspectral table reference. Preserve earlier conditional outputs.\n\n## Current evidence\n\nD405 factor 1.0288746669 and L515 RGB travel factor 1.0296675589. The selected L515 depth conversion is empirical, not certified device metadata.\n\n## Acceptance criteria\n\n- [ ] Board dimensions, metre units, dictionary and confirmation source are explicit.\n- [ ] Rechecked geometry, poses and derived dimensions retain original identities and earlier results.\n- [ ] RGB motion scale is distinguished from raw depth conversion.\n- [ ] Report distinguishes table-plane fitting residuals from elevated-leaf or independent physical accuracy.\n- [ ] Peer reviewer checks unit conversions and the recalculated outputs.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/board_confirmation.json`\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_findings.md`\n\n## Risk and scope\n\nPrint tolerance and independent device-unit evidence remain open; a good plane fit does not validate plant-height spectral projection.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS03": "# Reconstruct and review the D405 five-plant observations\n\n**Planning ID:** FS03\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Howard Zhang |\n| Reviewer | Adithya Rama |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:reconstruction, type:task |\n| Dependencies | FS01, FS02; replace with real issue links |\n| Evidence status | Saved reconstruction ready for peer review |\n\n## User story\n\nAs a researcher, I want to inspect reconstructed plants from multiple views so that alignment failures and unobserved surfaces are visible.\n\n## Description\n\nDocument the RGB multi-view stereo, scene-supported motion and ICP route, chosen outputs and source-supported views. Preserve separate trials. Inspect all five plants, including fine stems and difficult side views.\n\n## Current evidence\n\nThe confirmed-board update re-expresses the existing D405 result at the metric scale; it does not rerun stereo or create new surfaces. Plant 5 has more continuous broad-leaf observations than the difficult thin structures.\n\n## Acceptance criteria\n\n- [ ] Saved cloud, accepted camera poses and processing parameters are traceable.\n- [ ] P1-P5 can be inspected from front, side and top with unsupported areas visible.\n- [ ] Scale-only changes are distinguished from reconstruction changes.\n- [ ] No unobserved surface is presented as a measured gap-free reconstruction.\n- [ ] Peer reviewer records the selected result and its coverage limitations.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_findings.md`\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_verification.json`\n\n## Risk and scope\n\nOcclusion and missing thin structures cannot be repaired simply by increasing point size or relaxing alignment filters.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS04": "# Reconstruct L515 and fuse supported observations with D405\n\n**Planning ID:** FS04\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Adithya Rama |\n| Reviewer | Howard Zhang |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:geometry-fusion, type:task |\n| Dependencies | FS01, FS02, FS03; replace with real issue links |\n| Evidence status | Selected fusion ready for peer review |\n\n## User story\n\nAs a researcher, I want complementary camera observations in a common frame so that I can inspect additional measured surfaces and their source.\n\n## Description\n\nCompare the recorded-depth L515 hypotheses, retain separate reconstructions, align L515 into the D405 reference and preserve per-point camera provenance. Document overlap, excluded conflicts and selection checks.\n\n## Current evidence\n\nSelected union: 1,719,001 D405 inspection points plus 21,672 L515 additions, totalling 1,740,673 points. Matched-soil median disagreement changed from 11.160 to 6.289 mm in the comparable metric candidate comparison.\n\n## Acceptance criteria\n\n- [ ] Both L515 hypotheses and the selected rigid alignment are saved.\n- [ ] Fusion counts reconcile and retained points preserve camera and source indices.\n- [ ] Selection checks and unselected alternatives are reported without treating tuning data as untouched validation.\n- [ ] Geometric fusion is explained separately from spectral-to-surface association.\n- [ ] Reviewer verifies provenance and the basis for selecting the final candidate.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_findings.md`\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_verification.json`\n\n## Risk and scope\n\nThe selected P90 and maximum disagreement are 10.326 and 26.037 mm; candidate selection used the checking data.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS05": "# Separate plant tissue candidates and retain reversible cleanup evidence\n\n**Planning ID:** FS05\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Howard Zhang |\n| Reviewer | Tanisha Sharma |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:cleanup, type:task |\n| Dependencies | FS04; replace with real issue links |\n| Evidence status | Cleanup artifacts ready for peer review |\n\n## User story\n\nAs a researcher, I want plant candidates separated from pots and background so that I can inspect traits while recovering any questionable exclusions.\n\n## Description\n\nReview source-image tissue masks, extract P1-P5 and retain uncertain and scene-context partitions. Expose pre-cleanup and post-cleanup geometry and preserve original point indices.\n\n## Current evidence\n\n430,060 tissue-candidate points: P1 21,444; P2 72,786; P3 112,943; P4 68,239; P5 154,648.\n\n## Acceptance criteria\n\n- [ ] Counts reconcile across the five saved specimen clouds.\n- [ ] Candidate, uncertain and context partitions remain recoverable.\n- [ ] Every retained point maps to its original recorded/reconstructed source.\n- [ ] Side-view inspections document missing tips, undersides and possible mask losses.\n- [ ] Reviewer confirms that cleanup is described as a candidate segmentation rather than complete anatomical truth.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_findings.md`\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_verification.json`\n\n## Risk and scope\n\nApproximate masks and basal exclusions can remove true tissue; cleaned extent is not automatically stem-base-to-tip height.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS06": "# Compare manual traits with matched source-supported plant measurements\n\n**Planning ID:** FS06\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Tanisha Sharma |\n| Reviewer | Tianyu Xu |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:traits, type:task |\n| Dependencies | FS02, FS05; replace with real issue links |\n| Evidence status | Conditional comparisons ready for review; complete anatomical validation remains open |\n\n## User story\n\nAs a researcher, I want matched measurements and explicit exclusions so that differences from ruler references can be interpreted fairly.\n\n## Description\n\nAccount for all 47 manual dimensions, match specimen and organ identity, review endpoint support and compute justified differences. Keep operator annotations distinct from approximate photo readings and natural-pose chords distinct from flattened leaf measurements.\n\n## Current evidence\n\n13 conditional comparisons across eight P3/P5 organs: seven lengths and six widths. Five vertical-span diagnostics are descriptive and are not validated plant-height errors.\n\n## Acceptance criteria\n\n- [ ] The 47-dimension ledger contains a comparison or a specific unresolved reason for each dimension.\n- [ ] The 13 comparisons include operator value, 3D value, units, signed difference and source identities.\n- [ ] Endpoint choices are justified from images rather than chosen to match manual values.\n- [ ] P1 width conflict, P4 organ identity and unresolved base/tip pairs remain explicit.\n- [ ] Reviewer confirms eligible dimensions and retains poor agreements without an unsupported aggregate accuracy claim.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/trait_findings.md`\n- Project file: `docs/final-sprint-20260928/evidence/conditional_comparisons.csv`\n- Project file: `docs/final-sprint-20260928/evidence/dimension_ledger_47.csv`\n- Project file: `docs/final-sprint-20260928/evidence/trait_verification.json`\n\n## Risk and scope\n\nNatural-pose chords, flattened ruler lengths and different width sections can measure different quantities.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS07": "# Extract and inspect both hyperspectral cameras with quality flags\n\n**Planning ID:** FS07\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Tianyu Xu |\n| Reviewer | Tanisha Sharma |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:spectra, type:task |\n| Dependencies | FS01; replace with real issue links |\n| Evidence status | Measured camera-space outputs ready for peer review |\n\n## User story\n\nAs a spectral analyst, I want exact measured bands and reference-quality information so that unsupported normalization does not become a scientific claim.\n\n## Description\n\nVerify FX10 and FX17 cubes, preserve native pixel identities, expose measured DN and the Q/Q0 sensitivity alternatives, and calculate only supported descriptors. Retain missing and clipped values with their flags.\n\n## Current evidence\n\nThe broader inspector contains 7,982 FX10 and 5,361 FX17 selected samples, each with 224 bands. White reflectance and shutter-closed dark capture remain unconfirmed.\n\n## Acceptance criteria\n\n- [ ] Both cameras retain native column, line, wavelength and sample identities.\n- [ ] Raw values are traceable to the original cubes and invalid normalized values remain unavailable.\n- [ ] Reference support, clipping and dark assumptions are visible in exports and the viewer.\n- [ ] FX10 descriptors and the FX17 SWIR diagnostic are distinguished; no red band is borrowed for FX17 NDVI.\n- [ ] Reviewer verifies selected spectra and the wording of radiometric limitations.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_findings.md`\n- Project file: `docs/final-sprint-20260928/evidence/fusion_rescue_verification.json`\n\n## Risk and scope\n\nFixed exposure and an ordinary white board do not independently establish calibrated reflectance or physiological interpretation.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS08": "# Investigate dense spectral registration and preserve the partial surface result\n\n**Planning ID:** FS08\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Adithya Rama |\n| Reviewer | Tianyu Xu |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:spectral-fusion, type:spike |\n| Dependencies | FS03, FS05, FS07; replace with real issue links |\n| Evidence status | Research investigation and partial candidate ready for review; full fusion unresolved |\n\n## User story\n\nAs a researcher, I want spectra associated with supported 3D locations so that spatial patterns can be explored without invented coverage.\n\n## Description\n\nCompare learned image matching, local multimodal warps, physical camera models and cross-sensor tracking. Freeze candidates before scoring proposed check coordinates, preserve failed trials and limit exports to supported geometry domains.\n\n## Current evidence\n\n72 learned configurations on P5, 24 frozen maps and 16 additional P1-P4 runs. The selected two-upper-leaf demonstration has 2,338 FX10 and 862 FX17 native spectra on unchanged P5 geometry. These patches support raw DN only.\n\n## Acceptance criteria\n\n- [ ] Candidate definitions, selection rules and unsuccessful experiments remain available.\n- [ ] The partial viewer separates both cameras and traces each assignment to an exact native pixel and existing vertex.\n- [ ] No spectra are interpolated onto unobserved surfaces or spliced across cameras.\n- [ ] Local versus whole-plant coverage, post-hoc demonstration-region selection and unknown per-point error are explicit.\n- [ ] The investigation can close with a documented partial or negative result; complete validated fusion remains a separate unresolved product goal.\n- [ ] Peer reviewer signs off the evidence and links follow-up calibration work.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/fusion_rescue_report.md`\n- Project file: `docs/final-sprint-20260928/evidence/fusion_rescue_verification.json`\n\n## Risk and scope\n\nTraining fit, plausible colour overlap and geometry support do not establish the same physical material point across cameras.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS09": "# Audit correspondence controls and correct unsupported accuracy claims\n\n**Planning ID:** FS09\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Tianyu Xu |\n| Reviewer | Howard Zhang |\n| Story points | 3 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:validation, type:task |\n| Dependencies | FS02, FS06, FS08; replace with real issue links |\n| Evidence status | Audit ready for peer review |\n\n## User story\n\nAs a reviewer, I want checking landmarks and coordinate conventions audited so that a result is not accepted or rejected using unreliable truth labels.\n\n## Description\n\nCheck orientation, scale, native versus undistorted coordinates and exact source identities. Preserve uncertain landmark attempts and score frozen models without moving labels toward predictions. Record corrections to earlier interpretations.\n\n## Current evidence\n\n23 fresh/adaptive landmark attempts were retained. The old green_lower_4 control was already unaccepted and non-independent, so its discrepancy could not alone establish a definitive physical mapping failure.\n\n## Acceptance criteria\n\n- [ ] Coordinate and point-identity checks are documented.\n- [ ] Model-fitting evidence is distinguished from withheld annotations and independently measured truth.\n- [ ] Uncertain and unsuccessful checks remain visible, including adaptive second-round selection.\n- [ ] The previous rejection wording is corrected while the old result remains preserved.\n- [ ] Reviewer checks that residuals are not advertised as per-point error bounds.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/control_reassessment.json`\n- Project file: `docs/final-sprint-20260928/evidence/control_verification.json`\n- Project file: `docs/final-sprint-20260928/evidence/fusion_rescue_report.md`\n\n## Risk and scope\n\nSubjective landmark radii are not statistical confidence intervals; repetitive veins can have uncertain identity.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS10": "# Publish an inspectable results journey with downloads and explicit gaps\n\n**Planning ID:** FS10\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Tanisha Sharma |\n| Reviewer | Adithya Rama |\n| Story points | 5 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:website, type:task |\n| Dependencies | FS05, FS06, FS07, FS08, FS09; replace with real issue links |\n| Evidence status | Local build and browser evidence available; latest publication not verified |\n\n## User story\n\nAs a tutor or collaborator, I want an accessible results page with provenance so that I can inspect outcomes and limitations without running the research pipeline.\n\n## Description\n\nPresent calibration, geometry stages, manual comparisons, both-camera spectra, partial surface fusion and the control reassessment. Keep the historical baseline available, link the complete sprint explanation and verify the final deployed route.\n\n## Current evidence\n\nThe rescue build and browser checks passed, including both sensor layers and 86 static evidence/download links. Local success is distinct from GitHub Pages publication.\n\n## Acceptance criteria\n\n- [ ] The main page leads to geometry, traits, spectra and the latest partial-fusion report.\n- [ ] Sensor switching, wavelength selection, exact-source inspection and unavailable-value display are checked.\n- [ ] Download and evidence links resolve in the local build.\n- [ ] A teammate checks readable desktop/mobile presentation and historical versus current wording.\n- [ ] After the owner-authorized push, verify the public route and record the deployed commit before closing publication.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/fusion_rescue_verification.json`\n- Project file: `docs/final-sprint-20260928/evidence/website_link_validation.json`\n\n## Risk and scope\n\nA local build or fork push does not by itself prove the intended public Pages site contains the new results.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS11": "# Verify offline analysis integration and complete laboratory regression checks\n\n**Planning ID:** FS11\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Howard Zhang |\n| Reviewer | Tanisha Sharma |\n| Story points | 3 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:lab-regression, type:task |\n| Dependencies | FS01, FS03, FS04, FS06, FS07; replace with real issue links |\n| Evidence status | Blocked for physical acceptance until the lab machine is available |\n\n## User story\n\nAs a lab operator, I want the established camera and gantry workflow preserved while offline analysis is available so that analysis changes do not disrupt recording.\n\n## Description\n\nReview the existing offline integration and protected-source receipts, then run a bounded physical acceptance session for application startup, camera selection, capture, gantry motion, stop/cancel and saved output. New research rescue scripts are not automatically production features.\n\n## Current evidence\n\nThe saved archive records 26 protected files unchanged and a historical run of 101 targeted offline tests. This does not establish a new physical lab pass or arbitrary-dataset automation.\n\n## Acceptance criteria\n\n- [ ] Record exact software revision, environment and protected-source comparison.\n- [ ] Confirm the lab operator can launch the app and select the intended RealSense device.\n- [ ] Check paired capture, intended gantry motion, stop/cancel and recovery on the actual rig.\n- [ ] Verify offline analysis cannot trigger unintended acquisition or gantry activity.\n- [ ] Attach a dated lab observation log, failures and reviewer sign-off; do not close using source hashes alone.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/evidence/confirmed_board_verification.json`\n- Project file: `docs/final-sprint-20260928/evidence/software_archive_notes.md`\n\n## Risk and scope\n\nRequires lab access and the normal operating procedure. Physical execution remains unverified in the saved local work.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n", "FS12": "# Prepare the final sprint narrative demo and research handover\n\n**Planning ID:** FS12\n\n**Parent:** replace PARENT_URL after creating the parent issue.\n\n| Field | Proposed value |\n|---|---|\n| Assignee | Adithya Rama |\n| Reviewer | Tianyu Xu |\n| Story points | 3 |\n| Priority | P1 |\n| Milestone | Final Sprint, use the existing team milestone |\n| Labels | sprint:final, area:handover, type:task |\n| Dependencies | FS09, FS10, FS11; replace with real issue links |\n| Evidence status | Draft prepared; team review and final handover remain |\n\n## User story\n\nAs a tutor or incoming developer, I want the user journey, decisions and evidence explained together so that I understand both the outcome and the next steps.\n\n## Description\n\nUse the complete sprint report to present the objective, evolving workflow, problems, fixes, findings, limitations and lessons. Update the earlier slide deck to reflect the partial fusion and control correction. Confirm each member's actual contribution before final reflection.\n\n## Current evidence\n\nThe complete explanation, end-to-end software user guide, parent/sub-issue drafts and evidence snapshots are now prepared. The earlier presentation predates the rescue interpretation and needs reconciliation.\n\n## Acceptance criteria\n\n- [ ] Walkthrough covers calibration through geometry, traits and both-camera spectral inspection.\n- [ ] Stories and journeys link to demonstrated outputs or explicit gaps.\n- [ ] Presentation reflects 13 conditional trait comparisons and the new partial surface without claiming full fusion.\n- [ ] Each team member confirms their contribution and adds an evidence-based reflection.\n- [ ] Record public-site and lab status honestly, and hand unresolved items to the follow-up backlog.\n- [ ] Complete peer review and tutor/team handover.\n\n## Evidence\n\n- Project file: `docs/final-sprint-20260928/README.md`\n- Project file: `docs/final-sprint-20260928/USER_GUIDE.md`\n- Project file: `docs/final-sprint-20260928/evidence/fusion_rescue_report.md`\n- Project file: `docs/final-sprint-20260928/evidence/trait_findings.md`\n\n## Risk and scope\n\nFS11 can remain blocked, but the handover must carry that gap explicitly; it cannot assert complete lab acceptance.\n\n## Review note\n\nThis is a proposed issue allocation. The saved evidence above is not a claim that the named owner performed all historical work. Check criteria against the artifacts, attach the deployed/source links when available, and have the reviewer confirm closure.\n"};document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(bodies[b.dataset.copy]);b.textContent="Copied "+b.dataset.copy}catch(e){b.textContent="Use the downloadable Markdown file"}});</script></body></html>

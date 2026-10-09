@@ -1,0 +1,20 @@
+{
+  "reserved_checks": 13,
+  "learned_candidates": 24,
+  "learned_candidate_check_pairs": 52,
+  "learned_in_hull_unique_checks": 5,
+  "learned_out_of_hull_unique_checks": 8,
+  "local_frozen_candidates": 4,
+  "rotation_roundtrip_all": true,
+  "current_metric_sourcepoints_exact": true,
+  "max_metric_projection_change": 2.2737367544323206e-13,
+  "old_candidate_path_coordinates": "native distorted RGB verified by source code inspection",
+  "labels_not_independent_physical_ground_truth": true,
+  "round2_additional_checks": 10,
+  "total_fresh_and_round2_checks": 23,
+  "all_reserved_coordinate_sets_frozen_before_their_predictions_scored": true,
+  "physical_candidates": 6,
+  "silhouette_v2_candidates": 3,
+  "source_originals_modified": false,
+  "notes": "All candidate/check tables retained; no precise accuracy gate certified from subjective landmark uncertainty."
+}

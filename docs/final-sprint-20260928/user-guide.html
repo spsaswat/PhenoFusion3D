@@ -1,0 +1,187 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PhenoFusion3D end-to-end software user guide</title><style>*{box-sizing:border-box}body{margin:0;background:#f1f6f7;color:#183342;font:16px/1.65 system-ui,sans-serif}header{background:#103d4c;color:white;padding:25px max(22px,calc((100vw - 1120px)/2))}header a{color:#cdf3ed;margin-right:24px}main{max-width:1164px;margin:auto;padding:28px 22px 70px}h1{font-size:clamp(28px,4vw,42px);line-height:1.18}h2{font-size:25px;margin:45px 0 15px;border-bottom:1px solid #ccdadf;padding-bottom:10px}h3{font-size:20px;margin-top:28px}a{color:#006777;overflow-wrap:anywhere}p,li{max-width:105ch}li{margin:8px 0}.table{overflow-x:auto;margin:22px 0}table{border-collapse:collapse;background:white;width:100%;min-width:680px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d8e3e7;padding:12px;font-size:14px}th{background:#e1edef}code{background:#e3edf0;font-size:.9em;overflow-wrap:anywhere}article{background:white;border:1px solid #d4e1e6;border-radius:12px;padding:24px;margin:24px 0}article h1{font-size:26px}article h2{font-size:20px;margin-top:24px}.notice{padding:18px;background:#fff3d9;border-left:4px solid #bc9132}.copy{padding:10px 18px;background:#086574;color:white;border:0;border-radius:6px;font:inherit;cursor:pointer}.meta{font-size:13px;color:#536f7d}.nav{display:flex;flex-wrap:wrap;gap:14px}.nav a{margin:0}button:focus,a:focus{outline:3px solid #eaad37;outline-offset:3px}@media(max-width:600px){main{padding:20px 15px}article{padding:16px}header{padding:18px}}pre{background:#e3edf0;padding:18px;overflow-x:auto;line-height:1.5}pre code{overflow-wrap:normal}</style></head><body><header><nav class="nav"><a href="user-guide.html">Software user guide</a><a href="index.html">Complete sprint explanation</a><a href="issues.html">Parent and sub-issues</a><a href="README.md">Download report</a><a href="ISSUES.md">Download all issue drafts</a></nav></header><main><h1>PhenoFusion3D end-to-end user guide</h1>
+<p>Version: 8 October 2026. This guide follows the current <code>main.py</code> desktop application and its offline analysis window. It covers setup, capture, reconstruction, inspection, traits, manual validation, hyperspectral analysis, reviewed spectral association and saving results. Laboratory operation still requires testing on the actual rig; writing this guide is not a hardware acceptance test.</p>
+<p>For the results, decisions, evidence and unresolved research questions, read the <a href="index.html">complete final sprint explanation</a>. For proposed team responsibilities, use the <a href="issues.html">issue pack</a>. This guide describes how to operate the software; a separately generated research result is not necessarily a one-click feature in the application.</p>
+<h2>1. Choose your starting point</h2>
+<div class="table"><table>
+<tr><th>Your goal</th><th>Start here</th><th>What you need</th></tr>
+<tr><td>Acquire new RGB-D recordings</td><td>Sections 2–4</td><td>Lab camera, existing drivers, storage; working ROS and gantry for moving scans</td></tr>
+<tr><td>Reconstruct a saved recording</td><td>Sections 5–7</td><td>Matched RGB/depth frames, intrinsics, recorded depth units; motion information for RGB stereo</td></tr>
+<tr><td>Measure and validate traits</td><td>Sections 8–10</td><td>Reviewed plant cloud, specimen identities, matching manual measurements</td></tr>
+<tr><td>Inspect new hyperspectral data</td><td>Sections 11–12</td><td>ENVI header/data pair and reviewed extraction setup</td></tr>
+<tr><td>Associate spectra with 3D points</td><td>Section 13</td><td>Measured spectra, unchanged source cloud and reviewed correspondence evidence</td></tr>
+<tr><td>Replay the old August experiment</td><td>Section 14</td><td>Exact reviewed historical inputs</td></tr>
+<tr><td>Review or share saved results</td><td>Sections 15–17</td><td>Complete output folder and its provenance</td></tr>
+</table></div>
+<p>The offline processing tools run locally without Codex or another AI service. They still require appropriate inputs and human review. They cannot guarantee a complete 360-degree plant from unobserved surfaces or automatically establish every cross-camera correspondence.</p>
+<h2>2. Prepare and launch</h2>
+<p>On the working lab machine, use the existing environment and launcher first. Keep its camera and ROS configuration recorded. Do not upgrade a working hardware environment merely to open a report.</p>
+<p>From the repository root on the supported Linux lab setup, check the existing installation without changing it:</p>
+<pre><code>./setup.sh --check</code></pre>
+<p>For a new installation with the required system prerequisites already available:</p>
+<pre><code>./setup.sh
+source .venv-linux/bin/activate
+python main.py</code></pre>
+<p>Setup creates the project environment and a per-user Ubuntu Activities launcher. It does not install system ROS, replace the gantry workspace or install system drivers. Python 3.10–3.12 is the documented lab range. System ROS remains separate from the GUI environment.</p>
+<p>If multiple RealSense devices are connected, select the intended serial before launching. Replace the example values with the machine&#x27;s actual values:</p>
+<pre><code>export PHENOFUSION_CAMERA_SERIAL=YOUR_CAMERA_SERIAL
+export PHENOFUSION_ROS_WS=/path/to/gantry_workspace
+python main.py</code></pre>
+<p>Setting these before <code>setup.sh</code> also records them in the generated launcher. Check the selected model and serial; D405 and L515 are separate acquisitions, not interchangeable files.</p>
+<p>For a separate Windows offline-analysis environment, create and activate an environment from the repository root, then install the analysis extras:</p>
+<pre><code>py -3.11 -m venv .venv-analysis
+.\.venv-analysis\Scripts\Activate.ps1
+python -m pip install -e &quot;.[analysis,hyperspectral,hyperspectral-viewer]&quot;
+python main.py</code></pre>
+<p>This is a fresh analysis-environment recipe, not a claim that the lab&#x27;s ROS gantry runs on Windows. Camera-only Windows support uses the separate <code>windows</code> extra and compatible device setup. Follow the repository installation instructions for that hardware configuration. Package installation may need internet; processing installed workflows does not need an AI service. If embedded WebEngine is unavailable, use the saved report in an external browser.</p>
+<h2>3. Organise inputs before recording or processing</h2>
+<p>Keep raw acquisitions unchanged. Use different folders for calibration and plant scans and for each camera. Preserve original frame identifiers, timestamps, intrinsics, sensor serial, depth units, exposure and motion metadata. Give plants stable specimen IDs and use the same IDs in ruler photographs and measurements.</p>
+<p>For this project&#x27;s confirmed ChArUco target, the board has 7 × 10 squares, 25 mm square edges, 18 mm marker edges and <code>DICT_4X4_50</code>. In metric calibration configuration these lengths are 0.025 m and 0.018 m. A plain checkerboard image is not interchangeable with this ChArUco target. The earlier 127/76 values are not physical square dimensions.</p>
+<p>Record calibration using the actual cameras and configuration. If a mount, angle or scan geometry changes, review whether the previous calibration still applies. Board dimensions alone do not establish hyperspectral scan timing or an elevated leaf&#x27;s correspondence to a 3D point. The desktop workflow does not provide a universal automatic calibration wizard; calibration setups and reviewed poses are explicit analysis inputs.</p>
+<p>For hyperspectral acquisition, retain the ENVI header and binary data together. Record panel identity/reflectance, exposure, illumination, scan direction, speed and white/dark acquisition details. A bright white board does not by itself supply known reflectance, and an unconfirmed final dark-looking strip must not automatically be treated as shutter-closed data.</p>
+<h2>4. Capture RGB-D data and operate the gantry</h2>
+<ol>
+<li>Open <strong>Data Capture</strong>. Choose the output folder and the intended backend.</li>
+<li>Choose <strong>RealSense Only</strong> for stationary camera capture, or <strong>ROS + Gantry</strong> for the configured moving scan. <strong>Auto</strong> selects according to runtime availability; check the selection before starting.</li>
+<li>For a moving scan, verify <strong>Velocity (mm/s)</strong> and <strong>End (mm)</strong> against the rig&#x27;s approved travel. For camera-only capture, set <strong>Duration (s, RealSense)</strong> and FPS. Duration 0 means capture until Stop.</li>
+<li>Check free RAM and disk space. Capture buffers frames before saving; long recordings require substantial memory.</li>
+<li>Click <strong>Capture</strong>. Observe the progress and log. Use <strong>Stop</strong> to stop acquisition, then wait for buffered frames to finish saving.</li>
+<li>Click <strong>Open captured folder</strong>. Confirm that RGB, depth, intrinsics and session metadata exist before disconnecting equipment or closing the application.</li>
+</ol>
+<p>The separate <strong>Gantry Control</strong> panel provides <strong>Jog</strong>, <strong>Go</strong>, <strong>Go Home</strong> and <strong>STOP</strong>. It can operate independently of camera capture. Use the physical rig&#x27;s operating procedure when moving equipment. On normal combined-scan completion the implemented workflow returns home; an operator Stop does not initiate a new homing move. Wait for saving to finish before exiting.</p>
+<p><strong>Hypercam UI</strong> opens the configured local hyperspectral service. The application permits this action only when reported gantry position is within 1.0–1.9 mm. If blocked, check the actual position and rig procedure; do not bypass the guard. This button opens the camera service—it does not automatically calibrate or fuse its output.</p>
+<p>Typical saved capture layout:</p>
+<pre><code>data/captures/&lt;timestamp&gt;/
+  rgb/&lt;frame&gt;.png
+  depth/&lt;frame&gt;.png
+  kdc_intrinsics.txt
+  kd_intrinsics.txt
+  session.json</code></pre>
+<p>Successful capture populates Data Loading. Read the log for failures or incomplete output rather than treating the existence of a folder as success.</p>
+<h2>5. Import and check recordings</h2>
+<p>In <strong>Data Loading</strong>, select <strong>RGB Images</strong>, <strong>Depth Images</strong> and the appropriate intrinsics file. The main panel labels the intrinsics input <strong>Intrinsics JSON</strong>; the offline recording workflow also understands its documented recording metadata formats. Avoid substituting intrinsics from a different resolution or camera.</p>
+<p>Use <strong>Data Quality → Quick Check</strong> for an initial sample and <strong>Full Report</strong> for the recording. Inspect valid-depth coverage, depth range, overlap, registration fitness and RMSE. Save the resulting report. A registration score does not certify a complete plant or accurate leaf dimensions.</p>
+<p>For offline analysis, supported recordings include <code>rgb/</code> and <code>depth/</code> folders or flat <code>rgb_&lt;ID&gt;.png</code> / <code>depth_&lt;ID&gt;.png</code> files with genuine matching identifiers. RGB and aligned depth must correspond to the same observation. Never repair missing frames by renaming a nearby image to manufacture a pair.</p>
+<p>Depth units are essential. The offline field is <strong>raw depth units per metre</strong>, the reciprocal of metres per raw count. For example, 0.0001 metres/count means 10000 units/metre. A value of 0 requests metadata where supported; it does not mean zero physical depth. Do not tune depth scale to make a plant agree with its manual height.</p>
+<h2>6. Reconstruct the plant</h2>
+<p>The existing main-window route is <strong>Data Loading → Run Reconstruction</strong>. <strong>Step Size</strong> uses every Nth frame. Review the live result and metrics, then use <strong>File → Export PLY...</strong> and <strong>Export Metrics CSV...</strong>. Keep the original lab workflow available for regression comparisons.</p>
+<p>For the added offline route:</p>
+<ol>
+<li>Open <strong>Analysis → Offline reconstruction, traits and hyperspectral fusion...</strong>.</li>
+<li>Select <strong>Reconstruct</strong>, then the <strong>Recording folder</strong> and an explicit <strong>Results parent folder</strong> outside the raw recordings.</li>
+<li>Enter verified raw depth units if metadata is missing. Leave near/far at estimate only if you will inspect the chosen interval.</li>
+<li>Select camera views, motion direction, foreground selection and reconstruction method. Start with <code>auto</code> for the supported overlapping overhead gantry setup.</li>
+<li>Supply <strong>Saved camera poses</strong> if required by the acquisition. These must be calibrated poses in the expected format, not arbitrary display rotations.</li>
+<li>Click <strong>Check recording and explain settings</strong>. Review the chosen frames, units, range and selected method before the full run.</li>
+<li>Click <strong>Reconstruct from photographs + coloured ICP</strong>. Review logs and open the completed result.</li>
+</ol>
+<p>Automatic RGB reconstruction relies on supported overlapping camera motion and usable motion information, such as monotonic encoder positions. Without suitable metric motion information, automatic mode can use sensor-depth reconstruction instead. The button&#x27;s wording does not mean every recording necessarily used RGB stereo. Read the saved method and diagnostics.</p>
+<p>Foreground <code>auto</code> targets the supported scene geometry. <code>depth</code> retains surfaces in the selected range, which can include background. <code>colour</code> can miss tissue whose appearance does not match the segmentation. Inspect masks for red foliage, narrow leaves, stems and tips rather than trusting a colour filter alone.</p>
+<p>Offline jobs run in a child process. <strong>Cancel processing</strong> or closing the analysis dialog can terminate the job and leave explicitly incomplete output. Capture takes priority over optional analysis. Keep the laptop awake while processing; sleep pauses local computation.</p>
+<h2>7. Inspect, clean and combine camera results</h2>
+<p>Rotate the cloud through front, side and overhead views. Look for duplicated leaves, disconnected stems, missing tips, background fragments and alignment errors. Inspect each plant separately as well as the full scene. A convincing view from one angle is insufficient.</p>
+<p>Keep an original cloud and a separate cleaned cloud. Inspect any removed-point result or cleanup mask so thin genuine leaves are not silently discarded. Correct orientation using an explicit reviewed transform and choose the corresponding height axis. A display rotation alone does not prove stored measurement coordinates are upright.</p>
+<p>For D405/L515 combination, reconstruct each independently, establish their common frame, then review the registration and supported contribution from each. The final sprint&#x27;s fusion was an evidence-reviewed research procedure with saved transforms and checks. It is not a universal <strong>Fuse both cameras</strong> desktop button. Use the research workspace to retain the aligned clouds and provenance; do not simply concatenate unrelated coordinates.</p>
+<p>ICP aligns observations that exist. It does not measure unseen leaf undersides or repair absent depth. Gap filling for appearance must remain distinguishable from measured geometry and must not be used as new measurement evidence.</p>
+<h2>8. Extract plant traits</h2>
+<ol>
+<li>Open <strong>Model traits / RGB-D references</strong>.</li>
+<li>Select a <strong>Reviewed plant-only PLY</strong>. Exclude the pot, soil and other plants for plant-tissue measurements.</li>
+<li>Set <strong>Plant height axis</strong> to the actual upright axis.</li>
+<li>Review orientation and exclusions, then tick the confirmation and click <strong>Extract 3D model traits</strong>.</li>
+<li>Inspect the saved trait values and retain the exact cloud used to calculate them.</li>
+</ol>
+<p>Cloud spans, projected canopy area, projected convex hull and 3D hull quantities describe different things. A cloud&#x27;s minimum-to-maximum height is not automatically a biological stem-base-to-tip height. Missing tips reduce an observed span; stray points can increase it.</p>
+<p>The same tab can <strong>Extract image-derived reference traits</strong> from a recording using verified units and expected plant count. Review its selected images and masks. These references come from RGB-D data and are useful diagnostics, but are not independent physical ground truth.</p>
+<h2>9. Validate plant-level measurements</h2>
+<p>In <strong>Validate traits</strong>, select the parent containing <code>plant_N</code> trait folders, an optional image-reference JSON and/or a physical-measurement CSV. Enter explicit <strong>Confirmed specimen pairs</strong>, such as <code>1:2 2:1</code>, only when those reference/model identities are genuinely matched. Click <strong>Create comparison report</strong>.</p>
+<p>Physical CSV columns include:</p>
+<pre><code>plant_id
+physical_plant_height_m
+physical_canopy_major_span_m
+physical_canopy_minor_span_m
+physical_projected_canopy_area_m2
+physical_projected_convex_hull_area_m2</code></pre>
+<p>Lengths are metres and areas are square metres. Leave unmeasured cells blank. Do not enter zero for unavailable measurements. Record the manual definition: for this study plant height was from stem base to the highest plant tip, including the tip. Pot-bottom height or a partial observed span is a different quantity.</p>
+<p>Review individual comparisons, sample count, excluded measurements and reasons before quoting an aggregate error. Zero eligible comparisons means no validation result, not perfect accuracy. Retain ruler photographs, their interpretation and uncertain units alongside the CSV.</p>
+<h2>10. Validate identified leaves and source-cloud endpoints</h2>
+<p>For image-assisted leaf measurements, open <strong>Matched leaves</strong>. Choose the recording and verified depth units, then <strong>Mark leaves on a source photograph</strong>. Identify the same physical leaf and mark tip, blade base and the two width endpoints. Save the leaf annotation JSON and use <strong>Measure marked leaves and compare</strong>. The report separates length and width in millimetres. Review depth support; background or a neighbouring leaf must not supply the endpoint depth.</p>
+<p>These are image-derived measurements. A 3D straight-line chord differs from a curved ruler measurement along a bent blade. Match definitions before calling a discrepancy an error.</p>
+<p>For explicit measurements on saved research clouds, use <strong>Research workspace</strong>:</p>
+<ol>
+<li><strong>Create workspace setup template</strong> and fill the generated JSON with actual specimen IDs, cloud paths, coordinate units, orientation and references.</li>
+<li>Use a fresh output location and <strong>Build / check research workspace</strong>. A units label does not rescale coordinates; an upright rotation does not repair scale.</li>
+<li>Open the report. Choose <strong>Mark first point</strong>, double-click the intended source location, then <strong>Mark second point</strong>, <strong>Keep endpoint pair</strong> and <strong>Download endpoint JSON</strong>.</li>
+<li>Retain cloud hashes and source point indices. Review the endpoint identity, measurement type and manual-reference match before using the exported annotations in a configured follow-up workspace.</li>
+</ol>
+<p>Ordinary endpoint pairs are observed chords until their biological meaning is established. Full-height validation needs an identified stem base and highest tip. Review fields such as <code>landmarks_reviewed</code>, <code>organ_match_confirmed</code> and the reference ID must record real review, not merely enable acceptance. Replacing or reordering the cloud invalidates saved point identities; create and review new annotations.</p>
+<p>The saved final-sprint report contains 13 conditional leaf comparisons and a ledger of all 47 manual dimensions. Its unresolved matches and photo/unit conflicts remain visible. Do not describe those results as validated full-plant height for all five specimens.</p>
+<h2>11. Extract hyperspectral measurements</h2>
+<p>Use <strong>Research workspace → Extract measured spectra from reviewed regions</strong> for compatible new recordings. Create the extraction configuration described in the bundled research-workspace reference guide: specify the real ENVI header/data, sensor identity, reviewed sample regions and applicable reference regions. Check header dimensions, wavelength metadata and binary size first.</p>
+<p>Choose both available sensors through their actual recorded identity. The September headers identify <strong>FX10 and FX17</strong>; do not rename FX10 to FX15 based on earlier conversation shorthand. Keep each sensor&#x27;s wavelengths, samples and products separate.</p>
+<p>Save the extraction output including:</p>
+<pre><code>measured_spectra.npz
+measured_spectra.metadata.json
+summary.json</code></pre>
+<p>Review source-pixel positions and quality flags. The September 13,343-sample result contains selected reviewed patches, not every pixel or complete plant segmentation. A region name alone is not proof of plant or organ identity.</p>
+<h2>12. Inspect spectra and interpret values</h2>
+<p>Open <strong>Spectral review / 3D fusion</strong>. Select the extracted result folder for the available sensors, choose a fresh output location and click <strong>Build interactive spectral review</strong>. Use <strong>Open latest result</strong> or open a saved spectral report. This input is the extracted bundle, not a raw ENVI directory.</p>
+<p>Choose a sensor, displayed measurement and wavelength. Click a recorded sample to inspect its spectrum and source scan-line/detector-column identity. Download the sample CSV where available. Check quality flags before comparing values.</p>
+<div class="table"><table>
+<tr><th>Display</th><th>Interpretation</th><th>Requirement or limit</th></tr>
+<tr><td>Raw DN</td><td>Recorded detector signal</td><td>Not reflectance; affected by exposure and illumination</td></tr>
+<tr><td>Q</td><td><code>(DN - D) / (W - D)</code> reference-relative signal</td><td>Requires applicable reviewed white/dark support and valid denominator</td></tr>
+<tr><td>Q0</td><td><code>DN / W</code> white-relative signal</td><td>Omits dark correction; not calibrated reflectance</td></tr>
+<tr><td>NDVI-style descriptor</td><td>Ratio derived from supported red/NIR bands</td><td>Its scientific interpretation depends on calibration and valid band data</td></tr>
+<tr><td>FX17 SWIR ratio in the saved research report</td><td>Exploratory signal comparison</td><td>Not a calibrated measurement of water content</td></tr>
+</table></div>
+<p>Unknown white-panel reflectance and unconfirmed dark capture prevent claiming calibrated reflectance. FX17 lacks the red wavelength needed for the usual red/NIR NDVI formulation. Do not obtain it by silently mixing unrelated camera pixels. Missing values remain missing; grey points or gaps are not zeros. Per-view colour ranges can change, so compare numeric values rather than colour alone.</p>
+<h2>13. Associate measured spectra with 3D points</h2>
+<ol>
+<li>In <strong>Spectral review / 3D fusion</strong>, click <strong>Create 3D fusion setup template</strong>.</li>
+<li>Enter the actual cloud and spectral-bundle paths, sensor identity, source sample indices, source vertex indices and correspondence evidence in that template.</li>
+<li>Review the visible feature match and supporting RGB views. Retain the required source hashes and evidence; the template is a schema, not an automatic calibration.</li>
+<li>Click <strong>Build sparse measured fusion</strong>, then inspect the result from multiple views.</li>
+<li>Select a sensor and wavelength, inspect each association and export the complete result folder.</li>
+</ol>
+<p><code>sample_index</code> is an extracted-array row identity, not a wavelength index or raw detector column. <code>point_index</code> refers to the original cloud vertex. Use the generated template and the spectral-fusion reference guide for the full fields and evidence rules; fabricated indices or support records produce misleading associations.</p>
+<p>The older three coloured markers show three provisional associations, with spectra from both cameras. Their enlarged display size does not represent detector footprint, and showing a marker through geometry is a viewing aid. Unassigned RGB geometry remains without a spectral measurement.</p>
+<p>The later fusion-rescue result contains partial mappings on two upper Plant 5 leaves: 2,338 FX10 and 862 FX17 samples. It is a separately saved research investigation, not an automatic dense-fusion mode for any dataset. Those added upper patches provide raw DN; unsupported reference-relative values are not invented. The <a href="index.html">sprint explanation</a> records the methods attempted, correspondence uncertainty and remaining gaps.</p>
+<h2>14. Replay the historical August workflow</h2>
+<p><strong>Hyperspectral / fusion · experimental</strong> preserves the reviewed 28 August 2026 recipe. Its fixed calibration regions and specimen/frame assumptions are deliberately dataset-specific.</p>
+<p>Select the exact paired FX10/FX17 recording and its matching RGB-D recording/reviewed ICP results. Choose <strong>Spectral analysis only</strong>, <strong>Fusion from existing spectral results</strong> or <strong>Spectral analysis → RGB-D / ICP fusion</strong>. Select a new results parent, run <strong>Check historical inputs</strong>, then <strong>Run selected experimental workflow</strong>. Use <strong>Display saved report in software</strong> to open its showcase.</p>
+<p>Input checking restricts automatic replay to the reviewed historical data. The manual workspace for other inputs is unvalidated, not a promise of equivalent automatic results. Do not apply the August pixel warp to September plants or transfer a spectrum between datasets simply because the resulting picture looks plausible.</p>
+<h2>15. Save, reopen and share</h2>
+<p>Choose an explicit results parent so new analyses do not become mixed with raw input files. Offline tools commonly create timestamped <code>analysis_results</code> children; research builders use their selected output paths. Keep each version separately and check the saved completion status and log.</p>
+<p>Retain the cloud, transforms, settings, source identities, annotations, numerical outputs, quality information and report assets together. Keep cancelled runs labelled incomplete. Reopen <code>index.html</code> or the saved report through the application&#x27;s relevant report field. If a browser blocks local asset loading, serve the report directory locally or use the application&#x27;s report viewer.</p>
+<p>Copy the entire report folder for sharing; an HTML file alone may reference cloud binaries, JSON or scripts beside it. A <code>127.0.0.1</code> link works only on the computer running that server. A repository commit, push and successful public website deployment are separate steps. Verify the public URL before sending it to collaborators.</p>
+<h2>16. Troubleshooting</h2>
+<div class="table"><table>
+<tr><th>Symptom</th><th>Check and action</th></tr>
+<tr><td>No camera or wrong camera</td><td>Check connection, runtime and device serial; run setup check before changing dependencies</td></tr>
+<tr><td>ROS + Gantry unavailable</td><td>Check existing ROS installation and workspace environment; do not pip-install ROS into the GUI environment</td></tr>
+<tr><td>Hypercam UI blocked</td><td>Verify the live gantry position and approved positioning procedure</td></tr>
+<tr><td>Capture stopped but app is busy</td><td>Wait for buffered frames to save; check free disk and log</td></tr>
+<tr><td>Recording fails pairing checks</td><td>Restore the correct export; preserve original IDs rather than renaming unrelated frames</td></tr>
+<tr><td>Cloud dimensions are implausible</td><td>Check camera depth units, intrinsics, calibration and coordinate scale</td></tr>
+<tr><td>Cloud is fragmented</td><td>Inspect source depth, overlap, masks, frame rejection and pose support; missing observations may need recapture</td></tr>
+<tr><td>Plant appears upside down</td><td>Verify the recorded frame and explicit upright transform before traits; select the correct height axis</td></tr>
+<tr><td>Report is blank in the app</td><td>Try external browser viewing of the complete saved report; check optional WebEngine availability</td></tr>
+<tr><td>Output path already exists</td><td>Use a fresh run folder so previous results remain inspectable</td></tr>
+<tr><td>Validation has no eligible rows</td><td>Check specimen/organ identity, units, quantity definitions and endpoint evidence</td></tr>
+<tr><td>Spectral value is grey or absent</td><td>Read flags and reference coverage; missing data must not become zero or interpolation labelled as measured</td></tr>
+<tr><td>Cloud hash or point identity differs</td><td>Restore the original cloud or redo and review annotations on the replacement</td></tr>
+<tr><td>Job ended during sleep or cancellation</td><td>Check completion status and logs; rerun into a new folder if incomplete</td></tr>
+</table></div>
+<h2>17. Lab acceptance and supporting references</h2>
+<p>Before treating an updated checkout as accepted on the laboratory machine, verify launch, the selected RealSense camera, stationary capture, authorised gantry movement, combined capture, Stop behaviour, buffered saving, reload and a small reconstruction. Record the machine, commit, operator and outcome. Then test optional offline analysis separately. These checks are a pending operational handover where no physical test has been recorded; documentation does not certify that hardware was exercised.</p>
+<p>The following bundled references provide detailed file schemas and specialist workflow instructions. They are snapshots of the repository documentation; some contain earlier research results. Use the dated sprint explanation and fusion-rescue evidence for the latest scientific interpretation.</p>
+<ul>
+<li><a href="reference/install.md">Installation reference</a></li>
+<li><a href="reference/ANALYSIS_WORKFLOW.md">Offline analysis reference</a></li>
+<li><a href="reference/TRAIT_VALIDATION.md">Trait validation reference</a></li>
+<li><a href="reference/RESEARCH_WORKSPACE.md">Research workspace schemas and endpoint workflow</a></li>
+<li><a href="reference/SPECTRAL_FUSION_WORKFLOW.md">Measured spectral fusion schema</a></li>
+<li><a href="reference/HYPERSPECTRAL_WORKFLOW.md">Historical hyperspectral recipe</a></li>
+<li><a href="USER_GUIDE.md">Download this user guide</a></li>
+</ul>
+<p>Documentation was checked against <code>main.py</code>, <code>app/main_window.py</code>, <code>app/analysis_dialog.py</code>, the capture/data/gantry panels, packaging metadata and the linked repository workflow guides. No camera motion, capture or reconstruction algorithm was changed to produce it.</p></main></body></html>
