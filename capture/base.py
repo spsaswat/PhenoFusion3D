@@ -30,6 +30,7 @@ DEFAULT_MAX_BUFFER_GIB = 6.0
 MEMORY_HEADROOM_FRACTION = 0.5
 DISK_RESERVE_BYTES = 512 * 1024 ** 2
 PNG_WORST_CASE_FACTOR = 1.1
+MEMINFO_PATH = "/proc/meminfo"
 
 
 @dataclass
@@ -202,8 +203,28 @@ class CaptureBackend(abc.ABC):
             self._position_callback(float(position_m))
 
 
+def _meminfo_bytes(field: str) -> Optional[int]:
+    """Read one ``/proc/meminfo`` field as bytes, or None if unavailable."""
+    try:
+        with open(MEMINFO_PATH, "r") as meminfo:
+            for line in meminfo:
+                name, separator, rest = line.partition(":")
+                if not separator or name.strip() != field:
+                    continue
+                parts = rest.split()
+                if not parts:
+                    return None
+                value = int(parts[0])
+                if len(parts) > 1 and parts[1].lower() == "kb":
+                    value *= 1024
+                return value
+    except (OSError, ValueError):
+        return None
+    return None
+
+
 def _available_memory_bytes() -> Optional[int]:
-    """Best-effort free-memory query using only the standard library."""
+    """Best-effort available-memory query using only the standard library."""
     if os.name == "nt":
         class MemoryStatus(ctypes.Structure):
             _fields_ = [
@@ -225,6 +246,15 @@ def _available_memory_bytes() -> Optional[int]:
                 return int(status.available_physical)
         except Exception:
             return None
+
+    # MemAvailable is the kernel's own estimate of what a new allocation can
+    # obtain without swapping. SC_AVPHYS_PAGES reports MemFree instead, which
+    # counts the reclaimable page cache as unavailable -- on a machine that has
+    # been running for a while that is a few hundred MiB no matter how much RAM
+    # is installed, so a capture that fits comfortably was being rejected.
+    available = _meminfo_bytes("MemAvailable")
+    if available is not None:
+        return available
 
     try:
         pages = os.sysconf("SC_AVPHYS_PAGES")
