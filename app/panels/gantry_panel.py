@@ -118,7 +118,7 @@ class GantryPanel(QWidget):
         goto_row = QHBoxLayout()
         goto_row.addWidget(QLabel('Go to (mm):'))
         self.goto_spin = QDoubleSpinBox()
-        self.goto_spin.setRange(0.0, 5000.0)
+        self.goto_spin.setRange(0.0, 1650.0)
         self.goto_spin.setSingleStep(50.0)
         self.goto_spin.setDecimals(1)
         self.goto_spin.setValue(

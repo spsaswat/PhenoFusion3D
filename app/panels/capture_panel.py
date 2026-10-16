@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 
 from capture import CaptureParams, ros_available
 from capture.base import MILLIMETRES_PER_METRE
+from capture.ros_capture import RETURN_DIR_NAME
 
 
 class CapturePanel(QWidget):
@@ -208,6 +209,16 @@ class CapturePanel(QWidget):
         self._gantry_position_m = float(position_m)
 
     def _on_capture(self):
+        answer = QMessageBox.question(
+            self,
+            'Confirm Lighting',
+            'Have you turned on the light?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
         backend_pref = self.backend_combo.currentData()
         self.set_running(True)
         self.progress.setValue(0)
@@ -235,6 +246,8 @@ class CapturePanel(QWidget):
                 f'Capture finished. Saving {idx} RGB/depth frames...'
             )
             return
+        # A return pass acquires again after the forward pass has saved.
+        self.stop_btn.setEnabled(True)
         if total > 0:
             pct = min(100, int(100 * idx / max(1, total)))
             self.progress.setValue(pct)
@@ -252,18 +265,38 @@ class CapturePanel(QWidget):
         try:
             with open(os.path.join(out_dir, 'session.json')) as session_file:
                 session = json.load(session_file)
-            if session.get('termination_reason') == 'buffer_limit':
-                message = (
-                    f'Stopped at the safe RAM/disk limit. Saved {n_frames} '
-                    f'frames -> {out_dir}'
-                )
             if session.get('home_returned') is False:
                 message += ' WARNING: the gantry did not confirm its return home.'
         except (OSError, ValueError, TypeError):
             pass
+        message += self._return_pass_summary(out_dir)
         self.status_lbl.setText(message)
         self._last_out = out_dir
         self.open_btn.setVisible(True)
+
+    @staticmethod
+    def _return_pass_summary(out_dir: str) -> str:
+        """Describe the L515 return pass, or '' when there was none."""
+        return_dir = os.path.join(out_dir, RETURN_DIR_NAME)
+        try:
+            with open(os.path.join(return_dir, 'session.json')) as session_file:
+                session = json.load(session_file)
+            n_frames = int(session.get('n_frames', 0))
+        except (OSError, ValueError, TypeError):
+            return ''
+        reason = session.get('termination_reason')
+        if session.get('error') or reason == 'failed':
+            error = session.get('error') or 'unknown error'
+            return (
+                f' WARNING: L515 return pass failed ({error}); '
+                f'saved {n_frames} frames -> {return_dir}'
+            )
+        if reason == 'user_stop':
+            return (
+                f' L515 return pass stopped early by the operator. '
+                f'Saved {n_frames} frames -> {return_dir}'
+            )
+        return f' L515 return pass: {n_frames} frames -> {return_dir}'
 
     def on_error(self, msg: str):
         self.set_running(False)

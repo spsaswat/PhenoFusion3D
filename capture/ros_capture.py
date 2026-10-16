@@ -21,20 +21,28 @@ to the working stakeholder script -- we only:
 The frame->position map in session.json preserves per-frame gantry
 positions (which are lost when we rename frames to 0.png, 1.png, ...)
 and unlocks exact known-pose reconstruction downstream.
+
+When exactly one D405 and one L515 are connected (and no serial is
+requested), the D405 scans out to the endpoint as above, and the L515 then
+scans the trip back home. That return pass is buffered the same way and
+saved once the gantry is home, as its own dataset in the RETURN_DIR_NAME
+subfolder of the capture.
 """
 
 from __future__ import annotations
 
-import math
+import os
 import time
+from datetime import datetime
 from typing import Callable
 
 from capture.base import (
     CaptureBackend,
     CaptureParams,
     MILLIMETRES_PER_METRE,
-    capture_buffer_limit_bytes,
-    ensure_capture_capacity,
+    RETURN_DIR_NAME,
+    ReturnPassSession,
+    ensure_free_storage,
 )
 from capture.realsense_runtime import import_realsense
 from capture.ros_runtime import ros_is_installed
@@ -77,11 +85,12 @@ class RosCapture(CaptureBackend):
                 "ROS is not installed or sourced on this machine. Source the "
                 "lab ROS distribution and gantry workspace before launching."
             )
+        ensure_free_storage(self.out_dir)
 
         # Camera packages stay in the GUI venv. ROS runs under the lab's
         # existing compatible interpreter through RosAgentClient.
         from capture.ros_client import HOME_POSITION_M, RosAgentClient
-        from capture.realsense_capture import CaptureFrameBuffer, RealSenseCapture
+        from capture.realsense_capture import RealSenseCapture
 
         rs = import_realsense()
         try:
@@ -98,6 +107,7 @@ class RosCapture(CaptureBackend):
         # camera-only backend. Serial selection remains optional and may be
         # supplied through PHENOFUSION_CAMERA_SERIAL.
         camera = RealSenseCapture(serial_number=self.serial_number)
+        return_camera = camera._pair_return_camera(rs)
         camera.session = self.session
         camera.out_dir = self.out_dir
         device = camera._select_device(rs)
@@ -107,30 +117,16 @@ class RosCapture(CaptureBackend):
         )
         align = rs.align(rs.stream.color)
         gantry = None
-        frame_buffer = None
+        frame_pairs = []
         endpoint_reached = False
-        buffer_limit_reached = False
         motion_started = False
+        home_returned = None
 
         try:
             try:
                 camera._apply_visual_preset(profile, rs)
                 camera._update_session_from_profile(profile, rs)
                 intrinsics = camera._read_intrinsics(profile, rs)
-
-                actual_width = (
-                    self.session.width if self.session is not None else params.width
-                )
-                actual_height = (
-                    self.session.height if self.session is not None else params.height
-                )
-                actual_fps = (
-                    self.session.fps if self.session is not None else params.fps
-                )
-                buffer_limit = capture_buffer_limit_bytes(
-                    self.out_dir, params.max_buffer_gib
-                )
-                frame_buffer = CaptureFrameBuffer(buffer_limit)
 
                 # Warm-up (matches stakeholder)
                 for _ in range(camera.WARMUP_FRAMES):
@@ -164,21 +160,6 @@ class RosCapture(CaptureBackend):
                         "endpoint. Return it home before starting another pass."
                     )
 
-                travel_s = (
-                    params.end_position_m - self._current_position
-                ) / params.velocity_mps
-                estimated_frames = math.ceil(travel_s * actual_fps)
-                buffer_limit = ensure_capture_capacity(
-                    self.out_dir,
-                    params,
-                    estimated_frames,
-                    actual_width,
-                    actual_height,
-                )
-                frame_buffer.limit_bytes = min(
-                    frame_buffer.limit_bytes, buffer_limit
-                )
-
                 # ------------------ capture loop ---------------------------
                 i = 0
                 last_progress_position = self._current_position
@@ -209,18 +190,14 @@ class RosCapture(CaptureBackend):
                             pipeline, align, color_format, rs
                         )
                         if frame_pair is not None:
-                            if not frame_buffer.append(frame_pair):
-                                buffer_limit_reached = True
-                                if self.session is not None:
-                                    self.session.termination_reason = "buffer_limit"
-                                break
+                            frame_pairs.append(frame_pair)
                             self._record_position(i, self._current_position)
                             i += 1
                             on_progress(i, 0)  # unknown total -> 0
                         if self._current_position >= params.end_position_m:
                             endpoint_reached = True
                             break
-                    if endpoint_reached or buffer_limit_reached:
+                    if endpoint_reached:
                         break
 
                 if not self._stop_flag and not gantry.is_running():
@@ -248,7 +225,6 @@ class RosCapture(CaptureBackend):
                 write_frame_batch,
             )
 
-            frame_pairs = frame_buffer.frames
             frame_count = len(frame_pairs)
             on_progress(frame_count, -1)  # acquisition done; saving batch
             write_frame_batch(
@@ -260,6 +236,28 @@ class RosCapture(CaptureBackend):
                 remove_frame_batch(self.out_dir, range(frame_count))
                 raise
 
+            # The forward pass is on disk; the return camera scans the trip
+            # back. Its written frames were released by write_frame_batch.
+            if (
+                return_camera is not None
+                and motion_started
+                and not self._stop_flag
+            ):
+                # Persist the forward positions now rather than only after
+                # the return pass, so a crash on the way back cannot lose them.
+                if self.session is not None:
+                    self.session.n_frames = frame_count
+                self._write_session()
+                home_returned = self._return_with_camera(
+                    rs,
+                    return_camera,
+                    gantry,
+                    params,
+                    on_progress,
+                    HOME_POSITION_M,
+                )
+                self._record_home(home_returned, endpoint_reached)
+
             return frame_count
         finally:
             # Returning Home belongs after the buffered image and intrinsics
@@ -269,16 +267,12 @@ class RosCapture(CaptureBackend):
                 gantry is not None
                 and motion_started
                 and not self._stop_flag
+                and home_returned is None
             ):
                 home_returned = self._return_home_safely(
                     gantry, HOME_POSITION_M
                 )
-                if self.session is not None:
-                    self.session.home_returned = home_returned
-                    if endpoint_reached and not home_returned:
-                        self.session.termination_reason = (
-                            "endpoint_reached_home_failed"
-                        )
+                self._record_home(home_returned, endpoint_reached)
             if gantry is not None:
                 gantry.shutdown()
             self._gantry = None
@@ -320,3 +314,183 @@ class RosCapture(CaptureBackend):
             except Exception:
                 pass
             return False
+
+    def _record_home(self, home_returned: bool, endpoint_reached: bool) -> None:
+        if self.session is not None:
+            self.session.home_returned = home_returned
+            if endpoint_reached and not home_returned:
+                self.session.termination_reason = "endpoint_reached_home_failed"
+
+    # ------------------------------------------------------- return pass
+    def _return_with_camera(
+        self,
+        rs,
+        camera,
+        gantry,
+        params: CaptureParams,
+        on_progress: Callable[[int, int], None],
+        home_position_m: float,
+    ) -> bool:
+        """Scan the trip home with ``camera`` and save it once home.
+
+        The forward pass is already on disk, so a failure here is recorded in
+        the return pass's own session.json rather than failing the capture.
+        Returns whether the gantry confirmed its arrival home.
+        """
+        from capture.realsense_capture import (
+            remove_frame_batch,
+            write_frame_batch,
+        )
+
+        out_dir = os.path.join(self.out_dir, RETURN_DIR_NAME)
+        session = ReturnPassSession(
+            backend=self.name,
+            started_at=datetime.now().isoformat(timespec="seconds"),
+            width=params.width,
+            height=params.height,
+            fps=params.fps,
+            velocity_mps=params.velocity_mps,
+            gantry_axis=params.gantry_axis,
+            end_position_m=home_position_m,
+        )
+        camera.out_dir = out_dir
+        camera.session = session
+        on_progress(0, 0)  # acquiring again: the forward save has finished
+
+        pipeline = None
+        frame_pairs = []
+        intrinsics = None
+        home_returned = False
+        try:
+            for path in (
+                out_dir,
+                os.path.join(out_dir, "rgb"),
+                os.path.join(out_dir, "depth"),
+            ):
+                os.mkdir(path)
+            if not gantry.goto_available:
+                raise RuntimeError(
+                    "The return pass needs go-to from position_controller_ros. "
+                    "Source the gantry catkin workspace before launching."
+                )
+            ensure_free_storage(out_dir)
+
+            device = camera._select_device(rs)
+            session.camera = camera._device_label(device, rs)
+            pipeline = rs.pipeline()
+            profile, color_format = camera._start_pipeline(
+                pipeline, device, rs, params
+            )
+            align = rs.align(rs.stream.color)
+            camera._apply_visual_preset(profile, rs)
+            camera._update_session_from_profile(profile, rs)
+            try:
+                session.depth_scale_m = float(
+                    profile.get_device().first_depth_sensor().get_depth_scale()
+                )
+            except Exception:
+                pass
+            intrinsics = camera._read_intrinsics(profile, rs)
+            for _ in range(camera.WARMUP_FRAMES):
+                pipeline.wait_for_frames()
+
+            # Travel home at the scan velocity so the return pass is sampled
+            # as densely as the forward one. A stop during camera start-up
+            # must not be followed by motion.
+            if not self._stop_flag and not gantry.goto(
+                home_position_m, params.velocity_mps
+            ):
+                raise RuntimeError("ROS gantry helper is not running")
+
+            i = 0
+            last_progress_position = self._current_position
+            last_progress_at = time.monotonic()
+            while not self._stop_flag:
+                position = self._current_position
+                if abs(position - home_position_m) <= self.HOME_TOLERANCE_M:
+                    home_returned = True
+                    break
+                if not gantry.is_running():
+                    raise RuntimeError(
+                        "The ROS gantry helper stopped during the return pass."
+                    )
+                if (
+                    position
+                    <= last_progress_position
+                    - self.POSITION_PROGRESS_EPSILON_M
+                ):
+                    last_progress_position = position
+                    last_progress_at = time.monotonic()
+                elif time.monotonic() - last_progress_at >= self.STALL_TIMEOUT_S:
+                    raise RuntimeError(
+                        "Gantry position did not move toward home for "
+                        f"{self.STALL_TIMEOUT_S:.0f} seconds during the "
+                        "return pass."
+                    )
+
+                frame_pair = self._capture_one(pipeline, align, color_format, rs)
+                if frame_pair is None:
+                    continue
+                frame_pairs.append(frame_pair)
+                camera._record_position(i, self._current_position)
+                i += 1
+                on_progress(i, 0)  # unknown total -> 0
+        except Exception as exc:
+            session.error = str(exc) or type(exc).__name__
+        finally:
+            if pipeline is not None:
+                try:
+                    pipeline.stop()
+                except Exception:
+                    pass
+
+        if self._stop_flag:
+            # stop() may have raced the go-to above; repeat it after the go-to.
+            try:
+                gantry.stop_moving()
+            except Exception:
+                pass
+        elif not home_returned:
+            # Camera failure or stall: finish the trip with the proven
+            # go-home, as the forward pass does after a failure.
+            home_returned = self._return_home_safely(gantry, home_position_m)
+
+        if session.error is not None:
+            session.termination_reason = "failed"
+        elif self._stop_flag:
+            session.termination_reason = "user_stop"
+        elif session.termination_reason == "completed":
+            session.termination_reason = "home_reached"
+        session.home_returned = home_returned
+
+        # Back at the starting place: save the return pass.
+        frame_count = len(frame_pairs)
+        if frame_count:
+            on_progress(frame_count, -1)  # acquisition done; saving batch
+            try:
+                write_frame_batch(out_dir, frame_pairs, cv2_module=self._cv2)
+                try:
+                    camera._save_intrinsics(intrinsics)
+                except Exception:
+                    remove_frame_batch(out_dir, range(frame_count))
+                    raise
+            except Exception as exc:
+                frame_count = 0
+                session.termination_reason = "failed"
+                session.error = "; ".join(
+                    message
+                    for message in (
+                        session.error, str(exc) or type(exc).__name__
+                    )
+                    if message
+                )
+        session.n_frames = frame_count
+
+        try:
+            camera._write_session()
+        except Exception as exc:
+            print(
+                f"[ros_capture] WARNING: could not write the return pass "
+                f"session in {out_dir!r}: {exc}"
+            )
+        return home_returned
