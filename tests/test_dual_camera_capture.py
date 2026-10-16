@@ -1,10 +1,16 @@
-"""D405 forward pass plus L515 return pass, with fake cameras and gantry."""
+"""D405 then L515 captures, with fake cameras and gantry.
+
+On the gantry the D405 scans out and the L515 scans home; with RealSense
+Only the two record one after the other.
+"""
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -132,7 +138,7 @@ def test_return_camera_pairs_one_d405_with_one_l515(
     monkeypatch.setattr(RealSenseCapture, "_has_stream", lambda *_args: True)
     camera = RealSenseCapture()
 
-    return_camera = RosCapture()._pair_return_camera(_rs_with(devices), camera)
+    return_camera = camera._pair_return_camera(_rs_with(devices))
 
     if paired:
         assert camera.serial_number == D405[1]
@@ -147,7 +153,7 @@ def test_a_requested_serial_keeps_the_single_camera_pass(monkeypatch):
     monkeypatch.setattr(RealSenseCapture, "_has_stream", lambda *_args: True)
     camera = RealSenseCapture()
 
-    assert RosCapture()._pair_return_camera(_rs_with([D405, L515]), camera) is None
+    assert camera._pair_return_camera(_rs_with([D405, L515])) is None
     assert camera.serial_number == L515[1]
 
 
@@ -162,7 +168,7 @@ def test_cameras_without_depth_are_not_paired(monkeypatch):
     )
     camera = RealSenseCapture()
 
-    assert RosCapture()._pair_return_camera(_rs_with([D405, L515]), camera) is None
+    assert camera._pair_return_camera(_rs_with([D405, L515])) is None
 
 
 def test_enumeration_failure_leaves_selection_to_the_camera(monkeypatch):
@@ -174,7 +180,7 @@ def test_enumeration_failure_leaves_selection_to_the_camera(monkeypatch):
             raise RuntimeError("usb enumeration failed")
 
     camera = RealSenseCapture()
-    assert RosCapture()._pair_return_camera(Rs, camera) is None
+    assert camera._pair_return_camera(Rs) is None
     assert camera.serial_number is None
 
 
@@ -528,6 +534,432 @@ def test_return_pass_session_keeps_the_capture_session_schema():
     assert session.camera == ""
     assert session.error is None
     assert session.depth_scale_m is None
+
+
+# ------------------------------------------- cameras as the SDK reports them
+
+class _RigProfile:
+    def __init__(self, stream, fmt, width, height, fps=30):
+        self.stream, self.fmt = stream, fmt
+        self.size, self.rate = (width, height), fps
+
+    def stream_type(self):
+        return self.stream
+
+    def format(self):
+        return self.fmt
+
+    def fps(self):
+        return self.rate
+
+    def width(self):
+        return self.size[0]
+
+    def height(self):
+        return self.size[1]
+
+    def as_video_stream_profile(self):
+        if self.stream == "accel":
+            raise RuntimeError("a motion profile is not a video profile")
+        return self
+
+    def get_intrinsics(self):
+        width, height = self.size
+        return SimpleNamespace(
+            fx=600.0, fy=600.0, ppx=width / 2, ppy=height / 2,
+            coeffs=[0.0] * 5, width=width, height=height,
+        )
+
+
+class _RigSensor:
+    def __init__(self, *profiles, depth_scale=None):
+        self.profiles = [_RigProfile(*profile) for profile in profiles]
+        self.depth_scale = depth_scale
+        self.preset = None
+
+    def get_stream_profiles(self):
+        return list(self.profiles)
+
+    def get_depth_scale(self):
+        return self.depth_scale
+
+    def set_option(self, _option, value):
+        self.preset = value
+
+
+class _RigCamera(_Device):
+    def __init__(self, name, serial, *sensors):
+        super().__init__(name, serial)
+        self.sensors = sensors
+
+    def query_sensors(self):
+        return list(self.sensors)
+
+    def first_depth_sensor(self):
+        return self.sensors[0]
+
+
+class _RigConfig:
+    def __init__(self):
+        self.serial = None
+        self.streams = []
+
+    def enable_device(self, serial):
+        self.serial = serial
+
+    def enable_stream(self, stream, width, height, fmt, fps):
+        self.streams.append((stream, fmt, (width, height), fps))
+
+
+class _RigPipeline:
+    def __init__(self, rig):
+        self.rig = rig
+        self.camera = None
+        self.frames = 0
+
+    def start(self, config):
+        camera = next(
+            camera for camera in self.rig.cameras
+            if camera.serial == config.serial
+        )
+        if camera.serial in self.rig.broken:
+            raise RuntimeError(f"{camera.name} would not start")
+        chosen = {}
+        for stream, fmt, size, fps in config.streams:
+            offered = [
+                profile
+                for sensor in camera.sensors
+                for profile in sensor.profiles
+                if (profile.stream, profile.fmt, profile.size, profile.rate)
+                == (stream, fmt, size, fps)
+            ]
+            if not offered:
+                raise RuntimeError("Couldn't resolve requests")
+            chosen[stream] = offered[0]
+        self.camera = camera
+        self.rig.events.append(("camera started", camera.serial))
+        return SimpleNamespace(
+            get_stream=chosen.__getitem__, get_device=lambda: camera
+        )
+
+    def wait_for_frames(self):
+        self.frames += 1
+        self.rig.on_frame(self.camera.serial, self.frames)
+        return _Frames()
+
+    def stop(self):
+        if self.camera is None:
+            raise RuntimeError("stop() cannot be called before start()")
+        self.rig.events.append(("camera stopped", self.camera.serial))
+
+
+class _Rig:
+    """pyrealsense2 with a D405 and an L515, down to their stream profiles.
+
+    Device selection, profile negotiation, presets and intrinsics run against
+    it unstubbed. A pipeline starts only with streams its camera offers: the
+    L515 has no 1280x720 depth, so the backends must fall back to 1024x768.
+    """
+
+    camera_info = SimpleNamespace(name="name", serial_number="serial")
+    stream = SimpleNamespace(color="color", depth="depth")
+    format = SimpleNamespace(bgr8="bgr8", rgb8="rgb8", z16="z16")
+    option = SimpleNamespace(visual_preset="visual_preset")
+
+    def __init__(self, broken=()):
+        self.cameras = [
+            _RigCamera(*D405, _RigSensor(
+                ("depth", "z16", 1280, 720),
+                ("color", "rgb8", 1280, 720),
+                ("color", "bgr8", 1280, 720),
+                depth_scale=DEPTH_SCALES[D405[1]],
+            )),
+            _RigCamera(
+                *L515,
+                _RigSensor(
+                    ("depth", "z16", 1024, 768),
+                    ("depth", "z16", 640, 480),
+                    depth_scale=DEPTH_SCALES[L515[1]],
+                ),
+                _RigSensor(
+                    ("color", "rgb8", 1280, 720),
+                    ("color", "bgr8", 1280, 720),
+                ),
+                _RigSensor(("accel", "motion_xyz32f", 0, 0, 200)),
+            ),
+        ]
+        self.broken = set(broken)
+        self.events = []
+        self.on_frame = lambda serial, count: None
+
+    def context(self):
+        return SimpleNamespace(query_devices=lambda: list(self.cameras))
+
+    @staticmethod
+    def config():
+        return _RigConfig()
+
+    def pipeline(self):
+        return _RigPipeline(self)
+
+    @staticmethod
+    def align(_stream):
+        return _Align()
+
+    @staticmethod
+    def video_stream_profile(profile):
+        return profile
+
+    def preset(self, serial):
+        camera = next(
+            camera for camera in self.cameras if camera.serial == serial
+        )
+        return camera.first_depth_sensor().preset
+
+
+def _intrinsics(directory, kind):
+    with open(directory / f"{kind}_intrinsics.txt") as intrinsics_file:
+        return json.load(intrinsics_file)
+
+
+def test_ros_scans_with_both_cameras_selected_as_on_the_rig(
+    tmp_path, monkeypatch
+):
+    """The gantry pass with nothing stubbed between it and the camera SDK."""
+    monkeypatch.delenv("PHENOFUSION_CAMERA_SERIAL", raising=False)
+    rig = _Rig()
+
+    class Gantry:
+        """Jogging reaches the endpoint at once; go-to steps 0.5 m a frame."""
+
+        goto_available = True
+
+        def __init__(self, on_position=None, **_kwargs):
+            self.on_position = on_position
+            self.position = 0.0
+            self.homing = False
+            rig.on_frame = self.step
+
+        def move(self, position):
+            self.position = position
+            self.on_position(position)
+
+        def step(self, _serial, _count):
+            if self.homing:
+                self.move(max(HOME_POSITION_M, self.position - 0.5))
+
+        def start(self):
+            self.move(HOME_POSITION_M)
+
+        @staticmethod
+        def wait_for_position(_timeout):
+            return True
+
+        @staticmethod
+        def is_running():
+            return True
+
+        def start_moving(self, _velocity):
+            self.move(2.0)
+
+        def stop_moving(self):
+            pass
+
+        def shutdown(self):
+            pass
+
+        def go_home(self):
+            self.move(HOME_POSITION_M)
+            return True
+
+        def goto(self, _position, _velocity):
+            self.homing = True
+            return True
+
+    monkeypatch.setattr("capture.ros_capture.ros_available", lambda: True)
+    monkeypatch.setattr("capture.ros_capture.import_realsense", lambda: rig)
+    monkeypatch.setattr("capture.ros_client.RosAgentClient", Gantry)
+
+    errors = []
+    out_dir = RosCapture().start(
+        CaptureParams(out_root=str(tmp_path), velocity_mps=2.0),
+        on_error=errors.append,
+    )
+    assert errors == []
+    forward = tmp_path / out_dir
+    back = forward / RETURN_DIR_NAME
+
+    assert rig.events == [
+        ("camera started", D405[1]),
+        ("camera stopped", D405[1]),
+        ("camera started", L515[1]),
+        ("camera stopped", L515[1]),
+    ]
+    assert rig.preset(D405[1]) == 4
+    assert rig.preset(L515[1]) == 5
+    assert _pngs(forward / "rgb") == ["0.png"]
+    assert _pngs(back / "rgb") == ["0.png", "1.png", "2.png", "3.png"]
+    assert _intrinsics(back, "kd")["width"] == 1024
+    assert _session(forward)["termination_reason"] == "endpoint_reached"
+
+    return_session = _session(back)
+    assert return_session["termination_reason"] == "home_reached"
+    assert return_session["camera"] == f"{L515[0]} ({L515[1]})"
+    assert return_session["depth_scale_m"] == DEPTH_SCALES[L515[1]]
+
+
+# ------------------------------------------------------- RealSense Only
+
+def _run_realsense_only(
+    tmp_path, monkeypatch, stop_at=None, broken=(), serial=None
+):
+    """Capture with RealSense Only while a D405 and an L515 are connected.
+
+    Each camera records two frames. stop_at=(serial, n) presses Stop on that
+    camera's nth frame, counting its four warm-up frames; broken lists
+    serials whose pipeline will not start; serial is a requested camera.
+    """
+    import capture.realsense_capture as realsense_capture
+
+    if serial is None:
+        monkeypatch.delenv("PHENOFUSION_CAMERA_SERIAL", raising=False)
+    else:
+        monkeypatch.setenv("PHENOFUSION_CAMERA_SERIAL", serial)
+    capture = RealSenseCapture()
+    rig = _Rig(broken=broken)
+    if stop_at is not None:
+        rig.on_frame = lambda camera, count: (
+            capture.stop() if (camera, count) == stop_at else None
+        )
+
+    write_batch = realsense_capture.write_frame_batch
+    write_session = RealSenseCapture._write_session
+
+    def log_batch(out_dir, pairs, **kwargs):
+        rig.events.append(("frames saved", out_dir, len(pairs)))
+        write_batch(out_dir, pairs, **kwargs)
+
+    def log_session(self):
+        rig.events.append(("session saved", self.out_dir))
+        write_session(self)
+
+    clock = (tick / 2 for tick in itertools.count())
+    monkeypatch.setattr(realsense_capture, "import_realsense", lambda: rig)
+    monkeypatch.setattr(realsense_capture, "write_frame_batch", log_batch)
+    monkeypatch.setattr(RealSenseCapture, "_write_session", log_session)
+    monkeypatch.setattr(
+        "capture.realsense_capture.time.time", lambda: next(clock)
+    )
+
+    progress = []
+    errors = []
+    out_dir = capture.start(
+        CaptureParams(out_root=str(tmp_path), duration_s=1.25),
+        on_progress=lambda current, total: progress.append((current, total)),
+        on_error=errors.append,
+    )
+    assert errors == []
+    return tmp_path / out_dir, rig, progress
+
+
+def test_realsense_only_records_the_d405_then_the_l515(tmp_path, monkeypatch):
+    forward, rig, progress = _run_realsense_only(tmp_path, monkeypatch)
+    back = forward / RETURN_DIR_NAME
+
+    # The D405 is stopped and saved, with its session, before the L515 starts.
+    assert rig.events == [
+        ("camera started", D405[1]),
+        ("camera stopped", D405[1]),
+        ("frames saved", str(forward), 2),
+        ("session saved", str(forward)),
+        ("camera started", L515[1]),
+        ("camera stopped", L515[1]),
+        ("frames saved", str(back), 2),
+        ("session saved", str(back)),
+        ("session saved", str(forward)),
+    ]
+    assert progress == [
+        (1, 37), (2, 37), (2, -1),
+        (0, 0), (1, 37), (2, 37), (2, -1),
+    ]
+    assert rig.preset(D405[1]) == 4
+    assert rig.preset(L515[1]) == 5
+
+    assert _pngs(forward / "rgb") == _pngs(back / "rgb") == ["0.png", "1.png"]
+    assert _pngs(back / "depth") == ["0.png", "1.png"]
+    assert _intrinsics(forward, "kd")["width"] == 1280
+    assert _intrinsics(back, "kd")["width"] == 1024
+
+    forward_session = _session(forward)
+    assert forward_session["backend"] == "realsense"
+    assert forward_session["n_frames"] == 2
+    assert forward_session["termination_reason"] == "duration_elapsed"
+
+    return_session = _session(back)
+    assert return_session["backend"] == "realsense"
+    assert return_session["n_frames"] == 2
+    assert return_session["camera"] == f"{L515[0]} ({L515[1]})"
+    assert return_session["error"] is None
+    assert return_session["termination_reason"] == "duration_elapsed"
+    assert return_session["depth_scale_m"] == DEPTH_SCALES[L515[1]]
+
+
+def test_stop_while_the_d405_records_ends_the_capture_before_the_l515(
+    tmp_path, monkeypatch
+):
+    forward, rig, _progress = _run_realsense_only(
+        tmp_path, monkeypatch, stop_at=(D405[1], 5)
+    )
+
+    assert ("camera started", L515[1]) not in rig.events
+    assert not (forward / RETURN_DIR_NAME).exists()
+    assert _pngs(forward / "rgb") == ["0.png"]
+    assert _session(forward)["termination_reason"] == "user_stop"
+
+
+def test_stop_while_the_l515_records_saves_what_it_recorded(
+    tmp_path, monkeypatch
+):
+    forward, _rig, _progress = _run_realsense_only(
+        tmp_path, monkeypatch, stop_at=(L515[1], 5)
+    )
+    back = forward / RETURN_DIR_NAME
+
+    assert _pngs(forward / "rgb") == ["0.png", "1.png"]
+    assert _pngs(back / "rgb") == ["0.png"]
+    assert _session(forward)["termination_reason"] == "duration_elapsed"
+    return_session = _session(back)
+    assert return_session["termination_reason"] == "user_stop"
+    assert return_session["n_frames"] == 1
+
+
+def test_an_l515_that_will_not_start_keeps_the_d405_recording(
+    tmp_path, monkeypatch
+):
+    forward, rig, progress = _run_realsense_only(
+        tmp_path, monkeypatch, broken={L515[1]}
+    )
+    back = forward / RETURN_DIR_NAME
+
+    assert ("camera started", L515[1]) not in rig.events
+    assert _pngs(forward / "rgb") == ["0.png", "1.png"]
+    assert progress[-1] == (0, 0)
+    return_session = _session(back)
+    assert return_session["termination_reason"] == "failed"
+    assert "would not start" in return_session["error"]
+    assert return_session["n_frames"] == 0
+    assert _pngs(back / "rgb") == []
+
+
+def test_a_requested_serial_records_only_that_camera(tmp_path, monkeypatch):
+    forward, rig, _progress = _run_realsense_only(
+        tmp_path, monkeypatch, serial=L515[1]
+    )
+
+    started = [event for event in rig.events if event[0] == "camera started"]
+    assert started == [("camera started", L515[1])]
+    assert not (forward / RETURN_DIR_NAME).exists()
+    assert _pngs(forward / "rgb") == ["0.png", "1.png"]
 
 
 # ---------------------------------------------------------------- panel

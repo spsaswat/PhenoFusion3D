@@ -34,34 +34,20 @@ from __future__ import annotations
 import math
 import os
 import time
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Callable
 
 from capture.base import (
     CaptureBackend,
     CaptureParams,
-    CaptureSession,
     MILLIMETRES_PER_METRE,
+    RETURN_DIR_NAME,
+    ReturnPassSession,
     capture_buffer_limit_bytes,
     ensure_capture_capacity,
 )
 from capture.realsense_runtime import import_realsense
 from capture.ros_runtime import ros_is_installed
-
-
-FORWARD_CAMERA_MODEL = "D405"
-RETURN_CAMERA_MODEL = "L515"
-RETURN_DIR_NAME = "l515"
-
-
-@dataclass
-class ReturnPassSession(CaptureSession):
-    """session.json of the return pass, naming its camera and any failure."""
-    camera: str = ""
-    error: Optional[str] = None
-    # Metres per raw depth unit (the L515 default is 0.25 mm, not 1 mm).
-    depth_scale_m: Optional[float] = None
 
 
 def ros_available() -> bool:
@@ -122,7 +108,7 @@ class RosCapture(CaptureBackend):
         # camera-only backend. Serial selection remains optional and may be
         # supplied through PHENOFUSION_CAMERA_SERIAL.
         camera = RealSenseCapture(serial_number=self.serial_number)
-        return_camera = self._pair_return_camera(rs, camera)
+        return_camera = camera._pair_return_camera(rs)
         camera.session = self.session
         camera.out_dir = self.out_dir
         device = camera._select_device(rs)
@@ -372,41 +358,6 @@ class RosCapture(CaptureBackend):
                 self.session.termination_reason = "endpoint_reached_home_failed"
 
     # ------------------------------------------------------- return pass
-    def _pair_return_camera(self, rs, camera):
-        """Return the L515 for the trip home, or None to keep one camera.
-
-        Pairing needs no requested serial and exactly one connected RGB-D
-        D405 and L515; ``camera`` is then pinned to the D405. Anything else
-        leaves device selection to ``camera`` exactly as before.
-        """
-        if camera.serial_number:
-            return None
-
-        from capture.realsense_capture import RealSenseCapture
-
-        serials = {FORWARD_CAMERA_MODEL: [], RETURN_CAMERA_MODEL: []}
-        try:
-            for device in rs.context().query_devices():
-                if not (
-                    camera._has_stream(device, rs, rs.stream.color)
-                    and camera._has_stream(device, rs, rs.stream.depth)
-                ):
-                    continue
-                name = camera._device_name(device, rs).upper()
-                for model, found in serials.items():
-                    if model in name:
-                        found.append(camera._device_serial(device, rs))
-        except Exception:
-            # _select_device reports enumeration failures itself.
-            return None
-
-        forward = serials[FORWARD_CAMERA_MODEL]
-        back = serials[RETURN_CAMERA_MODEL]
-        if len(forward) != 1 or len(back) != 1 or not forward[0] or not back[0]:
-            return None
-        camera.serial_number = forward[0]
-        return RealSenseCapture(serial_number=back[0])
-
     def _return_with_camera(
         self,
         rs,

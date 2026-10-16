@@ -16,6 +16,13 @@ after the camera has stopped. The completed capture is saved to:
     <out_root>/<timestamp>/kd_intrinsics.txt
     <out_root>/<timestamp>/session.json
 
+When exactly one D405 and one L515 are connected (and no serial is
+requested), both record, one after the other, in the order the ROS backend
+scans with them: the D405 first, saved as above, then the L515 for the same
+duration, saved as its own dataset in the RETURN_DIR_NAME subfolder. Stop
+ends the whole capture, so the L515 records only after a D405 recording that
+was not stopped.
+
 Imports of pyrealsense2 are deferred to _run() so this module can be
 imported on machines where the SDK isn't installed (e.g. CI).
 """
@@ -26,6 +33,7 @@ import json
 import math
 import os
 import time
+from datetime import datetime
 from typing import Callable
 
 import cv2
@@ -34,10 +42,18 @@ import numpy as np
 from capture.base import (
     CaptureBackend,
     CaptureParams,
+    RETURN_DIR_NAME,
+    ReturnPassSession,
     capture_buffer_limit_bytes,
     ensure_capture_capacity,
 )
 from capture.realsense_runtime import import_realsense
+
+
+# With one of each connected, the D405 records first and the L515 second:
+# out to the endpoint and back home on the gantry.
+FORWARD_CAMERA_MODEL = "D405"
+RETURN_CAMERA_MODEL = "L515"
 
 
 def write_frame_pair(
@@ -194,6 +210,15 @@ class RealSenseCapture(CaptureBackend):
             else os.environ.get("PHENOFUSION_CAMERA_SERIAL")
         )
         self.serial_number = str(configured).strip() if configured else None
+        # The L515 that records after this D405, when both are connected.
+        self._return_camera = None
+
+    def stop(self) -> None:
+        """Request shutdown, including the L515 recording after the D405."""
+        super().stop()
+        return_camera = self._return_camera
+        if return_camera is not None:
+            return_camera.stop()
 
     def _run(
         self,
@@ -202,7 +227,27 @@ class RealSenseCapture(CaptureBackend):
     ) -> int:
         rs = import_realsense()
 
-        device = self._select_device(rs)
+        self._return_camera = self._pair_return_camera(rs)
+        frame_count = self._record(
+            rs, self._select_device(rs), params, on_progress
+        )
+        if self._return_camera is not None and not self._stop_flag:
+            # Persist the D405 session now rather than only after the L515
+            # has recorded, so a crash during the L515 cannot lose it.
+            if self.session is not None:
+                self.session.n_frames = frame_count
+            self._write_session()
+            self._record_return_camera(rs, params, on_progress)
+        return frame_count
+
+    def _record(
+        self,
+        rs,
+        device,
+        params: CaptureParams,
+        on_progress: Callable[[int, int], None],
+    ) -> int:
+        """Record ``device`` into ``out_dir``; save the batch once it stops."""
         pipeline = rs.pipeline()
         profile, color_format = self._start_pipeline(pipeline, device, rs, params)
         frame_buffer = None
@@ -289,7 +334,95 @@ class RealSenseCapture(CaptureBackend):
             raise
         return frame_count
 
+    def _record_return_camera(
+        self,
+        rs,
+        params: CaptureParams,
+        on_progress: Callable[[int, int], None],
+    ) -> None:
+        """Record the paired L515 after the D405, into RETURN_DIR_NAME.
+
+        The D405 recording is already on disk, so a failure here is recorded
+        in the L515's own session.json rather than failing the capture.
+        """
+        camera = self._return_camera
+        out_dir = os.path.join(self.out_dir, RETURN_DIR_NAME)
+        session = ReturnPassSession(
+            backend=self.name,
+            started_at=datetime.now().isoformat(timespec="seconds"),
+            width=params.width,
+            height=params.height,
+            fps=params.fps,
+            velocity_mps=params.velocity_mps,
+            gantry_axis=params.gantry_axis,
+            end_position_m=params.end_position_m,
+        )
+        camera.out_dir = out_dir
+        camera.session = session
+        on_progress(0, 0)  # recording again: the D405 batch has been saved
+
+        try:
+            for path in (
+                out_dir,
+                os.path.join(out_dir, "rgb"),
+                os.path.join(out_dir, "depth"),
+            ):
+                os.mkdir(path)
+            device = camera._select_device(rs)
+            session.camera = camera._device_label(device, rs)
+            try:
+                session.depth_scale_m = float(
+                    device.first_depth_sensor().get_depth_scale()
+                )
+            except Exception:
+                pass
+            session.n_frames = camera._record(rs, device, params, on_progress)
+        except Exception as exc:
+            session.termination_reason = "failed"
+            session.error = str(exc) or type(exc).__name__
+
+        try:
+            camera._write_session()
+        except Exception as exc:
+            print(
+                f"[realsense_capture] WARNING: could not write the L515 "
+                f"session in {out_dir!r}: {exc}"
+            )
+
     # ---------------------------------------------------------------- helpers
+    def _pair_return_camera(self, rs):
+        """Return the L515 to record after this D405, or None for one camera.
+
+        Pairing needs no requested serial and exactly one connected RGB-D
+        D405 and L515; this capture is then pinned to the D405. Anything else
+        leaves device selection to ``_select_device`` exactly as before.
+        """
+        if self.serial_number:
+            return None
+
+        serials = {FORWARD_CAMERA_MODEL: [], RETURN_CAMERA_MODEL: []}
+        try:
+            for device in rs.context().query_devices():
+                if not (
+                    self._has_stream(device, rs, rs.stream.color)
+                    and self._has_stream(device, rs, rs.stream.depth)
+                ):
+                    continue
+                name = self._device_name(device, rs).upper()
+                for model, found in serials.items():
+                    if model in name:
+                        found.append(self._device_serial(device, rs))
+        except Exception:
+            # _select_device reports enumeration failures itself.
+            return None
+
+        forward = serials[FORWARD_CAMERA_MODEL]
+        back = serials[RETURN_CAMERA_MODEL]
+        if len(forward) != 1 or len(back) != 1 or not forward[0] or not back[0]:
+            return None
+        self.serial_number = forward[0]
+        return RealSenseCapture(serial_number=back[0])
+
     def _select_device(self, rs):
         """Select one connected RGB-D camera without assuming its serial."""
         ctx = rs.context()
@@ -339,9 +472,10 @@ class RealSenseCapture(CaptureBackend):
             f"  - {self._device_label(device, rs)}" for device in rgbd_devices
         )
         raise RuntimeError(
-            "Multiple RGB-D RealSense cameras are connected. Set "
-            "PHENOFUSION_CAMERA_SERIAL to the serial of the camera to use:\n"
-            f"{choices}"
+            "Multiple RGB-D RealSense cameras are connected. Two cameras "
+            "record together only as exactly one D405 and one L515; "
+            "otherwise set PHENOFUSION_CAMERA_SERIAL to the serial of the "
+            f"camera to use:\n{choices}"
         )
 
     def _start_pipeline(self, pipeline, device, rs, params: CaptureParams):

@@ -78,6 +78,19 @@ class CaptureSession:
     home_returned: Optional[bool] = None
 
 
+# Subfolder of a capture holding the L515 recording that follows the D405.
+RETURN_DIR_NAME = "l515"
+
+
+@dataclass
+class ReturnPassSession(CaptureSession):
+    """session.json of the L515 recording, naming its camera and any failure."""
+    camera: str = ""
+    error: Optional[str] = None
+    # Metres per raw depth unit (the L515 default is 0.25 mm, not 1 mm).
+    depth_scale_m: Optional[float] = None
+
+
 class CaptureBackend(abc.ABC):
     """
     Abstract capture backend.
