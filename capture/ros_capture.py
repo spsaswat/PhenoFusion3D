@@ -31,7 +31,6 @@ subfolder of the capture.
 
 from __future__ import annotations
 
-import math
 import os
 import time
 from datetime import datetime
@@ -43,8 +42,7 @@ from capture.base import (
     MILLIMETRES_PER_METRE,
     RETURN_DIR_NAME,
     ReturnPassSession,
-    capture_buffer_limit_bytes,
-    ensure_capture_capacity,
+    ensure_free_storage,
 )
 from capture.realsense_runtime import import_realsense
 from capture.ros_runtime import ros_is_installed
@@ -87,11 +85,12 @@ class RosCapture(CaptureBackend):
                 "ROS is not installed or sourced on this machine. Source the "
                 "lab ROS distribution and gantry workspace before launching."
             )
+        ensure_free_storage(self.out_dir)
 
         # Camera packages stay in the GUI venv. ROS runs under the lab's
         # existing compatible interpreter through RosAgentClient.
         from capture.ros_client import HOME_POSITION_M, RosAgentClient
-        from capture.realsense_capture import CaptureFrameBuffer, RealSenseCapture
+        from capture.realsense_capture import RealSenseCapture
 
         rs = import_realsense()
         try:
@@ -118,9 +117,8 @@ class RosCapture(CaptureBackend):
         )
         align = rs.align(rs.stream.color)
         gantry = None
-        frame_buffer = None
+        frame_pairs = []
         endpoint_reached = False
-        buffer_limit_reached = False
         motion_started = False
         home_returned = None
 
@@ -129,20 +127,6 @@ class RosCapture(CaptureBackend):
                 camera._apply_visual_preset(profile, rs)
                 camera._update_session_from_profile(profile, rs)
                 intrinsics = camera._read_intrinsics(profile, rs)
-
-                actual_width = (
-                    self.session.width if self.session is not None else params.width
-                )
-                actual_height = (
-                    self.session.height if self.session is not None else params.height
-                )
-                actual_fps = (
-                    self.session.fps if self.session is not None else params.fps
-                )
-                buffer_limit = capture_buffer_limit_bytes(
-                    self.out_dir, params.max_buffer_gib
-                )
-                frame_buffer = CaptureFrameBuffer(buffer_limit)
 
                 # Warm-up (matches stakeholder)
                 for _ in range(camera.WARMUP_FRAMES):
@@ -176,21 +160,6 @@ class RosCapture(CaptureBackend):
                         "endpoint. Return it home before starting another pass."
                     )
 
-                travel_s = (
-                    params.end_position_m - self._current_position
-                ) / params.velocity_mps
-                estimated_frames = math.ceil(travel_s * actual_fps)
-                buffer_limit = ensure_capture_capacity(
-                    self.out_dir,
-                    params,
-                    estimated_frames,
-                    actual_width,
-                    actual_height,
-                )
-                frame_buffer.limit_bytes = min(
-                    frame_buffer.limit_bytes, buffer_limit
-                )
-
                 # ------------------ capture loop ---------------------------
                 i = 0
                 last_progress_position = self._current_position
@@ -221,18 +190,14 @@ class RosCapture(CaptureBackend):
                             pipeline, align, color_format, rs
                         )
                         if frame_pair is not None:
-                            if not frame_buffer.append(frame_pair):
-                                buffer_limit_reached = True
-                                if self.session is not None:
-                                    self.session.termination_reason = "buffer_limit"
-                                break
+                            frame_pairs.append(frame_pair)
                             self._record_position(i, self._current_position)
                             i += 1
                             on_progress(i, 0)  # unknown total -> 0
                         if self._current_position >= params.end_position_m:
                             endpoint_reached = True
                             break
-                    if endpoint_reached or buffer_limit_reached:
+                    if endpoint_reached:
                         break
 
                 if not self._stop_flag and not gantry.is_running():
@@ -260,7 +225,6 @@ class RosCapture(CaptureBackend):
                 write_frame_batch,
             )
 
-            frame_pairs = frame_buffer.frames
             frame_count = len(frame_pairs)
             on_progress(frame_count, -1)  # acquisition done; saving batch
             write_frame_batch(
@@ -374,7 +338,6 @@ class RosCapture(CaptureBackend):
         Returns whether the gantry confirmed its arrival home.
         """
         from capture.realsense_capture import (
-            CaptureFrameBuffer,
             remove_frame_batch,
             write_frame_batch,
         )
@@ -395,7 +358,7 @@ class RosCapture(CaptureBackend):
         on_progress(0, 0)  # acquiring again: the forward save has finished
 
         pipeline = None
-        frame_buffer = None
+        frame_pairs = []
         intrinsics = None
         home_returned = False
         try:
@@ -410,6 +373,7 @@ class RosCapture(CaptureBackend):
                     "The return pass needs go-to from position_controller_ros. "
                     "Source the gantry catkin workspace before launching."
                 )
+            ensure_free_storage(out_dir)
 
             device = camera._select_device(rs)
             session.camera = camera._device_label(device, rs)
@@ -427,9 +391,6 @@ class RosCapture(CaptureBackend):
             except Exception:
                 pass
             intrinsics = camera._read_intrinsics(profile, rs)
-            frame_buffer = CaptureFrameBuffer(
-                capture_buffer_limit_bytes(out_dir, params.max_buffer_gib)
-            )
             for _ in range(camera.WARMUP_FRAMES):
                 pipeline.wait_for_frames()
 
@@ -470,9 +431,7 @@ class RosCapture(CaptureBackend):
                 frame_pair = self._capture_one(pipeline, align, color_format, rs)
                 if frame_pair is None:
                     continue
-                if not frame_buffer.append(frame_pair):
-                    session.termination_reason = "buffer_limit"
-                    break
+                frame_pairs.append(frame_pair)
                 camera._record_position(i, self._current_position)
                 i += 1
                 on_progress(i, 0)  # unknown total -> 0
@@ -492,8 +451,8 @@ class RosCapture(CaptureBackend):
             except Exception:
                 pass
         elif not home_returned:
-            # Camera failure, stall or full buffer: finish the trip with the
-            # proven go-home, as the forward pass does after a failure.
+            # Camera failure or stall: finish the trip with the proven
+            # go-home, as the forward pass does after a failure.
             home_returned = self._return_home_safely(gantry, home_position_m)
 
         if session.error is not None:
@@ -505,7 +464,6 @@ class RosCapture(CaptureBackend):
         session.home_returned = home_returned
 
         # Back at the starting place: save the return pass.
-        frame_pairs = frame_buffer.frames if frame_buffer is not None else []
         frame_count = len(frame_pairs)
         if frame_count:
             on_progress(frame_count, -1)  # acquisition done; saving batch

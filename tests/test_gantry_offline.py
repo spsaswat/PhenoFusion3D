@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import math
 import sys
 import time
 
@@ -17,12 +16,7 @@ except Exception:  # pragma: no cover - dependency gate
 from capture.gantry import GantryController, _ros_importable
 from capture.ros_agent import HOME_VELOCITY_MPS as AGENT_HOME_VELOCITY_MPS
 from capture.ros_client import HOME_VELOCITY_MPS as CLIENT_HOME_VELOCITY_MPS
-from capture.base import (
-    GIB,
-    CaptureParams,
-    MILLIMETRES_PER_METRE,
-    frame_pair_bytes,
-)
+from capture.base import CaptureParams, MILLIMETRES_PER_METRE
 from capture.realsense_capture import RealSenseCapture
 from app.capture_worker import CaptureWorker
 from app.panels.capture_panel import CapturePanel
@@ -82,7 +76,6 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
     assert (defaults.width, defaults.height, defaults.fps) == (1280, 720, 30)
     assert defaults.velocity_mps == 0.038
     assert defaults.end_position_m == 1.65
-    assert defaults.max_buffer_gib == 6.0
     assert GantryController.HOME_POSITION_M == 0.005
     assert GantryController.HOME_VELOCITY_MPS == 0.15
     assert CLIENT_HOME_VELOCITY_MPS == 0.15
@@ -123,14 +116,6 @@ def test_initial_capture_values_match_the_required_lab_settings(qapp):
 
     gantry_panel.update_position(GantryController.HOME_POSITION_M)
     assert gantry_panel.pos_lbl.text() == '+5.0 mm'
-
-    estimated_frames = math.ceil(
-        defaults.end_position_m / defaults.velocity_mps * defaults.fps
-    )
-    required_bytes = frame_pair_bytes(
-        defaults.width, defaults.height
-    ) * estimated_frames
-    assert required_bytes <= defaults.max_buffer_gib * GIB
 
 
 @pytest.mark.parametrize("position_m", [0.001, 0.0019])

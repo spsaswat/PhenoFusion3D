@@ -5,9 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from capture.base import CaptureBackend, CaptureParams, ensure_capture_capacity
+from capture.base import CaptureBackend, CaptureParams
 from capture.realsense_capture import (
-    CaptureFrameBuffer,
     RealSenseCapture,
     capture_frame_pair,
     write_frame_batch,
@@ -258,25 +257,6 @@ def test_output_directories_do_not_collide_within_the_same_second(
 
     assert first != second
     assert second.endswith("-1")
-
-
-def test_capture_capacity_rejects_an_unsafe_memory_request(tmp_path):
-    out_dir = CaptureBackend._make_out_dir(str(tmp_path))
-    params = CaptureParams(max_buffer_gib=0.000001)
-
-    with pytest.raises(RuntimeError, match="safe RAM/disk limit"):
-        ensure_capture_capacity(out_dir, params, 2, 100, 100)
-
-
-def test_frame_buffer_stops_before_exceeding_its_limit():
-    color = np.ones((2, 2, 3), dtype=np.uint8)
-    depth = np.ones((2, 2), dtype=np.uint16)
-    pair_bytes = color.nbytes + depth.nbytes
-    buffer = CaptureFrameBuffer(pair_bytes)
-
-    assert buffer.append((color, depth)) is True
-    assert buffer.append((color.copy(), depth.copy())) is False
-    assert len(buffer) == 1
 
 
 class _ImageWriter:

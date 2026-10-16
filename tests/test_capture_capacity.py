@@ -1,4 +1,4 @@
-"""Capacity preconditions for a capture, isolated from any camera import."""
+"""The one capacity precondition for a capture: free output-disk storage."""
 
 import os
 import sys
@@ -7,12 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from capture import base  # noqa: E402
-from capture.base import (  # noqa: E402
-    GIB,
-    CaptureParams,
-    ensure_capture_capacity,
-    frame_pair_bytes,
-)
+from capture.base import GIB, ensure_free_storage  # noqa: E402
 
 
 class _DiskUsage:
@@ -22,71 +17,32 @@ class _DiskUsage:
         self.used = 0
 
 
-# ---------------------------------------------------------------- memory read
-
-def test_available_memory_prefers_memavailable_over_memfree(
-    monkeypatch, tmp_path
-):
-    """MemFree excludes the reclaimable page cache; MemAvailable does not.
-
-    Reading MemFree made a capture that fits comfortably look impossible on any
-    machine that had been running long enough to fill its page cache.
-    """
-    meminfo = tmp_path / 'meminfo'
-    meminfo.write_text(
-        'MemTotal:       16384000 kB\n'
-        'MemFree:          400000 kB\n'
-        'MemAvailable:   12000000 kB\n'
-        'Cached:         11000000 kB\n'
-    )
-    monkeypatch.setattr(base, 'MEMINFO_PATH', str(meminfo))
-
-    assert base._meminfo_bytes('MemAvailable') == 12000000 * 1024
-    assert base._meminfo_bytes('MemFree') == 400000 * 1024
-    assert base._available_memory_bytes() == 12000000 * 1024
-
-
-def test_available_memory_falls_back_when_meminfo_is_absent(
-    monkeypatch, tmp_path
-):
-    monkeypatch.setattr(base, 'MEMINFO_PATH', str(tmp_path / 'missing'))
-    assert base._meminfo_bytes('MemAvailable') is None
-    # No /proc/meminfo: either the sysconf fallback answers or nothing does.
-    fallback = base._available_memory_bytes()
-    assert fallback is None or fallback > 0
-
-
-def test_unparsable_meminfo_field_does_not_raise(monkeypatch, tmp_path):
-    meminfo = tmp_path / 'meminfo'
-    meminfo.write_text('MemAvailable:\nMemFree: not-a-number kB\n')
-    monkeypatch.setattr(base, 'MEMINFO_PATH', str(meminfo))
-    assert base._meminfo_bytes('MemAvailable') is None
-    assert base._meminfo_bytes('MemFree') is None
-
-
-def test_a_full_gantry_pass_fits_on_a_machine_with_a_warm_page_cache(
-    monkeypatch, tmp_path
-):
-    """The reported regression: 16 GiB host, page cache full, capture refused."""
-    meminfo = tmp_path / 'meminfo'
-    meminfo.write_text(
-        'MemTotal:       16384000 kB\n'
-        'MemFree:          400000 kB\n'      # 0.38 GiB -- what was being read
-        'MemAvailable:   13000000 kB\n'      # 12.4 GiB -- what is really usable
-    )
-    monkeypatch.setattr(base, 'MEMINFO_PATH', str(meminfo))
+def test_a_capture_is_refused_with_less_than_1_gb_free(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        base.shutil, 'disk_usage', lambda _path: _DiskUsage(40 * GIB)
+        base.shutil, 'disk_usage', lambda _path: _DiskUsage(GIB // 2)
     )
 
-    params = CaptureParams()
-    # 0.005 m to 1.65 m at 38 mm/s, 30 fps.
-    frames = 1299
-    required = frame_pair_bytes(params.width, params.height) * frames
-    assert required / GIB == pytest.approx(5.57, abs=0.01)
+    with pytest.raises(RuntimeError, match=r'Only 0\.50 GB .*at least 1 GB'):
+        ensure_free_storage(str(tmp_path))
 
-    # Must not raise.
-    limit = ensure_capture_capacity(
-        str(tmp_path), params, frames, params.width, params.height
+
+@pytest.mark.parametrize('free', [0, GIB - 1])
+def test_anything_below_1_gb_is_refused(monkeypatch, tmp_path, free):
+    monkeypatch.setattr(
+        base.shutil, 'disk_usage', lambda _path: _DiskUsage(free)
     )
-    assert limit >= required
+
+    with pytest.raises(RuntimeError, match='at least 1 GB'):
+        ensure_free_storage(str(tmp_path))
+
+
+# From the 1 GB minimum up to just below 5 GB, and well beyond.
+@pytest.mark.parametrize(
+    'free', [GIB, 2 * GIB, 3 * GIB, 4 * GIB, 5 * GIB - 1, 40 * GIB]
+)
+def test_a_capture_starts_with_1_gb_or_more_free(monkeypatch, tmp_path, free):
+    monkeypatch.setattr(
+        base.shutil, 'disk_usage', lambda _path: _DiskUsage(free)
+    )
+
+    ensure_free_storage(str(tmp_path))  # must not raise

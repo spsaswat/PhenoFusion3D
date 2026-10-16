@@ -255,11 +255,6 @@ class CapturePanel(QWidget):
         try:
             with open(os.path.join(out_dir, 'session.json')) as session_file:
                 session = json.load(session_file)
-            if session.get('termination_reason') == 'buffer_limit':
-                message = (
-                    f'Stopped at the safe RAM/disk limit. Saved {n_frames} '
-                    f'frames -> {out_dir}'
-                )
             if session.get('home_returned') is False:
                 message += ' WARNING: the gantry did not confirm its return home.'
         except (OSError, ValueError, TypeError):
@@ -285,11 +280,6 @@ class CapturePanel(QWidget):
             return (
                 f' WARNING: L515 return pass failed ({error}); '
                 f'saved {n_frames} frames -> {return_dir}'
-            )
-        if reason == 'buffer_limit':
-            return (
-                f' L515 return pass stopped at the safe RAM/disk limit. '
-                f'Saved {n_frames} frames -> {return_dir}'
             )
         if reason == 'user_stop':
             return (

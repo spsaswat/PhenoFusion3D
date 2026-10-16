@@ -30,7 +30,6 @@ imported on machines where the SDK isn't installed (e.g. CI).
 from __future__ import annotations
 
 import json
-import math
 import os
 import time
 from datetime import datetime
@@ -44,8 +43,7 @@ from capture.base import (
     CaptureParams,
     RETURN_DIR_NAME,
     ReturnPassSession,
-    capture_buffer_limit_bytes,
-    ensure_capture_capacity,
+    ensure_free_storage,
 )
 from capture.realsense_runtime import import_realsense
 
@@ -177,27 +175,6 @@ def remove_frame_batch(out_dir: str, indices) -> None:
                 pass
 
 
-class CaptureFrameBuffer:
-    """Bounded owner of copied RGB/depth arrays awaiting final persistence."""
-
-    def __init__(self, limit_bytes: int):
-        self.limit_bytes = max(1, int(limit_bytes))
-        self.used_bytes = 0
-        self.frames = []
-
-    def append(self, frame_pair) -> bool:
-        color_img, depth_img = frame_pair
-        pair_bytes = int(color_img.nbytes) + int(depth_img.nbytes)
-        if self.used_bytes + pair_bytes > self.limit_bytes:
-            return False
-        self.frames.append(frame_pair)
-        self.used_bytes += pair_bytes
-        return True
-
-    def __len__(self) -> int:
-        return len(self.frames)
-
-
 class RealSenseCapture(CaptureBackend):
     name = "realsense"
     WARMUP_FRAMES = 4
@@ -248,9 +225,10 @@ class RealSenseCapture(CaptureBackend):
         on_progress: Callable[[int, int], None],
     ) -> int:
         """Record ``device`` into ``out_dir``; save the batch once it stops."""
+        ensure_free_storage(self.out_dir)
         pipeline = rs.pipeline()
         profile, color_format = self._start_pipeline(pipeline, device, rs, params)
-        frame_buffer = None
+        frame_pairs = []
 
         try:
             self._apply_visual_preset(profile, rs)
@@ -260,30 +238,7 @@ class RealSenseCapture(CaptureBackend):
             self._update_session_from_profile(profile, rs)
             intrinsics = self._read_intrinsics(profile, rs)
 
-            actual_width = self.session.width if self.session is not None else params.width
-            actual_height = self.session.height if self.session is not None else params.height
             actual_fps = self.session.fps if self.session is not None else params.fps
-            if params.duration_s > 0:
-                estimated_frames = math.ceil(params.duration_s * actual_fps)
-                buffer_limit = ensure_capture_capacity(
-                    self.out_dir,
-                    params,
-                    estimated_frames,
-                    actual_width,
-                    actual_height,
-                )
-            else:
-                buffer_limit = capture_buffer_limit_bytes(
-                    self.out_dir, params.max_buffer_gib
-                )
-                ensure_capture_capacity(
-                    self.out_dir,
-                    params,
-                    1,
-                    actual_width,
-                    actual_height,
-                )
-            frame_buffer = CaptureFrameBuffer(buffer_limit)
 
             # Align depth to color (same as stakeholder)
             align = rs.align(rs.stream.color)
@@ -305,12 +260,8 @@ class RealSenseCapture(CaptureBackend):
                 if frame_pair is None:
                     continue
 
-                if not frame_buffer.append(frame_pair):
-                    if self.session is not None:
-                        self.session.termination_reason = "buffer_limit"
-                    break
-
-                n_captured = len(frame_buffer)
+                frame_pairs.append(frame_pair)
+                n_captured = len(frame_pairs)
                 on_progress(n_captured, total_estimate or n_captured)
 
             if self.session is not None and self.session.termination_reason == "completed":
@@ -323,7 +274,6 @@ class RealSenseCapture(CaptureBackend):
             except Exception:
                 pass
 
-        frame_pairs = frame_buffer.frames
         frame_count = len(frame_pairs)
         on_progress(frame_count, -1)  # acquisition done; saving batch
         write_frame_batch(self.out_dir, frame_pairs)

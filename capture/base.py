@@ -14,7 +14,6 @@ reconstruction pipeline don't care which backend produced the data.
 from __future__ import annotations
 
 import abc
-import ctypes
 import json
 import os
 import shutil
@@ -26,11 +25,9 @@ from typing import Callable, Optional
 GIB = 1024 ** 3
 MILLIMETRES_PER_METRE = 1000.0
 DEFAULT_END_POSITION_M = 1.65
-DEFAULT_MAX_BUFFER_GIB = 6.0
-MEMORY_HEADROOM_FRACTION = 0.5
-DISK_RESERVE_BYTES = 512 * 1024 ** 2
-PNG_WORST_CASE_FACTOR = 1.1
-MEMINFO_PATH = "/proc/meminfo"
+# A capture refuses to start with less free space than this on its output
+# disk: 1 GB, counted in 1024**3-byte units as `df -h` does.
+MIN_FREE_STORAGE_BYTES = GIB
 
 
 @dataclass
@@ -51,10 +48,6 @@ class CaptureParams:
 
     # RealSense-only mode: capture for N seconds (-1 = manual stop)
     duration_s: float = 10.0
-
-    # In-memory RGB/depth buffering ceiling. The effective limit can be lower
-    # when the machine has less free RAM or output disk space.
-    max_buffer_gib: float = DEFAULT_MAX_BUFFER_GIB
 
     # Naming -- always 0.png, 1.png, ... (matches load_image_pairs default)
     naming: str = "numeric"
@@ -216,108 +209,12 @@ class CaptureBackend(abc.ABC):
             self._position_callback(float(position_m))
 
 
-def _meminfo_bytes(field: str) -> Optional[int]:
-    """Read one ``/proc/meminfo`` field as bytes, or None if unavailable."""
-    try:
-        with open(MEMINFO_PATH, "r") as meminfo:
-            for line in meminfo:
-                name, separator, rest = line.partition(":")
-                if not separator or name.strip() != field:
-                    continue
-                parts = rest.split()
-                if not parts:
-                    return None
-                value = int(parts[0])
-                if len(parts) > 1 and parts[1].lower() == "kb":
-                    value *= 1024
-                return value
-    except (OSError, ValueError):
-        return None
-    return None
-
-
-def _available_memory_bytes() -> Optional[int]:
-    """Best-effort available-memory query using only the standard library."""
-    if os.name == "nt":
-        class MemoryStatus(ctypes.Structure):
-            _fields_ = [
-                ("length", ctypes.c_ulong),
-                ("memory_load", ctypes.c_ulong),
-                ("total_physical", ctypes.c_ulonglong),
-                ("available_physical", ctypes.c_ulonglong),
-                ("total_page_file", ctypes.c_ulonglong),
-                ("available_page_file", ctypes.c_ulonglong),
-                ("total_virtual", ctypes.c_ulonglong),
-                ("available_virtual", ctypes.c_ulonglong),
-                ("available_extended_virtual", ctypes.c_ulonglong),
-            ]
-
-        status = MemoryStatus()
-        status.length = ctypes.sizeof(MemoryStatus)
-        try:
-            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-                return int(status.available_physical)
-        except Exception:
-            return None
-
-    # MemAvailable is the kernel's own estimate of what a new allocation can
-    # obtain without swapping. SC_AVPHYS_PAGES reports MemFree instead, which
-    # counts the reclaimable page cache as unavailable -- on a machine that has
-    # been running for a while that is a few hundred MiB no matter how much RAM
-    # is installed, so a capture that fits comfortably was being rejected.
-    available = _meminfo_bytes("MemAvailable")
-    if available is not None:
-        return available
-
-    try:
-        pages = os.sysconf("SC_AVPHYS_PAGES")
-        page_size = os.sysconf("SC_PAGE_SIZE")
-        return int(pages * page_size)
-    except (AttributeError, OSError, TypeError, ValueError):
-        return None
-
-
-def frame_pair_bytes(width: int, height: int) -> int:
-    """Raw BGR8 plus z16 bytes for one aligned RGB/depth pair."""
-    return int(width) * int(height) * 5
-
-
-def capture_buffer_limit_bytes(out_dir: str, max_buffer_gib: float) -> int:
-    """Return a conservative RAM/disk-backed raw-frame buffer ceiling."""
-    if max_buffer_gib <= 0:
-        raise RuntimeError("Capture buffer limit must be greater than zero.")
-    configured = max(1, int(float(max_buffer_gib) * GIB))
-    limits = [configured]
-
-    available_memory = _available_memory_bytes()
-    if available_memory is not None:
-        limits.append(max(1, int(available_memory * MEMORY_HEADROOM_FRACTION)))
-
-    disk_free = shutil.disk_usage(out_dir).free
-    usable_disk = max(0, disk_free - DISK_RESERVE_BYTES)
-    if usable_disk == 0:
+def ensure_free_storage(out_dir: str) -> None:
+    """Refuse a capture when its output disk has less than 1 GB free."""
+    free = shutil.disk_usage(out_dir).free
+    if free < MIN_FREE_STORAGE_BYTES:
         raise RuntimeError(
-            "The output disk has less than the required 512 MiB safety reserve."
+            f"Only {free / GIB:.2f} GB of storage is free for {out_dir!r}; "
+            "a capture needs at least 1 GB. Free up space or choose another "
+            "output folder."
         )
-    limits.append(max(1, int(usable_disk / PNG_WORST_CASE_FACTOR)))
-    return min(limits)
-
-
-def ensure_capture_capacity(
-    out_dir: str,
-    params: CaptureParams,
-    frame_count: int,
-    width: int,
-    height: int,
-) -> int:
-    """Reject a requested capture that cannot safely fit in RAM and on disk."""
-    limit = capture_buffer_limit_bytes(out_dir, params.max_buffer_gib)
-    required = frame_pair_bytes(width, height) * max(0, int(frame_count))
-    if required > limit:
-        raise RuntimeError(
-            "Capture settings require approximately "
-            f"{required / GIB:.2f} GiB of raw RGB/depth buffering, but the "
-            f"current safe RAM/disk limit is {limit / GIB:.2f} GiB. Reduce "
-            "duration, FPS, resolution, end position, or gantry travel time."
-        )
-    return limit

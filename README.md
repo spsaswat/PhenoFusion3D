@@ -137,7 +137,6 @@ Two on-disk layouts are accepted by `load_image_pairs`
 | `width` × `height` | `1280 × 720` | Requested capture resolution |
 | `fps` | `30` | Requested frame rate |
 | `duration_s` | `10.0` | RealSense-only capture length (`-1` = manual stop) |
-| `max_buffer_gib` | `6.0` | Absolute ceiling before RAM/disk safety limits are applied |
 | Capture velocity | `38 mm/s` | Gantry linear velocity (`velocity_mps=0.038` internally) |
 | Capture endpoint | `1650 mm` | Gantry position at which the pass stops (`end_position_m=1.65` internally) |
 | Camera warm-up | `4` frames | Frames discarded before acquisition |
@@ -205,12 +204,11 @@ batch is saved as PNG files, followed by the intrinsics and `session.json`.
 This keeps image compression and disk I/O out of the time-critical capture loop.
 At the default 1280x720, 30 FPS settings, a 10-second raw buffer uses roughly
 1.3 GiB of RAM before Python/driver overhead; longer captures scale linearly.
-The required `0.005 m` to `1.65 m` ROS pass uses approximately 5.57 GiB of
-raw frame storage and is covered by the 6 GiB configured ceiling.
-Before acquisition, the app checks the estimated raw buffer against available
-RAM and output-disk space. Manual captures are stopped and saved at the runtime
-safety ceiling rather than allowing the process to exhaust memory. ROS passes
-also stop if gantry position does not advance for five seconds.
+The required `0.005 m` to `1.65 m` ROS pass buffers approximately 5.57 GiB of
+raw frames. There is no RAM limit, so a capture must fit in the machine's
+memory. The only check is that the output disk has at least 1 GB free; with
+less, the capture refuses to start. ROS passes also stop if gantry position
+does not advance for five seconds.
 
 Camera selection happens when capture starts. One connected RGB-D RealSense is
 selected automatically. If several are connected, select one by serial before

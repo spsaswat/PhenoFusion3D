@@ -9,13 +9,14 @@ from __future__ import annotations
 import itertools
 import json
 import os
+import shutil
 import sys
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from capture.base import CaptureParams
+from capture.base import GIB, CaptureParams
 from capture.realsense_capture import RealSenseCapture
 from capture.ros_capture import (
     RETURN_DIR_NAME,
@@ -184,6 +185,22 @@ def test_enumeration_failure_leaves_selection_to_the_camera(monkeypatch):
     assert camera.serial_number is None
 
 
+# Free output-disk space from the 1 GB minimum up to just below 5 GB.
+FREE_STORAGE = [GIB, 2 * GIB, 3 * GIB, 4 * GIB, 5 * GIB - 1]
+
+
+def _report_free_storage(monkeypatch, free, folder=None):
+    """Make the output disk report ``free`` bytes, for ``folder`` only if given."""
+    real_disk_usage = shutil.disk_usage
+
+    def disk_usage(path):
+        if folder is None or os.path.basename(path) == folder:
+            return SimpleNamespace(total=free, used=0, free=free)
+        return real_disk_usage(path)
+
+    monkeypatch.setattr("capture.base.shutil.disk_usage", disk_usage)
+
+
 # ---------------------------------------------------------------- full pass
 
 def _run_dual_capture(
@@ -196,8 +213,9 @@ def _run_dual_capture(
 
     return_failure: None, "camera" (L515 cannot start), "silent" (L515
     fails with an empty message), "stall" (gantry does not move after go-to),
-    "stop" (operator stops during the return pass) or "stop_warmup" (operator
-    stops while the L515 warms up, before any return motion).
+    "stop" (operator stops during the return pass), "stop_warmup" (operator
+    stops while the L515 warms up, before any return motion) or "storage"
+    (less than 1 GB free once the D405 pass is on disk).
     """
     monkeypatch.delenv("PHENOFUSION_CAMERA_SERIAL", raising=False)
     events = []
@@ -329,6 +347,8 @@ def _run_dual_capture(
         monkeypatch.setattr(
             "capture.ros_capture.time.monotonic", lambda: next(clock)
         )
+    if return_failure == "storage":
+        _report_free_storage(monkeypatch, GIB - 1, folder=RETURN_DIR_NAME)
 
     out_dir = capture.start(
         CaptureParams(out_root=str(tmp_path), width=2, height=2, fps=30),
@@ -441,6 +461,23 @@ def test_without_go_to_the_return_pass_is_skipped_but_home_is_still_tried(
                    for event in events if isinstance(event, tuple))
     assert "gantry home" in events
     assert "position_controller_ros" in _session(back)["error"]
+
+
+def test_a_return_pass_without_1_gb_free_is_skipped_but_home_is_still_tried(
+    tmp_path, monkeypatch
+):
+    out_dir, events, _progress = _run_dual_capture(
+        tmp_path, monkeypatch, return_failure="storage"
+    )
+    forward = tmp_path / out_dir
+    back = forward / RETURN_DIR_NAME
+
+    assert ("camera started", L515[1]) not in events
+    assert "gantry home" in events
+    assert _pngs(forward / "rgb") == ["0.png"]
+    return_session = _session(back)
+    assert return_session["termination_reason"] == "failed"
+    assert "at least 1 GB" in return_session["error"]
 
 
 def test_a_stalled_return_falls_back_to_the_proven_go_home(
@@ -722,10 +759,8 @@ def _intrinsics(directory, kind):
         return json.load(intrinsics_file)
 
 
-def test_ros_scans_with_both_cameras_selected_as_on_the_rig(
-    tmp_path, monkeypatch
-):
-    """The gantry pass with nothing stubbed between it and the camera SDK."""
+def _run_ros_on_rig(tmp_path, monkeypatch, **params):
+    """Run the gantry capture with nothing stubbed between it and the SDK."""
     monkeypatch.delenv("PHENOFUSION_CAMERA_SERIAL", raising=False)
     rig = _Rig()
 
@@ -782,9 +817,16 @@ def test_ros_scans_with_both_cameras_selected_as_on_the_rig(
 
     errors = []
     out_dir = RosCapture().start(
-        CaptureParams(out_root=str(tmp_path), velocity_mps=2.0),
+        CaptureParams(out_root=str(tmp_path), **params),
         on_error=errors.append,
     )
+    return out_dir, rig, errors
+
+
+def test_ros_scans_with_both_cameras_selected_as_on_the_rig(
+    tmp_path, monkeypatch
+):
+    out_dir, rig, errors = _run_ros_on_rig(tmp_path, monkeypatch)
     assert errors == []
     forward = tmp_path / out_dir
     back = forward / RETURN_DIR_NAME
@@ -808,16 +850,49 @@ def test_ros_scans_with_both_cameras_selected_as_on_the_rig(
     assert return_session["depth_scale_m"] == DEPTH_SCALES[L515[1]]
 
 
+@pytest.mark.parametrize("free", FREE_STORAGE)
+def test_ros_scans_with_both_cameras_with_1_to_5_gb_free(
+    tmp_path, monkeypatch, free
+):
+    """At 1 mm/s, the slowest scan, over 200 GiB of raw frames: not refused."""
+    _report_free_storage(monkeypatch, free)
+    out_dir, rig, errors = _run_ros_on_rig(
+        tmp_path, monkeypatch, velocity_mps=0.001
+    )
+
+    assert errors == []
+    started = [event for event in rig.events if event[0] == "camera started"]
+    assert started == [("camera started", D405[1]), ("camera started", L515[1])]
+    back = tmp_path / out_dir / RETURN_DIR_NAME
+    assert _session(back)["termination_reason"] == "home_reached"
+
+
+def test_ros_refuses_to_start_with_less_than_1_gb_free(tmp_path, monkeypatch):
+    _report_free_storage(monkeypatch, GIB - 1)
+    out_dir, rig, errors = _run_ros_on_rig(tmp_path, monkeypatch)
+
+    assert out_dir is None
+    assert len(errors) == 1
+    assert "at least 1 GB" in errors[0]
+    assert rig.events == []
+
+
 # ------------------------------------------------------- RealSense Only
 
 def _run_realsense_only(
-    tmp_path, monkeypatch, stop_at=None, broken=(), serial=None
+    tmp_path,
+    monkeypatch,
+    stop_at=None,
+    broken=(),
+    serial=None,
+    duration_s=1.25,
 ):
     """Capture with RealSense Only while a D405 and an L515 are connected.
 
-    Each camera records two frames. stop_at=(serial, n) presses Stop on that
-    camera's nth frame, counting its four warm-up frames; broken lists
-    serials whose pipeline will not start; serial is a requested camera.
+    Each camera records two frames, whatever duration_s is. stop_at=(serial,
+    n) presses Stop on that camera's nth frame, counting its four warm-up
+    frames; broken lists serials whose pipeline will not start; serial is a
+    requested camera.
     """
     import capture.realsense_capture as realsense_capture
 
@@ -843,7 +918,7 @@ def _run_realsense_only(
         rig.events.append(("session saved", self.out_dir))
         write_session(self)
 
-    clock = (tick / 2 for tick in itertools.count())
+    clock = (tick * duration_s / 2.5 for tick in itertools.count())
     monkeypatch.setattr(realsense_capture, "import_realsense", lambda: rig)
     monkeypatch.setattr(realsense_capture, "write_frame_batch", log_batch)
     monkeypatch.setattr(RealSenseCapture, "_write_session", log_session)
@@ -854,7 +929,7 @@ def _run_realsense_only(
     progress = []
     errors = []
     out_dir = capture.start(
-        CaptureParams(out_root=str(tmp_path), duration_s=1.25),
+        CaptureParams(out_root=str(tmp_path), duration_s=duration_s),
         on_progress=lambda current, total: progress.append((current, total)),
         on_error=errors.append,
     )
@@ -951,6 +1026,57 @@ def test_an_l515_that_will_not_start_keeps_the_d405_recording(
     assert _pngs(back / "rgb") == []
 
 
+@pytest.mark.parametrize("free", FREE_STORAGE)
+def test_realsense_only_records_both_cameras_with_1_to_5_gb_free(
+    tmp_path, monkeypatch, free
+):
+    """600 s, the longest recording, is ~77 GiB of raw frames: not refused."""
+    _report_free_storage(monkeypatch, free)
+    forward, _rig, _progress = _run_realsense_only(
+        tmp_path, monkeypatch, duration_s=600
+    )
+    back = forward / RETURN_DIR_NAME
+
+    assert _pngs(forward / "rgb") == _pngs(back / "rgb") == ["0.png", "1.png"]
+    assert _session(back)["error"] is None
+
+
+def test_realsense_only_refuses_to_start_with_less_than_1_gb_free(
+    tmp_path, monkeypatch
+):
+    monkeypatch.delenv("PHENOFUSION_CAMERA_SERIAL", raising=False)
+    rig = _Rig()
+    monkeypatch.setattr(
+        "capture.realsense_capture.import_realsense", lambda: rig
+    )
+    _report_free_storage(monkeypatch, GIB - 1)
+
+    errors = []
+    out_dir = RealSenseCapture().start(
+        CaptureParams(out_root=str(tmp_path)), on_error=errors.append
+    )
+
+    assert out_dir is None
+    assert len(errors) == 1
+    assert "at least 1 GB" in errors[0]
+    assert rig.events == []
+
+
+def test_an_l515_without_1_gb_free_is_recorded_as_failed(
+    tmp_path, monkeypatch
+):
+    """Storage can fall short once the D405's frames are on disk."""
+    _report_free_storage(monkeypatch, GIB - 1, folder=RETURN_DIR_NAME)
+    forward, rig, _progress = _run_realsense_only(tmp_path, monkeypatch)
+    back = forward / RETURN_DIR_NAME
+
+    assert ("camera started", L515[1]) not in rig.events
+    assert _pngs(forward / "rgb") == ["0.png", "1.png"]
+    return_session = _session(back)
+    assert return_session["termination_reason"] == "failed"
+    assert "at least 1 GB" in return_session["error"]
+
+
 def test_a_requested_serial_records_only_that_camera(tmp_path, monkeypatch):
     forward, rig, _progress = _run_realsense_only(
         tmp_path, monkeypatch, serial=L515[1]
@@ -990,11 +1116,6 @@ def test_panel_reports_nothing_extra_for_a_single_camera_capture(tmp_path):
         (
             {"n_frames": 4, "termination_reason": "home_reached", "error": None},
             "L515 return pass: 4 frames -> ",
-        ),
-        (
-            {"n_frames": 2, "termination_reason": "buffer_limit", "error": None},
-            "L515 return pass stopped at the safe RAM/disk limit. "
-            "Saved 2 frames -> ",
         ),
         (
             {
