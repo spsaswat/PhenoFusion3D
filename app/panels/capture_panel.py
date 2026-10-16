@@ -209,6 +209,16 @@ class CapturePanel(QWidget):
         self._gantry_position_m = float(position_m)
 
     def _on_capture(self):
+        answer = QMessageBox.question(
+            self,
+            'Confirm Lighting',
+            'Have you turned on the light?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
         backend_pref = self.backend_combo.currentData()
         self.set_running(True)
         self.progress.setValue(0)
