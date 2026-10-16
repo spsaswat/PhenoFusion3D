@@ -32,7 +32,7 @@ class GantryController(QObject):
     error = pyqtSignal(str)
 
     DEFAULT_POS_MIN_M = 0.0
-    DEFAULT_POS_MAX_M = 5.0
+    DEFAULT_POS_MAX_M = 1.65
     HOME_POSITION_M = 0.005
     HOME_VELOCITY_MPS = 0.15
 
@@ -55,6 +55,7 @@ class GantryController(QObject):
         self._start_attempted = False
         self._start_error: Optional[str] = None
         self._current_position_m = 0.0
+        self._jog_velocity_mps = 0.0
         self._pending_action = None
         self._pending_stop = False
         self._shutting_down = False
@@ -77,16 +78,18 @@ class GantryController(QObject):
         self._handle_position(float(position_m))
 
     def start_jog(self, velocity_mps: float) -> None:
-        """Move at a signed velocity until :meth:`stop` is called."""
+        """Move until stopped or the upper position limit is reached."""
 
         with self._lock:
             client = self._connected()
             if client is None:
                 self._pending_action = ("jog", float(velocity_mps))
+            else:
+                sent = self._send_jog(client, velocity_mps)
         if client is None:
             self._begin_start()
             return
-        if not client.jog(velocity_mps):
+        if not sent:
             self._handle_disconnect()
 
     def stop(self) -> None:
@@ -94,6 +97,7 @@ class GantryController(QObject):
 
         with self._lock:
             self._pending_action = None
+            self._jog_velocity_mps = 0.0
             client = self._connected()
             if client is None and self._start_thread is not None:
                 self._pending_stop = True
@@ -131,7 +135,10 @@ class GantryController(QObject):
                 "remain available."
             )
             return
-        if not client.goto(clamped, velocity_mps):
+        with self._lock:
+            self._jog_velocity_mps = 0.0
+            sent = client.goto(clamped, velocity_mps)
+        if not sent:
             self._handle_disconnect()
 
     def go_home(self) -> None:
@@ -142,11 +149,20 @@ class GantryController(QObject):
 
         with self._lock:
             self._shutting_down = True
+            self._jog_velocity_mps = 0.0
             client, self._client = self._client, None
         if client is not None:
             client.shutdown()
 
     # ----------------------------------------------------------- internals
+
+    def _send_jog(self, client, velocity_mps: float) -> bool:
+        """Send a jog while holding the state lock, respecting the limit."""
+        if velocity_mps > 0 and self._current_position_m >= self.pos_max_m:
+            self._jog_velocity_mps = 0.0
+            return client.stop()
+        self._jog_velocity_mps = velocity_mps
+        return client.jog(velocity_mps)
 
     def _connected(self):
         client = self._client
@@ -157,6 +173,7 @@ class GantryController(QObject):
     def _handle_disconnect(self) -> None:
         with self._lock:
             self._client = None
+            self._jog_velocity_mps = 0.0
             self._start_attempted = False
         self.error.emit(
             "The ROS gantry helper stopped unexpectedly; try the command again."
@@ -222,8 +239,9 @@ class GantryController(QObject):
                 elif pending_action is not None:
                     command, *values = pending_action
                     if command == "jog":
-                        client.jog(values[0])
+                        self._send_jog(client, values[0])
                     elif command == "goto" and client.goto_available:
+                        self._jog_velocity_mps = 0.0
                         client.goto(values[0], values[1])
                     elif command == "goto":
                         queued_goto_unavailable = True
@@ -246,5 +264,14 @@ class GantryController(QObject):
         )
 
     def _handle_position(self, position_m: float) -> None:
-        self._current_position_m = position_m
+        stopped = True
+        with self._lock:
+            self._current_position_m = position_m
+            if self._jog_velocity_mps > 0 and position_m >= self.pos_max_m:
+                self._jog_velocity_mps = 0.0
+                client = self._connected()
+                if client is not None:
+                    stopped = client.stop()
+        if not stopped:
+            self._handle_disconnect()
         self.position_changed.emit(position_m)
